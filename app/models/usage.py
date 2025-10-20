@@ -14,6 +14,9 @@ class UsageHistory(Base, TimestampMixin):
     # 세션 정보
     session_id = Column(String(100), index=True)
 
+    # 대화 제목 (첫 질문으로 자동 생성 또는 사용자 지정)
+    conversation_title = Column(String(200))
+
     # 질문/답변
     question = Column(Text, nullable=False)
     answer = Column(Text)

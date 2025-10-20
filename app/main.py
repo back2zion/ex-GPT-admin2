@@ -23,6 +23,7 @@ from app.routers.admin import (
     ip_whitelist,
     access_requests
 )
+from app.routers import chat_proxy
 import os
 
 app = FastAPI(
@@ -44,6 +45,9 @@ app.add_middleware(
 
 # API 라우터 등록
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+
+# Chat Proxy 라우터 등록 (layout.html용)
+app.include_router(chat_proxy.router)
 
 # Admin 라우터 등록 (MVP)
 app.include_router(notices.router)
@@ -68,15 +72,8 @@ app.include_router(pii_detections.router)
 app.include_router(ip_whitelist.router)
 app.include_router(access_requests.router)
 
-# 정적 파일 제공 (관리자 페이지)
+# 정적 파일 제공 (React 관리자 페이지)
 admin_path = "/home/aigen/html/admin"
-if os.path.exists(admin_path):
-    app.mount("/admin/static", StaticFiles(directory=f"{admin_path}"), name="admin-static")
-
-    @app.get("/admin")
-    @app.get("/admin/")
-    async def admin_dashboard():
-        return FileResponse(f"{admin_path}/index.html")
 
 @app.get("/")
 async def root():
@@ -90,3 +87,32 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+# React SPA 라우팅 지원 (모든 /admin/* 경로를 index.html로)
+if os.path.exists(admin_path):
+    # 정적 파일 (js, css, 이미지 등)
+    app.mount("/admin/assets", StaticFiles(directory=f"{admin_path}/assets"), name="admin-assets")
+
+    # /admin 루트 경로
+    @app.get("/admin")
+    @app.get("/admin/")
+    async def serve_admin_root():
+        """관리자 페이지 루트"""
+        return FileResponse(f"{admin_path}/index.html")
+
+    # vite.svg 같은 루트 정적 파일들
+    @app.get("/admin/vite.svg")
+    async def serve_vite_svg():
+        """Vite SVG 아이콘"""
+        return FileResponse(f"{admin_path}/vite.svg")
+
+    # Catch-all route: 모든 /admin/* 경로를 index.html로 (SPA 라우팅)
+    @app.get("/admin/{full_path:path}")
+    async def serve_admin_spa(full_path: str):
+        """React SPA의 클라이언트 사이드 라우팅 지원"""
+        # 파일이 실제로 존재하면 그 파일을 반환
+        file_path = f"{admin_path}/{full_path}"
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        # 그 외의 경우 index.html 반환 (React Router가 처리)
+        return FileResponse(f"{admin_path}/index.html")

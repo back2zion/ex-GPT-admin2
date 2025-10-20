@@ -72,6 +72,67 @@ class ConversationListResponse(BaseModel):
     total_pages: int
 
 
+# 인증 없이 사용 가능한 간단한 조회 엔드포인트
+@router.get("/simple", response_model=ConversationListResponse)
+async def get_conversations_simple(
+    start: Optional[date] = Query(None, description="시작일 (YYYY-MM-DD)"),
+    end: Optional[date] = Query(None, description="종료일 (YYYY-MM-DD)"),
+    page: int = Query(1, ge=1, description="페이지 번호"),
+    limit: int = Query(50, ge=1, le=10000, description="페이지당 항목 수"),
+    db: AsyncSession = Depends(get_db)
+):
+    """대화내역 목록 조회 (인증 불필요)"""
+    conditions = []
+
+    if start:
+        conditions.append(func.date(UsageHistory.created_at) >= start)
+    if end:
+        conditions.append(func.date(UsageHistory.created_at) <= end)
+
+    count_query = select(func.count(UsageHistory.id))
+    if conditions:
+        count_query = count_query.filter(and_(*conditions))
+
+    count_result = await db.execute(count_query)
+    total = count_result.scalar() or 0
+
+    offset = (page - 1) * limit
+    total_pages = (total + limit - 1) // limit if limit > 0 else 0
+
+    query = select(UsageHistory)
+    if conditions:
+        query = query.filter(and_(*conditions))
+    query = query.order_by(desc(UsageHistory.created_at)).offset(offset).limit(limit)
+
+    result = await db.execute(query)
+    items = result.scalars().all()
+
+    return ConversationListResponse(
+        items=[ConversationListItem.model_validate(item) for item in items],
+        total=total,
+        page=page,
+        limit=limit,
+        total_pages=total_pages
+    )
+
+
+@router.get("/simple/{conversation_id}", response_model=ConversationDetail)
+async def get_conversation_detail_simple(
+    conversation_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """대화내역 상세 조회 (인증 불필요)"""
+    query = select(UsageHistory).filter(UsageHistory.id == conversation_id)
+    result = await db.execute(query)
+    conversation = result.scalar_one_or_none()
+
+    if not conversation:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="대화내역을 찾을 수 없습니다.")
+
+    return ConversationDetail.model_validate(conversation)
+
+
 @router.get("/", response_model=ConversationListResponse)
 async def get_conversations(
     start: Optional[date] = Query(None, description="시작일 (YYYY-MM-DD)"),

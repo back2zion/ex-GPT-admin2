@@ -8,6 +8,8 @@ from app.models.access import AccessRequest
 from app.models.approval import DocumentChangeRequest, ApprovalStep
 from app.models.notice import Notice
 from app.models.satisfaction import SatisfactionSurvey
+from app.models.pii_detection import PIIDetectionResult, PIIStatus
+from app.models.ip_whitelist import IPWhitelist
 
 __all__ = [
     "Base",
@@ -27,4 +29,7 @@ __all__ = [
     "ApprovalStep",
     "Notice",
     "SatisfactionSurvey",
+    "PIIDetectionResult",
+    "PIIStatus",
+    "IPWhitelist",
 ]

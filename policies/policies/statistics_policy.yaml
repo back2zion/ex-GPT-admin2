@@ -1,0 +1,21 @@
+---
+apiVersion: api.cerbos.dev/v1
+resourcePolicy:
+  version: "default"
+  resource: "statistics"
+  rules:
+    # 관리자와 매니저는 모든 통계 조회 가능
+    - actions: ['read']
+      effect: EFFECT_ALLOW
+      roles:
+        - admin
+        - manager
+
+    # 부서 매니저는 자신의 부서 통계만 조회 가능
+    - actions: ['read']
+      effect: EFFECT_ALLOW
+      roles:
+        - department_manager
+      condition:
+        match:
+          expr: request.resource.attr.department_id == request.principal.attr.department_id
