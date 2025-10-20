@@ -15,21 +15,23 @@ from cerbos.sdk.model import Principal
 router = APIRouter(prefix="/api/v1/admin/satisfaction", tags=["admin-satisfaction"])
 
 
-@router.get("/", response_model=List[SatisfactionResponse])
+@router.get("/")
 async def list_satisfaction(
     skip: int = Query(0, ge=0, description="건너뛸 레코드 수"),
     limit: int = Query(100, le=1000, description="조회할 최대 레코드 수"),
     rating: Optional[int] = Query(None, ge=1, le=5, description="평점 필터 (1-5)"),
-    category: Optional[str] = Query(None, pattern="^(ui|speed|accuracy|other)$", description="카테고리 필터"),
+    category: Optional[str] = Query(None, description="카테고리 필터"),
     user_id: Optional[str] = Query(None, description="사용자 ID 필터"),
+    sort_by: Optional[str] = Query("created_at", description="정렬 필드"),
+    order: Optional[str] = Query("desc", description="정렬 방향 (asc/desc)"),
     db: AsyncSession = Depends(get_db),
     principal: Principal = Depends(get_principal)
 ):
     """
-    만족도 조사 목록 조회
+    만족도 조사 목록 조회 (react-admin 형식)
 
     - 평점, 피드백, 카테고리 등 조회
-    - 필터링 및 페이지네이션 지원
+    - 필터링, 페이지네이션, 정렬 지원
     """
     query = select(SatisfactionSurvey)
 
@@ -41,11 +43,41 @@ async def list_satisfaction(
     if user_id:
         query = query.filter(SatisfactionSurvey.user_id == user_id)
 
-    # 정렬 및 페이징
-    query = query.order_by(SatisfactionSurvey.created_at.desc()).offset(skip).limit(limit)
+    # 전체 개수
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar()
+
+    # 정렬 처리
+    sort_column = getattr(SatisfactionSurvey, sort_by, SatisfactionSurvey.created_at)
+    if order.lower() == "asc":
+        query = query.order_by(sort_column.asc())
+    else:
+        query = query.order_by(sort_column.desc())
+
+    # 페이징
+    query = query.offset(skip).limit(limit)
 
     result = await db.execute(query)
-    return result.scalars().all()
+    surveys = result.scalars().all()
+
+    return {
+        "items": [
+            {
+                "id": s.id,
+                "user_id": s.user_id,
+                "rating": s.rating,
+                "feedback": s.feedback,
+                "category": s.category,
+                "related_question_id": s.related_question_id,
+                "ip_address": s.ip_address,
+                "created_at": s.created_at.isoformat() if s.created_at else None,
+                "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+            }
+            for s in surveys
+        ],
+        "total": total
+    }
 
 
 @router.get("/stats")

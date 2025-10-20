@@ -23,6 +23,8 @@ class Notice(Base, TimestampMixin):
 
     # 활성화 상태
     is_active = Column(Boolean, default=True)
+    is_important = Column(Boolean, default=False)  # 중요 공지 여부
+    is_popup = Column(Boolean, default=False)  # 팝업 표시 여부
 
     # 대상 사용자 (null이면 전체)
     target_users = Column(JSON)  # 사용자 ID 리스트

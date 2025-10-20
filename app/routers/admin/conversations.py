@@ -79,6 +79,8 @@ async def get_conversations_simple(
     end: Optional[date] = Query(None, description="종료일 (YYYY-MM-DD)"),
     page: int = Query(1, ge=1, description="페이지 번호"),
     limit: int = Query(50, ge=1, le=10000, description="페이지당 항목 수"),
+    sort_by: Optional[str] = Query("created_at", description="정렬 필드"),
+    order: Optional[str] = Query("desc", description="정렬 방향 (asc/desc)"),
     db: AsyncSession = Depends(get_db)
 ):
     """대화내역 목록 조회 (인증 불필요)"""
@@ -99,10 +101,19 @@ async def get_conversations_simple(
     offset = (page - 1) * limit
     total_pages = (total + limit - 1) // limit if limit > 0 else 0
 
+    # 정렬 처리
     query = select(UsageHistory)
     if conditions:
         query = query.filter(and_(*conditions))
-    query = query.order_by(desc(UsageHistory.created_at)).offset(offset).limit(limit)
+
+    # 정렬 필드 매핑
+    sort_column = getattr(UsageHistory, sort_by, UsageHistory.created_at)
+    if order.lower() == "asc":
+        query = query.order_by(sort_column.asc())
+    else:
+        query = query.order_by(sort_column.desc())
+
+    query = query.offset(offset).limit(limit)
 
     result = await db.execute(query)
     items = result.scalars().all()

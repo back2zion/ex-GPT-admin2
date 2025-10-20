@@ -50,8 +50,9 @@ class Settings(BaseSettings):
 
     # Qdrant
     QDRANT_HOST: str = "localhost"
-    QDRANT_PORT: int = 10004
-    QDRANT_COLLECTION: str = "admin_documents"
+    QDRANT_PORT: int = 6335  # ex-gpt Qdrant port
+    QDRANT_COLLECTION: str = "130825-512-v3"  # Main collection
+    QDRANT_API_KEY: str = ""  # Optional
 
     # CORS
     ALLOWED_ORIGINS: List[str] = [

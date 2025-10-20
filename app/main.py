@@ -21,7 +21,8 @@ from app.routers.admin import (
     user_document_permissions,
     pii_detections,
     ip_whitelist,
-    access_requests
+    access_requests,
+    stats
 )
 from app.routers import chat_proxy
 import os
@@ -56,6 +57,7 @@ app.include_router(satisfaction.router)
 app.include_router(export.router)
 app.include_router(statistics.router)
 app.include_router(conversations.router)
+app.include_router(stats.router)
 
 # Admin 라우터 등록 (Phase 2 - 권한 관리)
 app.include_router(departments.router)
