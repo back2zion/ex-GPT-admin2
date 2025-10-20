@@ -171,7 +171,8 @@ async def chat_stream_proxy(
                                     pass
 
             # 스트리밍 완료 후 DB에 저장
-            if accumulated_response:
+            # thinking 내용만 있는 경우는 저장하지 않음
+            if accumulated_response and not accumulated_response.strip().startswith('<think>'):
                 await save_usage_to_db(
                     db=db,
                     user_id=request.user_id,
