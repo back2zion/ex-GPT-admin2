@@ -1,0 +1,26 @@
+---
+apiVersion: api.cerbos.dev/v1
+resourcePolicy:
+  version: "default"
+  resource: "user"
+  rules:
+    # admin: 모든 작업 허용
+    - actions: ['*']
+      effect: EFFECT_ALLOW
+      roles:
+        - admin
+
+    # manager: 읽기만 허용 (사용자 관리는 admin만)
+    - actions: ['read']
+      effect: EFFECT_ALLOW
+      roles:
+        - manager
+
+    # user: 자기 자신만 읽기/수정 가능
+    - actions: ['read', 'update']
+      effect: EFFECT_ALLOW
+      roles:
+        - user
+      condition:
+        match:
+          expr: request.resource.id == request.principal.id

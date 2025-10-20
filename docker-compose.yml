@@ -1,0 +1,74 @@
+services:
+  admin-api:
+    build: .
+    ports:
+      - "8010:8001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - default
+      - exgpt
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/admin_db
+      - REDIS_URL=redis://redis:6379
+      - CERBOS_HOST=cerbos
+      - CERBOS_PORT=3592
+      - MINIO_ENDPOINT=host.docker.internal:10002
+      - MINIO_ACCESS_KEY=admin
+      - MINIO_SECRET_KEY=admin123
+      - MINIO_SECURE=false
+      - MINIO_BUCKET=documents
+      - QDRANT_HOST=host.docker.internal
+      - QDRANT_PORT=10004
+      - QDRANT_COLLECTION=admin_documents
+      - EMBEDDING_MODEL_ENDPOINT=http://vllm-embeddings:8000/v1
+      - EX_GPT_QDRANT_HOST=qdrant
+      - EX_GPT_QDRANT_PORT=6333
+      - EX_GPT_QDRANT_API_KEY=QFy9YlRTm0Y1yo6D
+      - EX_GPT_MINIO_ENDPOINT=minio:9000
+    depends_on:
+      - postgres
+      - redis
+      - cerbos
+    volumes:
+      - ./app:/app/app
+      - /home/aigen/html/admin:/home/aigen/html/admin:ro
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=admin_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  cerbos:
+    image: ghcr.io/cerbos/cerbos:latest
+    ports:
+      - "3592:3592"
+      - "3593:3593"
+    volumes:
+      - ./policies:/policies
+    command: server --config=/policies/config.yaml
+
+networks:
+  default:
+    name: admin-api_default
+  exgpt:
+    external: true
+    name: exgpt_net
+
+volumes:
+  postgres_data:
+  redis_data:

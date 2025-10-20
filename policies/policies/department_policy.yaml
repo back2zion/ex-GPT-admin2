@@ -1,0 +1,29 @@
+---
+apiVersion: api.cerbos.dev/v1
+resourcePolicy:
+  version: "default"
+  resource: "department"
+  rules:
+    # admin: 모든 작업 허용
+    - actions: ['*']
+      effect: EFFECT_ALLOW
+      roles:
+        - admin
+
+    # manager: 읽기, 생성, 수정만 허용
+    - actions: ['read', 'create', 'update']
+      effect: EFFECT_ALLOW
+      roles:
+        - manager
+
+    # user: 읽기만 허용
+    - actions: ['read']
+      effect: EFFECT_ALLOW
+      roles:
+        - user
+
+    # viewer: 읽기만 허용
+    - actions: ['read']
+      effect: EFFECT_ALLOW
+      roles:
+        - viewer

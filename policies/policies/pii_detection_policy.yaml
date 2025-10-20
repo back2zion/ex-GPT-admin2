@@ -1,0 +1,36 @@
+---
+apiVersion: api.cerbos.dev/v1
+resourcePolicy:
+  version: "default"
+  resource: "pii_detection"
+  rules:
+    # 관리자는 모든 작업 가능
+    - actions:
+        - view
+        - approve
+        - delete
+      effect: EFFECT_ALLOW
+      roles:
+        - admin
+        - super_admin
+
+    # 일반 사용자는 조회만 가능
+    - actions:
+        - view
+      effect: EFFECT_ALLOW
+      roles:
+        - user
+
+    # 데이터 보안 담당자는 승인 가능
+    - actions:
+        - view
+        - approve
+      effect: EFFECT_ALLOW
+      roles:
+        - data_security_officer
+
+  schemas:
+    principalSchema:
+      ref: "cerbos:///principal.json"
+    resourceSchema:
+      ref: "cerbos:///pii_detection.json"
