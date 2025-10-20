@@ -1,5 +1,11 @@
 """
 사용 이력 API 엔드포인트
+
+보안 기능:
+- Cerbos RBAC 기반 권한 검증
+- SQL Injection 방지 (SQLAlchemy ORM)
+- Input validation (Pydantic + Query parameters)
+- 데이터 길이 제한
 """
 from fastapi import APIRouter, Depends, Query, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,12 +16,69 @@ from datetime import datetime, timedelta
 from app.models import UsageHistory
 from app.schemas.usage import UsageHistoryResponse, UsageHistoryCreate
 from app.core.database import get_db
-from app.dependencies import get_principal, require_permission
+from app.dependencies import get_principal, get_cerbos_client, check_resource_permission
 from cerbos.sdk.model import Principal, Resource
 from cerbos.sdk.client import AsyncCerbosClient
-from app.dependencies import get_cerbos_client, check_resource_permission
+
+# Constants for data protection
+MAX_QUESTION_LENGTH = 10000
+MAX_ANSWER_LENGTH = 50000
+MAX_THINKING_LENGTH = 100000
+DATE_FORMAT = "%Y-%m-%d"
 
 router = APIRouter(prefix="/api/v1/admin/usage", tags=["admin-usage"])
+
+
+# Helper Functions
+def _parse_date_filter(date_str: str, field_name: str, is_end_date: bool = False) -> datetime:
+    """
+    날짜 문자열을 datetime 객체로 변환
+
+    Args:
+        date_str: YYYY-MM-DD 형식의 날짜 문자열
+        field_name: 오류 메시지에 표시할 필드명
+        is_end_date: 종료일인 경우 True (하루 추가)
+
+    Returns:
+        datetime: 파싱된 datetime 객체
+
+    Raises:
+        HTTPException: 날짜 형식이 잘못된 경우
+    """
+    try:
+        parsed_date = datetime.strptime(date_str, DATE_FORMAT)
+        if is_end_date:
+            # 종료일 포함을 위해 다음날 00:00:00 사용
+            parsed_date += timedelta(days=1)
+        return parsed_date
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{field_name} 형식이 잘못되었습니다 (YYYY-MM-DD 형식 필요): {date_str}"
+        )
+
+
+def _extract_client_ip(request: Request) -> Optional[str]:
+    """
+    요청에서 클라이언트 IP 주소 추출
+
+    X-Forwarded-For 헤더를 우선으로 사용하고,
+    없으면 request.client.host 사용
+
+    Args:
+        request: FastAPI Request 객체
+
+    Returns:
+        str | None: 클라이언트 IP 주소 또는 None
+    """
+    # X-Forwarded-For 헤더 확인 (프록시 환경)
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        # 여러 프록시를 거친 경우 첫 번째 IP 사용
+        return forwarded_for.split(",")[0].strip()
+
+    # 직접 연결된 경우
+    return request.client.host if request.client else None
 
 
 @router.get("/", response_model=List[UsageHistoryResponse])
@@ -47,20 +110,14 @@ async def list_usage_history(
 
     query = select(UsageHistory)
 
-    # 날짜 범위 필터 (시큐어 코딩: datetime 객체로 변환하여 Type Safety 보장)
+    # 날짜 범위 필터 (Helper 함수 사용 - DRY 원칙)
     if start_date:
-        try:
-            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-            query = query.filter(UsageHistory.created_at >= start_dt)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="잘못된 시작 날짜 형식입니다 (YYYY-MM-DD)")
+        start_dt = _parse_date_filter(start_date, "시작 날짜", is_end_date=False)
+        query = query.filter(UsageHistory.created_at >= start_dt)
 
     if end_date:
-        try:
-            end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)  # 종료일 포함
-            query = query.filter(UsageHistory.created_at < end_dt)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="잘못된 종료 날짜 형식입니다 (YYYY-MM-DD)")
+        end_dt = _parse_date_filter(end_date, "종료 날짜", is_end_date=True)
+        query = query.filter(UsageHistory.created_at < end_dt)
 
     # 사용자 ID 필터
     if user_id:
@@ -127,26 +184,16 @@ async def log_usage_history(
     - Input validation 자동 적용 (Pydantic)
     - 민감 정보 로깅 금지
     """
-    # Input validation (Pydantic 스키마에서 자동 처리)
-    # - question: max_length=10000
-    # - answer: max_length=50000
-    # - user_id: max_length=100
+    # IP 주소 자동 수집 (Helper 함수 사용)
+    client_ip = _extract_client_ip(request)
 
-    # IP 주소 자동 수집 (X-Forwarded-For 헤더 우선)
-    client_ip = request.headers.get("X-Forwarded-For")
-    if client_ip:
-        # 프록시를 거친 경우 첫 번째 IP 사용
-        client_ip = client_ip.split(",")[0].strip()
-    else:
-        client_ip = request.client.host if request.client else None
-
-    # UsageHistory 모델 생성
+    # UsageHistory 모델 생성 (상수 사용으로 유지보수성 향상)
     new_history = UsageHistory(
         user_id=usage_data.user_id,
         session_id=usage_data.session_id,
-        question=usage_data.question[:10000],  # 길이 제한 (DB 보호)
-        answer=usage_data.answer[:50000] if usage_data.answer else None,
-        thinking_content=usage_data.thinking_content[:100000] if usage_data.thinking_content else None,
+        question=usage_data.question[:MAX_QUESTION_LENGTH],  # 길이 제한 (DB 보호)
+        answer=usage_data.answer[:MAX_ANSWER_LENGTH] if usage_data.answer else None,
+        thinking_content=usage_data.thinking_content[:MAX_THINKING_LENGTH] if usage_data.thinking_content else None,
         response_time=usage_data.response_time,
         referenced_documents=usage_data.referenced_documents,
         model_name=usage_data.model_name,
