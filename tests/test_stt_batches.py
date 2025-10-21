@@ -322,11 +322,12 @@ class TestSecurityValidation:
 
         # Path Traversal 시도 목록
         malicious_paths = [
-            "../../etc/passwd",
-            "../../../../../etc/shadow",
-            "s3://bucket/../../../etc/passwd",
-            "/etc/passwd",
-            "C:\\Windows\\System32\\config\\sam"
+            "../../etc/passwd",                      # Linux Path Traversal
+            "../../../../../etc/shadow",             # Linux Path Traversal
+            "s3://bucket/../../../etc/passwd",       # S3 Path Traversal
+            "/etc/passwd",                           # Linux 시스템 경로 (허용 패턴 외)
+            "C:\\..\\etc\\passwd",                   # Windows Path Traversal
+            "\\\\server\\..\\..\\etc\\passwd",       # UNC Path Traversal
         ]
 
         for bad_path in malicious_paths:
@@ -337,6 +338,49 @@ class TestSecurityValidation:
                     file_pattern="*",
                     created_by="attacker"
                 )
+
+    @pytest.mark.asyncio
+    async def test_windows_path_support(self, db_session: AsyncSession):
+        """Windows 경로 지원 테스트 (정상 경로)"""
+        from app.services.stt_service import STTService
+
+        stt_service = STTService()
+
+        # 정상적인 Windows 경로들
+        valid_windows_paths = [
+            "C:\\AudioFiles\\2024\\meetings\\",
+            "D:\\Data\\Audio\\회의록\\",
+            "\\\\server\\share\\audio\\files\\",
+        ]
+
+        for path in valid_windows_paths:
+            try:
+                # 경로 검증만 테스트 (실제 배치 생성은 DB 없이 불가)
+                result = stt_service.validate_file_path(path)
+                assert result is True
+            except ValueError as e:
+                pytest.fail(f"Valid Windows path '{path}' was rejected: {e}")
+
+    @pytest.mark.asyncio
+    async def test_linux_path_support(self, db_session: AsyncSession):
+        """Linux 경로 지원 테스트 (정상 경로)"""
+        from app.services.stt_service import STTService
+
+        stt_service = STTService()
+
+        # 정상적인 Linux/클라우드 경로들
+        valid_linux_paths = [
+            "/data/audio/meetings/2024/",
+            "s3://audio-bucket/meetings/",
+            "minio://my-bucket/audio-files/",
+        ]
+
+        for path in valid_linux_paths:
+            try:
+                result = stt_service.validate_file_path(path)
+                assert result is True
+            except ValueError as e:
+                pytest.fail(f"Valid Linux path '{path}' was rejected: {e}")
 
     @pytest.mark.asyncio
     async def test_file_size_limit(self, db_session: AsyncSession):
