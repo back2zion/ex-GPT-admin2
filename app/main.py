@@ -26,7 +26,8 @@ from app.routers.admin import (
     categories,
     documents,
     stt_batches,
-    file_browser
+    file_browser,
+    file_upload
 )
 from app.routers import chat_proxy
 import os
@@ -85,6 +86,7 @@ app.include_router(documents.router)
 # Admin 라우터 등록 (STT 음성 전사 시스템)
 app.include_router(stt_batches.router)
 app.include_router(file_browser.router)
+app.include_router(file_upload.router)
 
 # 정적 파일 제공 (React 관리자 페이지)
 admin_path = "/home/aigen/html/admin"
