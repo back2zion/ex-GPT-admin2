@@ -12,7 +12,7 @@ class TestSTTBatchModel:
     """STT 배치 모델 테스트"""
 
     @pytest.mark.asyncio
-    async def test_create_batch_with_valid_data(self, db: AsyncSession):
+    async def test_create_batch_with_valid_data(self, db_session: AsyncSession):
         """정상 데이터로 배치 생성 테스트"""
         batch = STTBatch(
             name="2024년 12월 총무처 회의록",
@@ -24,9 +24,9 @@ class TestSTTBatchModel:
             priority="high",
             created_by="admin"
         )
-        db.add(batch)
-        await db.commit()
-        await db.refresh(batch)
+        db_session.add(batch)
+        await db_session.commit()
+        await db_session.refresh(batch)
 
         assert batch.id is not None
         assert batch.name == "2024년 12월 총무처 회의록"
@@ -34,7 +34,7 @@ class TestSTTBatchModel:
         assert batch.total_files == 5000000
 
     @pytest.mark.asyncio
-    async def test_create_batch_with_invalid_path(self, db: AsyncSession):
+    async def test_create_batch_with_invalid_path(self, db_session: AsyncSession):
         """잘못된 파일 경로로 배치 생성 시 실패 (Path Traversal 방지)"""
         from app.services.stt_service import STTService
 
@@ -50,7 +50,7 @@ class TestSTTBatchModel:
             )
 
     @pytest.mark.asyncio
-    async def test_batch_progress_calculation(self, db: AsyncSession):
+    async def test_batch_progress_calculation(self, db_session: AsyncSession):
         """진행률 계산 정확도 테스트"""
         batch = STTBatch(
             name="테스트 배치",
@@ -59,9 +59,9 @@ class TestSTTBatchModel:
             status="processing",
             created_by="admin"
         )
-        db.add(batch)
-        await db.commit()
-        await db.refresh(batch)
+        db_session.add(batch)
+        await db_session.commit()
+        await db_session.refresh(batch)
 
         # 500개 전사 완료
         for i in range(500):
@@ -87,7 +87,7 @@ class TestSTTTranscription:
     """STT 전사 모델 테스트"""
 
     @pytest.mark.asyncio
-    async def test_create_transcription_with_valid_data(self, db: AsyncSession):
+    async def test_create_transcription_with_valid_data(self, db_session: AsyncSession):
         """정상 데이터로 전사 생성 테스트"""
         # 배치 먼저 생성
         batch = STTBatch(
@@ -97,9 +97,9 @@ class TestSTTTranscription:
             status="processing",
             created_by="admin"
         )
-        db.add(batch)
-        await db.commit()
-        await db.refresh(batch)
+        db_session.add(batch)
+        await db_session.commit()
+        await db_session.refresh(batch)
 
         # 전사 생성
         transcription = STTTranscription(
@@ -123,7 +123,7 @@ class TestSTTTranscription:
         assert transcription.status == "success"
 
     @pytest.mark.asyncio
-    async def test_transcription_with_speaker_diarization(self, db: AsyncSession):
+    async def test_transcription_with_speaker_diarization(self, db_session: AsyncSession):
         """화자 분리 데이터가 포함된 전사 테스트"""
         batch = STTBatch(
             name="테스트 배치",
@@ -132,9 +132,9 @@ class TestSTTTranscription:
             status="processing",
             created_by="admin"
         )
-        db.add(batch)
-        await db.commit()
-        await db.refresh(batch)
+        db_session.add(batch)
+        await db_session.commit()
+        await db_session.refresh(batch)
 
         # 화자 분리 정보 포함
         speaker_labels = {
@@ -167,7 +167,7 @@ class TestSTTSummary:
     """STT 요약 모델 테스트"""
 
     @pytest.mark.asyncio
-    async def test_create_summary_with_llm(self, db: AsyncSession):
+    async def test_create_summary_with_llm(self, db_session: AsyncSession):
         """LLM으로 요약 생성 테스트"""
         # 배치 및 전사 먼저 생성
         batch = STTBatch(
@@ -216,7 +216,7 @@ class TestSTTEmailLog:
     """STT 이메일 로그 모델 테스트"""
 
     @pytest.mark.asyncio
-    async def test_email_validation(self, db: AsyncSession):
+    async def test_email_validation(self, db_session: AsyncSession):
         """이메일 주소 검증 테스트 (Email Injection 방지)"""
         from app.services.email_service import EmailService
 
@@ -237,7 +237,7 @@ class TestSTTEmailLog:
             assert email_service.validate_email(bad_email) is False
 
     @pytest.mark.asyncio
-    async def test_email_send_tracking(self, db: AsyncSession):
+    async def test_email_send_tracking(self, db_session: AsyncSession):
         """이메일 송출 추적 테스트"""
         # 요약 생성
         batch = STTBatch(
@@ -295,7 +295,7 @@ class TestSecurityValidation:
     """시큐어 코딩 검증 테스트"""
 
     @pytest.mark.asyncio
-    async def test_sql_injection_prevention(self, db: AsyncSession):
+    async def test_sql_injection_prevention(self, db_session: AsyncSession):
         """SQL Injection 방어 테스트"""
         from app.services.stt_service import STTService
 
@@ -307,14 +307,14 @@ class TestSecurityValidation:
         # 정상적으로 파라미터화된 쿼리 사용 시 안전
         batches = await stt_service.search_batches(
             name=malicious_input,
-            db=db
+            db=db_session
         )
 
         # 테이블이 삭제되지 않고 빈 결과 반환
         assert batches == []
 
     @pytest.mark.asyncio
-    async def test_path_traversal_prevention(self, db: AsyncSession):
+    async def test_path_traversal_prevention(self, db_session: AsyncSession):
         """Path Traversal 방어 테스트"""
         from app.services.stt_service import STTService
 
@@ -339,7 +339,7 @@ class TestSecurityValidation:
                 )
 
     @pytest.mark.asyncio
-    async def test_file_size_limit(self, db: AsyncSession):
+    async def test_file_size_limit(self, db_session: AsyncSession):
         """파일 크기 제한 테스트 (DoS 방지)"""
         from app.services.stt_service import STTService
 
