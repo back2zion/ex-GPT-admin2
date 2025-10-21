@@ -4,6 +4,7 @@ STT 서비스 레이어
 """
 import os
 import re
+import glob
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 from sqlalchemy import select, func
@@ -112,6 +113,56 @@ class STTService:
             )
         return True
 
+    def count_audio_files(self, source_path: str, file_pattern: str = "*.mp3") -> int:
+        """
+        경로에서 음성 파일 개수 세기
+
+        Args:
+            source_path: 스캔할 경로
+            file_pattern: 파일 패턴 (예: *.mp3, *.wav)
+
+        Returns:
+            int: 매칭되는 파일 개수
+
+        Security:
+            - 경로 검증 완료된 후 호출해야 함
+            - 디렉토리만 스캔 (심볼릭 링크 제외)
+        """
+        # S3, MinIO 경로는 실제 스캔 불가 (0 반환)
+        if source_path.startswith(('s3://', 'minio://')):
+            # TODO: S3/MinIO SDK를 사용한 파일 리스팅 구현
+            return 0
+
+        # 로컬 파일 시스템 경로
+        path_obj = Path(source_path)
+
+        # 경로 존재 확인
+        if not path_obj.exists():
+            return 0
+
+        if not path_obj.is_dir():
+            return 0
+
+        # glob 패턴으로 파일 검색 (재귀적)
+        try:
+            # **를 사용하여 모든 하위 디렉토리 재귀 검색
+            pattern = str(path_obj / "**" / file_pattern)
+            files = glob.glob(pattern, recursive=True)
+
+            # 실제 파일만 카운트 (디렉토리, 심볼릭 링크 제외)
+            count = 0
+            for file_path in files:
+                file_obj = Path(file_path)
+                if file_obj.is_file() and not file_obj.is_symlink():
+                    # 허용된 확장자인지 확인
+                    if file_obj.suffix.lower() in self.ALLOWED_EXTENSIONS:
+                        count += 1
+
+            return count
+        except (PermissionError, OSError) as e:
+            # 권한 없거나 I/O 에러 시 0 반환
+            return 0
+
     async def create_batch(
         self,
         name: str,
@@ -158,12 +209,16 @@ class STTService:
                 if not email_service.validate_email(email):
                     raise ValueError(f"Invalid email address: '{email}'")
 
+        # 파일 개수 스캔 (보안 검증 완료 후)
+        total_files = self.count_audio_files(source_path, file_pattern)
+
         # 배치 객체 생성
         batch = STTBatch(
             name=name,
             description=description,
             source_path=source_path,
             file_pattern=file_pattern,
+            total_files=total_files,
             priority=priority,
             status="pending",
             created_by=created_by,
