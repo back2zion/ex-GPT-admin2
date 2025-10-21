@@ -208,6 +208,116 @@ async def get_hourly_pattern(
     return {"items": items}
 
 
+@router.get("/weekly-trend")
+async def get_weekly_trend(
+    start: date = Query(..., description="시작 날짜 (YYYY-MM-DD)"),
+    end: date = Query(..., description="종료 날짜 (YYYY-MM-DD)"),
+    db: AsyncSession = Depends(get_db),
+    principal: Principal = Depends(get_principal)
+):
+    """
+    주별 사용 추이
+
+    **보안**: 인증 필수, 날짜 범위 검증
+
+    **반환값**:
+    - items: 주별 통계 목록
+      - week: 주차 (YYYY-WW)
+      - question_count: 질문 수
+      - avg_response_time: 평균 응답 시간 (ms)
+    """
+    # 날짜 범위 검증
+    if end < start:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="종료 날짜는 시작 날짜보다 늦어야 합니다")
+
+    start_datetime = datetime.combine(start, datetime.min.time())
+    end_datetime = datetime.combine(end, datetime.max.time())
+
+    # 주별 질문 수 및 평균 응답 시간
+    query = select(
+        func.to_char(UsageHistory.created_at, 'IYYY-IW').label('week'),
+        func.count(UsageHistory.id).label('question_count'),
+        func.avg(UsageHistory.response_time).label('avg_response_time')
+    ).filter(
+        UsageHistory.created_at >= start_datetime,
+        UsageHistory.created_at <= end_datetime
+    ).group_by(
+        func.to_char(UsageHistory.created_at, 'IYYY-IW')
+    ).order_by(
+        func.to_char(UsageHistory.created_at, 'IYYY-IW').asc()
+    )
+
+    result = await db.execute(query)
+    rows = result.fetchall()
+
+    items = [
+        {
+            "week": row.week,
+            "question_count": row.question_count or 0,
+            "avg_response_time": round(float(row.avg_response_time), 2) if row.avg_response_time else 0
+        }
+        for row in rows
+    ]
+
+    return {"items": items}
+
+
+@router.get("/monthly-trend")
+async def get_monthly_trend(
+    start: date = Query(..., description="시작 날짜 (YYYY-MM-DD)"),
+    end: date = Query(..., description="종료 날짜 (YYYY-MM-DD)"),
+    db: AsyncSession = Depends(get_db),
+    principal: Principal = Depends(get_principal)
+):
+    """
+    월별 사용 추이
+
+    **보안**: 인증 필수, 날짜 범위 검증
+
+    **반환값**:
+    - items: 월별 통계 목록
+      - month: 월 (YYYY-MM)
+      - question_count: 질문 수
+      - avg_response_time: 평균 응답 시간 (ms)
+    """
+    # 날짜 범위 검증
+    if end < start:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="종료 날짜는 시작 날짜보다 늦어야 합니다")
+
+    start_datetime = datetime.combine(start, datetime.min.time())
+    end_datetime = datetime.combine(end, datetime.max.time())
+
+    # 월별 질문 수 및 평균 응답 시간
+    query = select(
+        func.to_char(UsageHistory.created_at, 'YYYY-MM').label('month'),
+        func.count(UsageHistory.id).label('question_count'),
+        func.avg(UsageHistory.response_time).label('avg_response_time')
+    ).filter(
+        UsageHistory.created_at >= start_datetime,
+        UsageHistory.created_at <= end_datetime
+    ).group_by(
+        func.to_char(UsageHistory.created_at, 'YYYY-MM')
+    ).order_by(
+        func.to_char(UsageHistory.created_at, 'YYYY-MM').asc()
+    )
+
+    result = await db.execute(query)
+    rows = result.fetchall()
+
+    items = [
+        {
+            "month": row.month,
+            "question_count": row.question_count or 0,
+            "avg_response_time": round(float(row.avg_response_time), 2) if row.avg_response_time else 0
+        }
+        for row in rows
+    ]
+
+    return {"items": items}
+
+
 @router.get("/top-questions")
 async def get_top_questions(
     limit: int = Query(10, ge=1, le=100, description="조회할 개수"),

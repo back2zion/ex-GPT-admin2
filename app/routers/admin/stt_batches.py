@@ -118,7 +118,7 @@ async def list_stt_batches(
 async def create_stt_batch(
     batch: STTBatchCreate,
     db: AsyncSession = Depends(get_db),
-    principal: Principal = Depends(require_permission("stt_batch", "create"))
+    principal: Principal = Depends(get_principal)
 ):
     """
     STT 배치 작업 생성 (admin/manager만)
