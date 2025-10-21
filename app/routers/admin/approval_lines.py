@@ -17,23 +17,61 @@ from cerbos.sdk.model import Principal
 router = APIRouter(prefix="/api/v1/admin/approval-lines", tags=["admin-approval-lines"])
 
 
-@router.get("/", response_model=List[ApprovalLineResponse])
+@router.get("/")
 async def list_approval_lines(
     skip: int = Query(0, ge=0, description="오프셋"),
     limit: int = Query(100, le=1000, description="최대 개수"),
     search: Optional[str] = Query(None, description="검색어 (이름)"),
+    sort_by: Optional[str] = Query("name", description="정렬 필드"),
+    order: Optional[str] = Query("asc", description="정렬 방향 (asc, desc)"),
     db: AsyncSession = Depends(get_db),
     principal: Principal = Depends(get_principal)
 ):
-    """결재라인 목록 조회"""
+    """
+    결재라인 목록 조회 (Pagination 및 Sorting 지원)
+
+    Returns:
+        {
+            "items": [...],
+            "total": N,
+            "page": 1,
+            "limit": 100
+        }
+    """
+    from sqlalchemy import func, asc, desc
+
+    # Base query
     query = select(ApprovalLine)
+    count_query = select(func.count()).select_from(ApprovalLine)
 
+    # Filters
     if search:
-        query = query.filter(ApprovalLine.name.contains(search))
+        search_filter = ApprovalLine.name.contains(search)
+        query = query.filter(search_filter)
+        count_query = count_query.filter(search_filter)
 
-    query = query.order_by(ApprovalLine.name).offset(skip).limit(limit)
+    # Get total count
+    total_result = await db.execute(count_query)
+    total = total_result.scalar()
+
+    # Sorting
+    sort_column = getattr(ApprovalLine, sort_by, ApprovalLine.name)
+    if order.lower() == "desc":
+        query = query.order_by(desc(sort_column))
+    else:
+        query = query.order_by(asc(sort_column))
+
+    # Pagination
+    query = query.offset(skip).limit(limit)
     result = await db.execute(query)
-    return result.scalars().all()
+    items = result.scalars().all()
+
+    return {
+        "items": items,
+        "total": total,
+        "page": (skip // limit) + 1 if limit > 0 else 1,
+        "limit": limit
+    }
 
 
 @router.post("/", response_model=ApprovalLineResponse, status_code=201)

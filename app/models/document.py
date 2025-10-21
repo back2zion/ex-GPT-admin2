@@ -49,11 +49,16 @@ class Document(Base, TimestampMixin):
     file_size = Column(Integer)  # 파일 크기 (bytes)
     mime_type = Column(String(200))  # MIME 타입
 
+    # 카테고리 (학습데이터 관리)
+    category_id = Column(Integer, ForeignKey('categories.id'), nullable=True, index=True)
+
     # 관계
+    category = relationship("Category", back_populates="documents")
     versions = relationship("DocumentVersion", back_populates="document")
     changes = relationship("DocumentChange", back_populates="document")
     permissions = relationship("DocumentPermission", back_populates="document")
     pii_detections = relationship("PIIDetectionResult", back_populates="document")
+    vectors = relationship("DocumentVector", back_populates="document", cascade="all, delete-orphan")
 
 
 class DocumentVersion(Base, TimestampMixin):

@@ -23,34 +23,73 @@ from cerbos.sdk.model import Principal
 router = APIRouter(prefix="/api/v1/admin/document-permissions", tags=["admin-document-permissions"])
 
 
-@router.get("/", response_model=List[DocumentPermissionResponse])
+@router.get("/")
 async def list_document_permissions(
     skip: int = Query(0, ge=0, description="오프셋"),
     limit: int = Query(100, le=1000, description="최대 개수"),
     document_id: Optional[int] = Query(None, description="문서 ID 필터"),
     department_id: Optional[int] = Query(None, description="부서 ID 필터"),
     approval_line_id: Optional[int] = Query(None, description="결재라인 ID 필터"),
+    sort_by: Optional[str] = Query("document_id", description="정렬 필드"),
+    order: Optional[str] = Query("asc", description="정렬 방향 (asc, desc)"),
     db: AsyncSession = Depends(get_db),
     principal: Principal = Depends(get_principal)
 ):
-    """문서 권한 목록 조회"""
+    """
+    문서 권한 목록 조회 (Pagination 및 Sorting 지원)
+
+    Returns:
+        {
+            "items": [...],
+            "total": N,
+            "page": 1,
+            "limit": 100
+        }
+    """
+    from sqlalchemy import func, asc, desc
+
+    # Base query
     query = select(DocumentPermission).options(
         selectinload(DocumentPermission.department),
         selectinload(DocumentPermission.approval_line)
     )
+    count_query = select(func.count()).select_from(DocumentPermission)
 
+    # Filters
     if document_id is not None:
         query = query.filter(DocumentPermission.document_id == document_id)
+        count_query = count_query.filter(DocumentPermission.document_id == document_id)
 
     if department_id is not None:
         query = query.filter(DocumentPermission.department_id == department_id)
+        count_query = count_query.filter(DocumentPermission.department_id == department_id)
 
     if approval_line_id is not None:
         query = query.filter(DocumentPermission.approval_line_id == approval_line_id)
+        count_query = count_query.filter(DocumentPermission.approval_line_id == approval_line_id)
 
-    query = query.order_by(DocumentPermission.document_id).offset(skip).limit(limit)
+    # Get total count
+    total_result = await db.execute(count_query)
+    total = total_result.scalar()
+
+    # Sorting
+    sort_column = getattr(DocumentPermission, sort_by, DocumentPermission.document_id)
+    if order.lower() == "desc":
+        query = query.order_by(desc(sort_column))
+    else:
+        query = query.order_by(asc(sort_column))
+
+    # Pagination
+    query = query.offset(skip).limit(limit)
     result = await db.execute(query)
-    return result.scalars().all()
+    items = result.scalars().all()
+
+    return {
+        "items": items,
+        "total": total,
+        "page": (skip // limit) + 1 if limit > 0 else 1,
+        "limit": limit
+    }
 
 
 @router.post("/", response_model=DocumentPermissionResponse, status_code=201)

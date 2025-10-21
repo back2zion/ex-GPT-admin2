@@ -1,6 +1,8 @@
 from app.models.base import Base
 from app.models.user import User
 from app.models.document import Document, DocumentVersion, DocumentChange
+from app.models.category import Category, ParsingPattern
+from app.models.document_vector import DocumentVector, VectorStatus
 from app.models.usage import UsageHistory
 from app.models.permission import Role, Permission, Department
 from app.models.document_permission import ApprovalLine, DocumentPermission, UserDocumentPermission
@@ -17,6 +19,10 @@ __all__ = [
     "Document",
     "DocumentVersion",
     "DocumentChange",
+    "Category",
+    "ParsingPattern",
+    "DocumentVector",
+    "VectorStatus",
     "UsageHistory",
     "Role",
     "Permission",

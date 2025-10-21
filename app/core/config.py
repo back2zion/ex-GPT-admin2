@@ -50,8 +50,8 @@ class Settings(BaseSettings):
 
     # Qdrant
     QDRANT_HOST: str = "localhost"
-    QDRANT_PORT: int = 6335  # ex-gpt Qdrant port
-    QDRANT_COLLECTION: str = "130825-512-v3"  # Main collection
+    QDRANT_PORT: int = 6335  # ex-gpt Qdrant port (maps to qdrant:6333 inside Docker)
+    QDRANT_COLLECTION: str = "130825-512-v2"  # Main collection (must match ex-gpt-api)
     QDRANT_API_KEY: str = ""  # Optional
 
     # CORS

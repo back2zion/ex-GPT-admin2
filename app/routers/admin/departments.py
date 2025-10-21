@@ -22,29 +22,66 @@ from cerbos.sdk.model import Principal
 router = APIRouter(prefix="/api/v1/admin/departments", tags=["admin-departments"])
 
 
-@router.get("/", response_model=List[DepartmentResponse])
+@router.get("/")
 async def list_departments(
     skip: int = Query(0, ge=0, description="오프셋"),
     limit: int = Query(100, le=1000, description="최대 개수"),
     search: Optional[str] = Query(None, description="검색어 (이름/코드)"),
     parent_id: Optional[int] = Query(None, description="상위 부서 ID"),
+    sort_by: Optional[str] = Query("code", description="정렬 필드 (id, code, name, created_at)"),
+    order: Optional[str] = Query("asc", description="정렬 방향 (asc, desc)"),
     db: AsyncSession = Depends(get_db),
     principal: Principal = Depends(get_principal)
 ):
-    """부서 목록 조회"""
-    query = select(Department)
+    """
+    부서 목록 조회 (Pagination 및 Sorting 지원)
 
+    Returns:
+        {
+            "items": [...],
+            "total": N,
+            "page": 1,
+            "limit": 100
+        }
+    """
+    from sqlalchemy import func, asc, desc
+
+    # Base query
+    query = select(Department)
+    count_query = select(func.count()).select_from(Department)
+
+    # Filters
     if search:
-        query = query.filter(
-            (Department.name.contains(search)) | (Department.code.contains(search))
-        )
+        search_filter = (Department.name.contains(search)) | (Department.code.contains(search))
+        query = query.filter(search_filter)
+        count_query = count_query.filter(search_filter)
 
     if parent_id is not None:
         query = query.filter(Department.parent_id == parent_id)
+        count_query = count_query.filter(Department.parent_id == parent_id)
 
-    query = query.order_by(Department.code).offset(skip).limit(limit)
+    # Get total count
+    total_result = await db.execute(count_query)
+    total = total_result.scalar()
+
+    # Sorting
+    sort_column = getattr(Department, sort_by, Department.code)
+    if order.lower() == "desc":
+        query = query.order_by(desc(sort_column))
+    else:
+        query = query.order_by(asc(sort_column))
+
+    # Pagination
+    query = query.offset(skip).limit(limit)
     result = await db.execute(query)
-    return result.scalars().all()
+    items = result.scalars().all()
+
+    return {
+        "items": items,
+        "total": total,
+        "page": (skip // limit) + 1 if limit > 0 else 1,
+        "limit": limit
+    }
 
 
 @router.get("/tree", response_model=List[DepartmentTreeResponse])

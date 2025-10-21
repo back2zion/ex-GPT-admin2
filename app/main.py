@@ -22,7 +22,9 @@ from app.routers.admin import (
     pii_detections,
     ip_whitelist,
     access_requests,
-    stats
+    stats,
+    categories,
+    documents
 )
 from app.routers import chat_proxy
 import os
@@ -73,6 +75,10 @@ app.include_router(user_document_permissions.router)
 app.include_router(pii_detections.router)
 app.include_router(ip_whitelist.router)
 app.include_router(access_requests.router)
+
+# Admin 라우터 등록 (Vector Data Management - 학습데이터 관리)
+app.include_router(categories.router)
+app.include_router(documents.router)
 
 # 정적 파일 제공 (React 관리자 페이지)
 admin_path = "/home/aigen/html/admin"

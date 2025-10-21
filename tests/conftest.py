@@ -42,14 +42,12 @@ def event_loop() -> Generator:
 
 @pytest_asyncio.fixture(scope="function")
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
-    """Create test database session"""
+    """Create test database session with automatic rollback"""
     # Note: Using existing admin_db, tables already created via Alembic
-    # No need to drop/create tables in tests
-
     # Create session
     async with test_async_session() as session:
         yield session
-        # Rollback any changes made during test
+        # Rollback any changes made during test to isolate tests
         await session.rollback()
 
 

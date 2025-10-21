@@ -281,3 +281,69 @@ async def get_session_messages(
             for msg in messages
         ]
     }
+
+
+class STTConversationRequest(BaseModel):
+    """STT 대화 저장 요청"""
+    user_id: str
+    session_id: str
+    question: str  # "STT 전사해줘: filename.mp3"
+    answer: str  # AI 분석 회의록
+    thinking_content: Optional[str] = None  # 음성 전사 내용
+    response_time: Optional[float] = None
+    usage_metadata: Optional[Dict[str, Any]] = None
+
+
+@router.post("/stt/save_conversation")
+async def save_stt_conversation(
+    request: STTConversationRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    STT 대화 내역을 데이터베이스에 저장
+    layout.html의 processVoiceToChat()에서 호출
+    """
+    try:
+        # 대화 제목 생성 (첫 대화인 경우)
+        query = select(UsageHistory).filter(
+            UsageHistory.session_id == request.session_id
+        ).limit(1)
+        result = await db.execute(query)
+        existing = result.scalar_one_or_none()
+
+        conversation_title = None
+        if not existing:
+            # STT 요청임을 명시한 제목
+            conversation_title = f"🎤 {request.question[:50]}"
+
+        # 새 레코드 생성
+        usage_record = UsageHistory(
+            user_id=request.user_id,
+            session_id=request.session_id,
+            conversation_title=conversation_title,
+            question=request.question,
+            answer=request.answer,
+            thinking_content=request.thinking_content,
+            response_time=request.response_time,
+            model_name="ex-GPT-STT",  # STT임을 명시
+            usage_metadata=request.usage_metadata,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+
+        db.add(usage_record)
+        await db.commit()
+        await db.refresh(usage_record)
+
+        print(f"✅ STT conversation saved to DB: id={usage_record.id}, session_id={request.session_id}")
+
+        return {
+            "success": True,
+            "id": usage_record.id,
+            "message": "STT 대화가 저장되었습니다."
+        }
+
+    except Exception as e:
+        print(f"❌ Failed to save STT conversation to DB: {e}")
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"STT 대화 저장 실패: {str(e)}")
