@@ -9,12 +9,12 @@ Security:
 """
 import os
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 
-router = APIRouter(prefix="/file-browser", tags=["File Browser"])
+router = APIRouter(prefix="/api/v1/admin/file-browser", tags=["File Browser"])
 
 
 class DirectoryEntry(BaseModel):
@@ -31,6 +31,13 @@ class DirectoryListResponse(BaseModel):
     current_path: str
     parent_path: Optional[str]
     entries: List[DirectoryEntry]
+
+
+class RootDirectory(BaseModel):
+    """루트 디렉토리 정보"""
+    path: str
+    name: str
+    exists: bool
 
 
 # 보안: 허용된 루트 디렉토리 (화이트리스트)
@@ -107,7 +114,7 @@ def validate_path(path: str) -> Path:
     return path_obj
 
 
-@router.get("/roots", response_model=List[Dict[str, str]])
+@router.get("/roots", response_model=List[RootDirectory])
 async def get_root_directories():
     """
     허용된 루트 디렉토리 목록 조회

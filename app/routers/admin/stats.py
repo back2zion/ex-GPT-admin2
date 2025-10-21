@@ -5,7 +5,7 @@ TDD GREEN 단계: 테스트를 통과하는 최소 코드 작성
 """
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, extract
+from sqlalchemy import select, func, extract, literal_column
 from typing import List, Optional
 from datetime import date, datetime, timedelta
 import httpx
@@ -235,17 +235,18 @@ async def get_weekly_trend(
     end_datetime = datetime.combine(end, datetime.max.time())
 
     # 주별 질문 수 및 평균 응답 시간
+    # Note: literal_column() avoids asyncpg parameter binding issues with to_char()
     query = select(
-        func.to_char(UsageHistory.created_at, 'IYYY-IW').label('week'),
+        literal_column("to_char(usage_history.created_at, 'IYYY-IW')").label('week'),
         func.count(UsageHistory.id).label('question_count'),
         func.avg(UsageHistory.response_time).label('avg_response_time')
     ).filter(
         UsageHistory.created_at >= start_datetime,
         UsageHistory.created_at <= end_datetime
     ).group_by(
-        func.to_char(UsageHistory.created_at, 'IYYY-IW')
+        literal_column("to_char(usage_history.created_at, 'IYYY-IW')")
     ).order_by(
-        func.to_char(UsageHistory.created_at, 'IYYY-IW').asc()
+        literal_column("to_char(usage_history.created_at, 'IYYY-IW')")
     )
 
     result = await db.execute(query)
@@ -290,17 +291,18 @@ async def get_monthly_trend(
     end_datetime = datetime.combine(end, datetime.max.time())
 
     # 월별 질문 수 및 평균 응답 시간
+    # Note: literal_column() avoids asyncpg parameter binding issues with to_char()
     query = select(
-        func.to_char(UsageHistory.created_at, 'YYYY-MM').label('month'),
+        literal_column("to_char(usage_history.created_at, 'YYYY-MM')").label('month'),
         func.count(UsageHistory.id).label('question_count'),
         func.avg(UsageHistory.response_time).label('avg_response_time')
     ).filter(
         UsageHistory.created_at >= start_datetime,
         UsageHistory.created_at <= end_datetime
     ).group_by(
-        func.to_char(UsageHistory.created_at, 'YYYY-MM')
+        literal_column("to_char(usage_history.created_at, 'YYYY-MM')")
     ).order_by(
-        func.to_char(UsageHistory.created_at, 'YYYY-MM').asc()
+        literal_column("to_char(usage_history.created_at, 'YYYY-MM')")
     )
 
     result = await db.execute(query)
