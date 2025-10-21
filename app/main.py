@@ -24,7 +24,8 @@ from app.routers.admin import (
     access_requests,
     stats,
     categories,
-    documents
+    documents,
+    stt_batches
 )
 from app.routers import chat_proxy
 import os
@@ -79,6 +80,9 @@ app.include_router(access_requests.router)
 # Admin 라우터 등록 (Vector Data Management - 학습데이터 관리)
 app.include_router(categories.router)
 app.include_router(documents.router)
+
+# Admin 라우터 등록 (STT 음성 전사 시스템)
+app.include_router(stt_batches.router)
 
 # 정적 파일 제공 (React 관리자 페이지)
 admin_path = "/home/aigen/html/admin"

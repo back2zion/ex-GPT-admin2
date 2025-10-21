@@ -12,6 +12,7 @@ from app.models.notice import Notice
 from app.models.satisfaction import SatisfactionSurvey
 from app.models.pii_detection import PIIDetectionResult, PIIStatus
 from app.models.ip_whitelist import IPWhitelist
+from app.models.stt import STTBatch, STTTranscription, STTSummary, STTEmailLog
 
 __all__ = [
     "Base",
@@ -38,4 +39,8 @@ __all__ = [
     "PIIDetectionResult",
     "PIIStatus",
     "IPWhitelist",
+    "STTBatch",
+    "STTTranscription",
+    "STTSummary",
+    "STTEmailLog",
 ]
