@@ -34,13 +34,11 @@ class DirectoryListResponse(BaseModel):
 
 
 # 보안: 허용된 루트 디렉토리 (화이트리스트)
-# Windows와 Linux 경로 모두 지원
+# 실제 서버 경로 (리눅스 서버: ui.datastreams.co.kr)
 ALLOWED_ROOT_DIRECTORIES = [
-    "/data/audio",           # Linux 예시
-    "/mnt/audio",            # Linux 마운트 포인트
-    "C:\\AudioFiles",        # Windows 예시
-    "D:\\Data\\Audio",       # Windows 예시
-    "\\\\server\\audio",     # UNC 네트워크 공유
+    "/data/audio",           # STT 음성 파일 저장소 (3.7TB)
+    "/data/images",          # 이미지 파일
+    "/tmp/test-audio",       # 테스트용 (개발 환경)
 ]
 
 

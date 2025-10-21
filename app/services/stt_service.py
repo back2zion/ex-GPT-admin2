@@ -16,13 +16,13 @@ class STTService:
     """STT 배치 처리 서비스"""
 
     # 보안: 허용된 파일 경로 패턴 (화이트리스트)
-    # Windows와 Linux 경로 모두 지원, 한글 파일명도 지원
+    # 실제 서버 경로 기반 (리눅스 서버: ui.datastreams.co.kr)
     ALLOWED_PATH_PATTERNS = [
         r'^s3://[\w\-_/\.]+$',                                    # S3 경로
         r'^minio://[\w\-_/\.]+$',                                 # MinIO 경로
-        r'^/[\w\-_/\. ㄀-ㅣ가-힣]+$',                              # Linux 절대 경로 (한글 지원)
-        r'^[A-Za-z]:[/\\][\w\-_/\\. ㄀-ㅣ가-힣()]+$',            # Windows 로컬 경로 (C:\, D:\ 등, 한글 지원)
-        r'^\\\\[\w\-_.]+\\[\w\-_/\\. ㄀-ㅣ가-힣()]+$',           # UNC 네트워크 경로 (\\server\share\, 한글 지원)
+        r'^/data/audio[\w\-_/\. ㄀-ㅣ가-힣()]*$',                 # /data/audio 하위 경로 (한글 지원)
+        r'^/data/images[\w\-_/\. ㄀-ㅣ가-힣()]*$',                # /data/images 하위 경로
+        r'^/tmp/test-audio[\w\-_/\. ㄀-ㅣ가-힣()]*$',             # 테스트용
     ]
 
     # 보안: 허용된 파일 확장자 (화이트리스트)

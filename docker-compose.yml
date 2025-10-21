@@ -42,6 +42,9 @@ services:
       - /usr/lib/libnvidia-ml.so.1:/usr/lib/libnvidia-ml.so.1:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /usr/bin/docker:/usr/bin/docker:ro
+      # STT 음성 파일 저장소 (읽기/쓰기)
+      - /data/audio:/data/audio:rw
+      - /data/images:/data/images:ro
     deploy:
       resources:
         reservations:
