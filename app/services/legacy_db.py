@@ -74,7 +74,7 @@ class LegacyDBService:
         레거시 DB에서 모든 문서 조회
 
         Returns:
-            List[Dict]: 문서 목록
+            List[Dict]: 문서 목록 (JSON 직렬화 가능)
         """
         try:
             pool = await self.get_pool()
@@ -91,7 +91,15 @@ class LegacyDBService:
                     ORDER BY updated_at DESC
                 """)
 
-                return [dict(row) for row in rows]
+                # datetime을 str로 변환하여 JSON 직렬화 가능하게 만듦
+                result = []
+                for row in rows:
+                    doc = dict(row)
+                    # datetime을 ISO 형식 문자열로 변환
+                    if doc.get('updated_at'):
+                        doc['updated_at'] = doc['updated_at'].isoformat()
+                    result.append(doc)
+                return result
         except Exception as e:
             logger.error(f"Failed to fetch documents from legacy DB: {e}")
             return []
@@ -104,7 +112,7 @@ class LegacyDBService:
             legacy_id: 레거시 문서 ID
 
         Returns:
-            Optional[Dict]: 문서 정보 또는 None
+            Optional[Dict]: 문서 정보 또는 None (JSON 직렬화 가능)
         """
         try:
             pool = await self.get_pool()
@@ -120,7 +128,13 @@ class LegacyDBService:
                     WHERE id = $1
                 """, legacy_id)
 
-                return dict(row) if row else None
+                if row:
+                    doc = dict(row)
+                    # datetime을 ISO 형식 문자열로 변환
+                    if doc.get('updated_at'):
+                        doc['updated_at'] = doc['updated_at'].isoformat()
+                    return doc
+                return None
         except Exception as e:
             logger.error(f"Failed to fetch document {legacy_id} from legacy DB: {e}")
             return None

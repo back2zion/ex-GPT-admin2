@@ -35,6 +35,14 @@ class User(Base, TimestampMixin):
     allowed_model = Column(String(100), nullable=True, comment="허용된 모델명")
     last_login_at = Column(DateTime(timezone=True), nullable=True, comment="마지막 로그인 시간")
 
+    # 조직 및 인사 정보
+    employee_number = Column(String(50), unique=True, index=True, comment="사번")
+    position = Column(String(50), comment="직급 (예: 사원, 대리, 과장, 차장, 부장)")
+    rank = Column(String(50), comment="직위 (예: 팀원, 팀장, 본부장)")
+    job_category = Column(String(50), comment="직종 (예: 사무, 기술, 관리)")
+    team = Column(String(100), comment="팀명/부서명")
+    join_year = Column(Integer, comment="입사년도")
+
     # 관계 (역참조)
     access_requests = relationship("AccessRequest", foreign_keys="AccessRequest.user_id", back_populates="user")
     document_permissions = relationship("UserDocumentPermission", back_populates="user")

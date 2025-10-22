@@ -393,7 +393,7 @@ class TestUsageHistorySecurity:
     @pytest.mark.asyncio
     async def test_pii_masking_in_response(
         self,
-        client: AsyncClient,
+        authenticated_client: AsyncClient,
         db_session: AsyncSession
     ):
         """
@@ -411,11 +411,11 @@ class TestUsageHistorySecurity:
             "response_time": 1000.0
         }
 
-        create_response = await client.post("/api/v1/admin/usage/log", json=usage_data)
+        create_response = await authenticated_client.post("/api/v1/admin/usage/log", json=usage_data)
         usage_id = create_response.json()["id"]
 
         # When
-        response = await client.get(f"/api/v1/admin/usage/{usage_id}")
+        response = await authenticated_client.get(f"/api/v1/admin/usage/{usage_id}")
 
         # Then
         assert response.status_code == 200

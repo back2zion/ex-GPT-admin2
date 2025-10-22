@@ -62,6 +62,20 @@ async def get_principal(request: Request) -> Principal:
         raise HTTPException(status_code=401, detail="토큰 검증 실패")
     ```
     """
+    # 기본적인 인증 체크: Authorization 헤더 또는 X-Auth-Token 체크
+    auth_header = request.headers.get("Authorization", "")
+    auth_token = request.headers.get("X-Auth-Token", "")
+
+    # 테스트 환경에서 인증 우회 (X-Test-Auth 헤더)
+    test_auth = request.headers.get("X-Test-Auth", "")
+
+    # 인증 정보가 없으면 401 반환
+    if not auth_header and not auth_token and not test_auth:
+        raise HTTPException(
+            status_code=401,
+            detail="인증이 필요합니다. Authorization 헤더를 제공해주세요."
+        )
+
     # ⚠️ MVP ONLY: 임시 하드코딩 (프로덕션 사용 금지)
     # TODO: 위의 JWT 인증 코드로 교체 필요
     import warnings

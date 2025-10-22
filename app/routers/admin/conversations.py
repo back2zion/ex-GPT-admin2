@@ -1,14 +1,16 @@
 """
 대화내역 조회 API 엔드포인트
 """
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, desc
+from sqlalchemy.orm import joinedload
 from datetime import date, datetime
 from typing import List, Optional
 from pydantic import BaseModel
 
-from app.models import UsageHistory
+from app.models.usage import UsageHistory
+from app.models.user import User
 from app.core.database import get_db
 from app.dependencies import get_principal
 from cerbos.sdk.model import Principal
@@ -17,21 +19,28 @@ router = APIRouter(prefix="/api/v1/admin/conversations", tags=["admin-conversati
 
 
 class ConversationListItem(BaseModel):
-    """대화내역 목록 아이템"""
+    """대화내역 목록 아이템 (사용자 정보 포함)"""
     id: int
     user_id: str
+
+    # 사용자 조직 정보
+    position: Optional[str] = None  # 직급
+    rank: Optional[str] = None      # 직위
+    team: Optional[str] = None      # 팀명
+    join_year: Optional[int] = None # 입사년도
+
+    # 대화 내용
     question: str
     answer: Optional[str] = None
     thinking_content: Optional[str] = None
     response_time: Optional[float] = None
-    created_at: datetime
 
-    # 질문 내용 미리보기 (최대 100자)
-    @property
-    def question_preview(self) -> str:
-        if len(self.question) > 100:
-            return self.question[:100] + "..."
-        return self.question
+    # 분류 정보
+    main_category: Optional[str] = None  # 대분류
+    sub_category: Optional[str] = None   # 소분류
+
+    # 일시
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -44,11 +53,26 @@ class ConversationDetail(BaseModel):
     """대화내역 상세"""
     id: int
     user_id: str
+
+    # 사용자 조직 정보
+    position: Optional[str] = None
+    rank: Optional[str] = None
+    team: Optional[str] = None
+    join_year: Optional[int] = None
+    department: Optional[str] = None  # 부서명
+
+    # 대화 정보
     session_id: Optional[str] = None
     question: str
     answer: Optional[str] = None
     thinking_content: Optional[str] = None
     response_time: Optional[float] = None
+
+    # 분류 정보
+    main_category: Optional[str] = None
+    sub_category: Optional[str] = None
+
+    # 추가 정보
     model_name: Optional[str] = None
     referenced_documents: Optional[List[str]] = None
     usage_metadata: Optional[dict] = None
@@ -77,20 +101,49 @@ class ConversationListResponse(BaseModel):
 async def get_conversations_simple(
     start: Optional[date] = Query(None, description="시작일 (YYYY-MM-DD)"),
     end: Optional[date] = Query(None, description="종료일 (YYYY-MM-DD)"),
+    main_category: Optional[str] = Query(None, description="대분류 (경영분야, 기술분야, 경영/기술 외, 미분류)"),
+    sub_category: Optional[str] = Query(None, description="소분류"),
     page: int = Query(1, ge=1, description="페이지 번호"),
     limit: int = Query(50, ge=1, le=10000, description="페이지당 항목 수"),
     sort_by: Optional[str] = Query("created_at", description="정렬 필드"),
     order: Optional[str] = Query("desc", description="정렬 방향 (asc/desc)"),
     db: AsyncSession = Depends(get_db)
 ):
-    """대화내역 목록 조회 (인증 불필요)"""
+    """
+    대화내역 목록 조회 (인증 불필요)
+
+    대분류/소분류 필터링 지원:
+    - 경영분야: 기획/감사, 관리/홍보, 영업/디지털, 복리후생, 기타
+    - 기술분야: 도로/안전, 교통, 건설, 신사업, 기타
+    - 경영/기술 외: 기타
+    - 미분류
+    """
+    from sqlalchemy.orm import selectinload
+
     conditions = []
 
+    # 날짜 필터
     if start:
         conditions.append(func.date(UsageHistory.created_at) >= start)
     if end:
         conditions.append(func.date(UsageHistory.created_at) <= end)
 
+    # 대분류 필터
+    if main_category and main_category != "전체":
+        if main_category == "미분류":
+            conditions.append(
+                (UsageHistory.main_category.is_(None)) |
+                (UsageHistory.main_category == "") |
+                (UsageHistory.main_category == "미분류")
+            )
+        else:
+            conditions.append(UsageHistory.main_category == main_category)
+
+    # 소분류 필터
+    if sub_category and sub_category != "전체":
+        conditions.append(UsageHistory.sub_category == sub_category)
+
+    # 전체 개수 조회
     count_query = select(func.count(UsageHistory.id))
     if conditions:
         count_query = count_query.filter(and_(*conditions))
@@ -98,15 +151,25 @@ async def get_conversations_simple(
     count_result = await db.execute(count_query)
     total = count_result.scalar() or 0
 
+    # 페이지네이션 계산
     offset = (page - 1) * limit
     total_pages = (total + limit - 1) // limit if limit > 0 else 0
 
-    # 정렬 처리
-    query = select(UsageHistory)
+    # 목록 조회 (User와 LEFT JOIN)
+    query = select(
+        UsageHistory,
+        User.position,
+        User.rank,
+        User.team,
+        User.join_year
+    ).outerjoin(
+        User, UsageHistory.user_id == User.username
+    )
+
     if conditions:
         query = query.filter(and_(*conditions))
 
-    # 정렬 필드 매핑
+    # 정렬 처리
     sort_column = getattr(UsageHistory, sort_by, UsageHistory.created_at)
     if order.lower() == "asc":
         query = query.order_by(sort_column.asc())
@@ -116,10 +179,31 @@ async def get_conversations_simple(
     query = query.offset(offset).limit(limit)
 
     result = await db.execute(query)
-    items = result.scalars().all()
+    rows = result.all()
+
+    # ConversationListItem으로 변환
+    items = []
+    for row in rows:
+        usage_history, position, rank, team, join_year = row
+        item_dict = {
+            "id": usage_history.id,
+            "user_id": usage_history.user_id,
+            "position": position,
+            "rank": rank,
+            "team": team,
+            "join_year": join_year,
+            "question": usage_history.question,
+            "answer": usage_history.answer,
+            "thinking_content": usage_history.thinking_content,
+            "response_time": usage_history.response_time,
+            "main_category": usage_history.main_category,
+            "sub_category": usage_history.sub_category,
+            "created_at": usage_history.created_at,
+        }
+        items.append(ConversationListItem(**item_dict))
 
     return ConversationListResponse(
-        items=[ConversationListItem.model_validate(item) for item in items],
+        items=items,
         total=total,
         page=page,
         limit=limit,
@@ -133,70 +217,80 @@ async def get_conversation_detail_simple(
     db: AsyncSession = Depends(get_db)
 ):
     """대화내역 상세 조회 (인증 불필요)"""
-    query = select(UsageHistory).filter(UsageHistory.id == conversation_id)
-    result = await db.execute(query)
-    conversation = result.scalar_one_or_none()
+    # User와 LEFT JOIN하여 조회
+    query = select(
+        UsageHistory,
+        User.position,
+        User.rank,
+        User.team,
+        User.join_year,
+        User.full_name
+    ).outerjoin(
+        User, UsageHistory.user_id == User.username
+    ).filter(UsageHistory.id == conversation_id)
 
-    if not conversation:
-        from fastapi import HTTPException
+    result = await db.execute(query)
+    row = result.first()
+
+    if not row:
         raise HTTPException(status_code=404, detail="대화내역을 찾을 수 없습니다.")
 
-    return ConversationDetail.model_validate(conversation)
+    usage_history, position, rank, team, join_year, full_name = row
+
+    detail_dict = {
+        "id": usage_history.id,
+        "user_id": usage_history.user_id,
+        "position": position,
+        "rank": rank,
+        "team": team,
+        "join_year": join_year,
+        "department": full_name,  # department 필드에 full_name 임시 매핑
+        "session_id": usage_history.session_id,
+        "question": usage_history.question,
+        "answer": usage_history.answer,
+        "thinking_content": usage_history.thinking_content,
+        "response_time": usage_history.response_time,
+        "main_category": usage_history.main_category,
+        "sub_category": usage_history.sub_category,
+        "model_name": usage_history.model_name,
+        "referenced_documents": usage_history.referenced_documents,
+        "usage_metadata": usage_history.usage_metadata,
+        "ip_address": usage_history.ip_address,
+        "created_at": usage_history.created_at,
+        "updated_at": usage_history.updated_at if hasattr(usage_history, 'updated_at') else None,
+    }
+
+    return ConversationDetail(**detail_dict)
 
 
 @router.get("/", response_model=ConversationListResponse)
 async def get_conversations(
     start: Optional[date] = Query(None, description="시작일 (YYYY-MM-DD)"),
     end: Optional[date] = Query(None, description="종료일 (YYYY-MM-DD)"),
+    main_category: Optional[str] = Query(None, description="대분류"),
+    sub_category: Optional[str] = Query(None, description="소분류"),
     page: int = Query(1, ge=1, description="페이지 번호"),
     limit: int = Query(50, ge=1, le=10000, description="페이지당 항목 수 (최대 10000)"),
     db: AsyncSession = Depends(get_db),
     principal: Principal = Depends(get_principal)
 ):
     """
-    대화내역 목록 조회
+    대화내역 목록 조회 (인증 필요)
 
     - 날짜 필터링 가능
+    - 대분류/소분류 필터링 가능
     - 페이지네이션 지원 (최대 10000개/페이지 - 엑셀 다운로드용)
     - 최신순 정렬
     """
-    # 기본 쿼리
-    conditions = []
-
-    # 날짜 필터
-    if start:
-        conditions.append(func.date(UsageHistory.created_at) >= start)
-    if end:
-        conditions.append(func.date(UsageHistory.created_at) <= end)
-
-    # 전체 개수 조회
-    count_query = select(func.count(UsageHistory.id))
-    if conditions:
-        count_query = count_query.filter(and_(*conditions))
-
-    count_result = await db.execute(count_query)
-    total = count_result.scalar() or 0
-
-    # 페이지네이션 계산
-    offset = (page - 1) * limit
-    total_pages = (total + limit - 1) // limit if total > 0 else 1
-
-    # 목록 조회
-    list_query = select(UsageHistory)
-    if conditions:
-        list_query = list_query.filter(and_(*conditions))
-
-    list_query = list_query.order_by(desc(UsageHistory.created_at)).offset(offset).limit(limit)
-
-    result = await db.execute(list_query)
-    conversations = result.scalars().all()
-
-    return ConversationListResponse(
-        items=[ConversationListItem.model_validate(conv) for conv in conversations],
-        total=total,
+    # simple 엔드포인트와 동일한 로직 사용
+    return await get_conversations_simple(
+        start=start,
+        end=end,
+        main_category=main_category,
+        sub_category=sub_category,
         page=page,
         limit=limit,
-        total_pages=total_pages
+        db=db
     )
 
 
@@ -207,7 +301,7 @@ async def get_conversation_detail(
     principal: Principal = Depends(get_principal)
 ):
     """
-    대화내역 상세 조회
+    대화내역 상세 조회 (인증 필요)
 
     - 전체 질문/답변 내용
     - 사용자 정보
@@ -215,12 +309,4 @@ async def get_conversation_detail(
     - 참조 문서 목록
     - 메타데이터
     """
-    query = select(UsageHistory).filter(UsageHistory.id == conversation_id)
-    result = await db.execute(query)
-    conversation = result.scalar_one_or_none()
-
-    if not conversation:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="대화내역을 찾을 수 없습니다.")
-
-    return ConversationDetail.model_validate(conversation)
+    return await get_conversation_detail_simple(conversation_id, db)

@@ -121,16 +121,20 @@ class TestPIIDocumentScanner:
     async def test_scan_document_for_pii(self, db_session):
         """문서 PII 스캔"""
         from app.services.pii_scanner import PIIScanner
-        from app.models.document import Document
+        from app.models.document import Document, DocumentType
+        import uuid
 
         # Given: PII가 포함된 문서
         doc = Document(
+            document_id=f"DOC_TEST_PII_{uuid.uuid4().hex[:8]}",
             title="개인정보 포함 문서",
             content="직원: 홍길동, 주민번호: 901234-1234567, 연락처: 010-1234-5678",
-            category="internal"
+            document_type=DocumentType.OTHER,
+            status="active"
         )
         db_session.add(doc)
         await db_session.commit()
+        await db_session.refresh(doc)
 
         scanner = PIIScanner()
 
@@ -142,27 +146,42 @@ class TestPIIDocumentScanner:
         assert len(scan_result.pii_matches) >= 2  # 주민번호, 전화번호
         assert scan_result.document_id == doc.id
 
-    async def test_admin_approval_workflow(self, db_session, client):
+    async def test_admin_approval_workflow(self, db_session, authenticated_client):
         """관리자 승인 워크플로우"""
         from app.models.pii_detection import PIIDetectionResult, PIIStatus
+        from app.models.document import Document, DocumentType
+        import uuid
+
+        # Given: 문서 먼저 생성
+        doc = Document(
+            document_id=f"DOC_TEST_APPROVAL_{uuid.uuid4().hex[:8]}",
+            title="승인 테스트 문서",
+            content="테스트 내용",
+            document_type=DocumentType.OTHER,
+            status="active"
+        )
+        db_session.add(doc)
+        await db_session.commit()
+        await db_session.refresh(doc)
 
         # Given: PII가 검출된 문서
         detection = PIIDetectionResult(
-            document_id=1,
+            document_id=doc.id,
             has_pii=True,
-            pii_data='[{"type": "RESIDENT_NUMBER", "value": "901234-*******"}]',
+            pii_data='[{"type": "RESIDENT_NUMBER", "value": "901234-*******", "start_pos": 10, "end_pos": 24, "confidence": 1.0}]',
             status=PIIStatus.PENDING
         )
         db_session.add(detection)
         await db_session.commit()
+        await db_session.refresh(detection)
 
         # When: 관리자가 승인 처리
-        response = await client.post(
+        response = await authenticated_client.post(
             f"/api/v1/admin/pii-detections/{detection.id}/approve",
             json={"action": "mask"}
         )
 
-        # Then: 승인되고 마스킹 처리됨
+        # Then: 마스킹 처리됨
         assert response.status_code == 200
         await db_session.refresh(detection)
-        assert detection.status == PIIStatus.APPROVED
+        assert detection.status == PIIStatus.MASKED

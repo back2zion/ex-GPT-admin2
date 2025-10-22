@@ -8,7 +8,7 @@ from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_get_dashboard_stats(client: AsyncClient):
+async def test_get_dashboard_stats(authenticated_client: AsyncClient):
     """
     대시보드 통계 조회 테스트
     - 기간별 총 질문 수
@@ -21,7 +21,7 @@ async def test_get_dashboard_stats(client: AsyncClient):
     start_date = end_date - timedelta(days=7)
 
     # When: 통계 API 호출
-    response = await client.get(
+    response = await authenticated_client.get(
         f"/api/v1/admin/stats/dashboard?start={start_date}&end={end_date}"
     )
 
@@ -38,7 +38,7 @@ async def test_get_dashboard_stats(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_get_daily_trend(client: AsyncClient):
+async def test_get_daily_trend(authenticated_client: AsyncClient):
     """
     일자별 사용 추이 테스트
     - 날짜별 질문 수
@@ -49,7 +49,7 @@ async def test_get_daily_trend(client: AsyncClient):
     start_date = end_date - timedelta(days=7)
 
     # When: 일자별 추이 API 호출
-    response = await client.get(
+    response = await authenticated_client.get(
         f"/api/v1/admin/stats/daily-trend?start={start_date}&end={end_date}"
     )
 
@@ -67,7 +67,7 @@ async def test_get_daily_trend(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_get_hourly_pattern(client: AsyncClient):
+async def test_get_hourly_pattern(authenticated_client: AsyncClient):
     """
     시간대별 사용 패턴 테스트
     - 0~23시 각 시간대별 질문 수
@@ -76,7 +76,7 @@ async def test_get_hourly_pattern(client: AsyncClient):
     target_date = date.today()
 
     # When: 시간대별 패턴 API 호출
-    response = await client.get(
+    response = await authenticated_client.get(
         f"/api/v1/admin/stats/hourly-pattern?date={target_date}"
     )
 
@@ -96,13 +96,13 @@ async def test_get_hourly_pattern(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_get_top_questions(client: AsyncClient):
+async def test_get_top_questions(authenticated_client: AsyncClient):
     """
     인기 질문 TOP 10 테스트
     """
     # Given: 최근 30일간의 인기 질문 조회
     # When: 인기 질문 API 호출
-    response = await client.get("/api/v1/admin/stats/top-questions?limit=10")
+    response = await authenticated_client.get("/api/v1/admin/stats/top-questions?limit=10")
 
     # Then: 200 응답과 TOP 10 질문 반환
     assert response.status_code == 200

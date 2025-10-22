@@ -38,3 +38,7 @@ class UsageHistory(Base, TimestampMixin):
 
     # IP 주소
     ip_address = Column(String(45))
+
+    # 질문 분류 (대분류/소분류)
+    main_category = Column(String(50), index=True, comment="대분류: 경영분야, 기술분야, 경영/기술 외, 미분류")
+    sub_category = Column(String(50), index=True, comment="소분류: 세부 카테고리")

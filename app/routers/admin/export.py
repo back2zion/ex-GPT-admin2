@@ -1,12 +1,14 @@
 """
 엑셀 내보내기 API 엔드포인트
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import pandas as pd
-from io import BytesIO
+from io import BytesIO, StringIO
+from datetime import date
+from typing import Optional
 
 from app.models import Notice, UsageHistory, SatisfactionSurvey
 from app.core.database import get_db
@@ -58,15 +60,43 @@ async def export_notices(
 @router.get("/usage")
 async def export_usage(
     db: AsyncSession = Depends(get_db),
-    principal: Principal = Depends(require_permission("usage_history", "read"))
+    principal: Principal = Depends(require_permission("usage_history", "read")),
+    start_date: Optional[date] = Query(None, description="시작 날짜 (YYYY-MM-DD)"),
+    end_date: Optional[date] = Query(None, description="종료 날짜 (YYYY-MM-DD)"),
+    user_id: Optional[str] = Query(None, description="사용자 ID"),
+    format: str = Query("excel", description="파일 형식 (excel, csv)")
 ):
     """
-    사용 이력 엑셀 내보내기
+    사용 이력 내보내기
 
     - 최대 10,000건의 사용 이력 데이터 내보내기
     - 답변은 100자로 제한하여 파일 크기 최적화
+    - 날짜 범위 필터: start_date, end_date
+    - 사용자 필터: user_id
+    - 형식: excel (기본), csv
     """
-    result = await db.execute(select(UsageHistory).limit(10000))
+    # 쿼리 구성
+    query = select(UsageHistory)
+
+    # 날짜 범위 필터
+    if start_date:
+        from datetime import datetime, timezone
+        start_datetime = datetime.combine(start_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+        query = query.where(UsageHistory.created_at >= start_datetime)
+
+    if end_date:
+        from datetime import datetime, timezone
+        end_datetime = datetime.combine(end_date, datetime.max.time()).replace(tzinfo=timezone.utc)
+        query = query.where(UsageHistory.created_at <= end_datetime)
+
+    # 사용자 필터
+    if user_id:
+        query = query.where(UsageHistory.user_id == user_id)
+
+    # 최대 10,000건 제한
+    query = query.limit(10000)
+
+    result = await db.execute(query)
     history = result.scalars().all()
 
     # DataFrame 생성
@@ -81,18 +111,31 @@ async def export_usage(
         "생성일": h.created_at.strftime("%Y-%m-%d %H:%M:%S") if h.created_at else ""
     } for h in history])
 
-    # Excel 파일 생성
-    buffer = BytesIO()
-    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='사용이력')
+    # 형식에 따라 내보내기
+    if format == "csv":
+        # CSV 파일 생성
+        buffer = StringIO()
+        df.to_csv(buffer, index=False, encoding="utf-8")
+        buffer.seek(0)
 
-    buffer.seek(0)
+        return StreamingResponse(
+            iter([buffer.getvalue()]),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": "attachment; filename=usage_history.csv"}
+        )
+    else:
+        # Excel 파일 생성 (기본)
+        buffer = BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='사용이력')
 
-    return StreamingResponse(
-        buffer,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": "attachment; filename=usage_history.xlsx"}
-    )
+        buffer.seek(0)
+
+        return StreamingResponse(
+            buffer,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=usage_history.xlsx"}
+        )
 
 
 @router.get("/satisfaction")

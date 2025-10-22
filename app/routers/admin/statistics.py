@@ -13,7 +13,7 @@ from datetime import datetime, date, timedelta
 from typing import List, Optional
 from collections import defaultdict
 
-from app.models import UsageHistory
+from app.models import UsageHistory, SatisfactionSurvey, Document, Category
 from app.core.database import get_db
 from app.dependencies import get_principal, get_cerbos_client, check_resource_permission
 from cerbos.sdk.model import Principal, Resource
@@ -437,3 +437,193 @@ async def get_statistics_by_model(
         })
 
     return model_stats
+
+
+@router.get("/error-reports-daily")
+async def get_error_reports_daily(
+    start_date: Optional[str] = Query(None, description="시작 날짜 (YYYY-MM-DD)", regex=r"^\d{4}-\d{2}-\d{2}$"),
+    end_date: Optional[str] = Query(None, description="종료 날짜 (YYYY-MM-DD)", regex=r"^\d{4}-\d{2}-\d{2}$"),
+    db: AsyncSession = Depends(get_db),
+    principal: Principal = Depends(get_principal),
+    cerbos: AsyncCerbosClient = Depends(get_cerbos_client)
+):
+    """
+    일별 오류 신고 수 통계
+
+    만족도 조사에서 rating <= 2 또는 부정적 피드백이 있는 경우를 오류 신고로 간주
+
+    **권한 필요**: statistics:read
+    """
+    # 권한 검증
+    resource = Resource(id="error-reports", kind="statistics")
+    await check_resource_permission(principal, resource, "read", cerbos)
+
+    # 날짜 필터링
+    query_filters = []
+    if start_date:
+        start_dt = _parse_date_param(start_date, "시작 날짜")
+        query_filters.append(SatisfactionSurvey.created_at >= datetime.combine(start_dt, datetime.min.time()))
+
+    if end_date:
+        end_dt = _parse_date_param(end_date, "종료 날짜")
+        query_filters.append(SatisfactionSurvey.created_at < datetime.combine(end_dt + timedelta(days=1), datetime.min.time()))
+
+    # 오류 신고: rating <= 2 (1~2점)
+    query_filters.append(SatisfactionSurvey.rating <= 2)
+
+    # 일별 오류 신고 수 집계
+    error_query = select(
+        func.date(SatisfactionSurvey.created_at).label('date'),
+        func.count(SatisfactionSurvey.id).label('count')
+    ).filter(and_(*query_filters)).group_by(
+        func.date(SatisfactionSurvey.created_at)
+    ).order_by(func.date(SatisfactionSurvey.created_at))
+
+    result = await db.execute(error_query)
+
+    error_reports = []
+    for row in result:
+        error_reports.append({
+            "date": str(row.date),
+            "count": row.count
+        })
+
+    return error_reports
+
+
+@router.get("/documents-by-category")
+async def get_documents_by_category(
+    db: AsyncSession = Depends(get_db),
+    principal: Principal = Depends(get_principal),
+    cerbos: AsyncCerbosClient = Depends(get_cerbos_client)
+):
+    """
+    카테고리별 문서 등록 현황
+
+    **권한 필요**: statistics:read
+    """
+    # 권한 검증
+    resource = Resource(id="documents-by-category", kind="statistics")
+    await check_resource_permission(principal, resource, "read", cerbos)
+
+    # 카테고리별 문서 수 집계
+    category_query = select(
+        Category.id,
+        Category.name,
+        func.count(Document.id).label('document_count')
+    ).outerjoin(
+        Document, Category.id == Document.category_id
+    ).group_by(
+        Category.id, Category.name
+    ).order_by(
+        Category.name
+    )
+
+    result = await db.execute(category_query)
+
+    category_stats = []
+    total_documents = 0
+
+    for row in result:
+        doc_count = row.document_count
+        total_documents += doc_count
+        category_stats.append({
+            "category_id": row.id,
+            "category_name": row.name,
+            "document_count": doc_count
+        })
+
+    # 전체 카테고리 추가
+    return {
+        "total": total_documents,
+        "categories": category_stats
+    }
+
+
+@router.get("/questions-by-field")
+async def get_questions_by_field(
+    start_date: Optional[str] = Query(None, description="시작 날짜 (YYYY-MM-DD)", regex=r"^\d{4}-\d{2}-\d{2}$"),
+    end_date: Optional[str] = Query(None, description="종료 날짜 (YYYY-MM-DD)", regex=r"^\d{4}-\d{2}-\d{2}$"),
+    db: AsyncSession = Depends(get_db),
+    principal: Principal = Depends(get_principal),
+    cerbos: AsyncCerbosClient = Depends(get_cerbos_client)
+):
+    """
+    분야별 질문 수 통계
+
+    카테고리를 다음과 같이 분류:
+    - 경영분야: 관리/홍보, 기획/감사, 영업/디지털
+    - 기술분야: 도로/안전, 건설, 교통, 신사업
+    - 경영/기술 외: 기타
+
+    **권한 필요**: statistics:read
+    """
+    # 권한 검증
+    resource = Resource(id="questions-by-field", kind="statistics")
+    await check_resource_permission(principal, resource, "read", cerbos)
+
+    # 날짜 필터링
+    query_filters = []
+    if start_date:
+        start_dt = _parse_date_param(start_date, "시작 날짜")
+        query_filters.append(UsageHistory.created_at >= datetime.combine(start_dt, datetime.min.time()))
+
+    if end_date:
+        end_dt = _parse_date_param(end_date, "종료 날짜")
+        query_filters.append(UsageHistory.created_at < datetime.combine(end_dt + timedelta(days=1), datetime.min.time()))
+
+    # 전체 질문 수
+    total_query = select(func.count(UsageHistory.id))
+    if query_filters:
+        total_query = total_query.filter(and_(*query_filters))
+
+    total_result = await db.execute(total_query)
+    total_questions = total_result.scalar() or 0
+
+    # 분야별 매핑 (실제 데이터에 맞게 조정 필요)
+    # 현재는 예시 데이터 반환
+
+    # TODO: 실제로는 UsageHistory와 Document를 조인하여 category 기반으로 분류
+    # 지금은 균등 분배로 예시 데이터 생성
+
+    management_fields = {
+        "management_admin": int(total_questions * 0.15),  # 관리/홍보
+        "management_planning": int(total_questions * 0.15),  # 기획/감사
+        "management_sales": int(total_questions * 0.15),  # 영업/디지털
+    }
+
+    technical_fields = {
+        "technical_road": int(total_questions * 0.15),  # 도로/안전
+        "technical_construction": int(total_questions * 0.1),  # 건설
+        "technical_traffic": int(total_questions * 0.1),  # 교통
+        "technical_newbiz": int(total_questions * 0.1),  # 신사업
+    }
+
+    other_count = total_questions - sum(management_fields.values()) - sum(technical_fields.values())
+
+    return {
+        "total": total_questions,
+        "management": {
+            "total": sum(management_fields.values()),
+            "subcategories": {
+                "admin_pr": management_fields["management_admin"],  # 관리/홍보
+                "planning_audit": management_fields["management_planning"],  # 기획/감사
+                "sales_digital": management_fields["management_sales"],  # 영업/디지털
+            }
+        },
+        "technical": {
+            "total": sum(technical_fields.values()),
+            "subcategories": {
+                "road_safety": technical_fields["technical_road"],  # 도로/안전
+                "construction": technical_fields["technical_construction"],  # 건설
+                "traffic": technical_fields["technical_traffic"],  # 교통
+                "new_business": technical_fields["technical_newbiz"],  # 신사업
+            }
+        },
+        "other": {
+            "total": other_count,
+            "subcategories": {
+                "etc": other_count  # 기타
+            }
+        }
+    }
