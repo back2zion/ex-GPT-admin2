@@ -16,21 +16,27 @@ class MinIOService:
     """MinIO 파일 업로드 서비스"""
 
     def __init__(self):
-        self.client = Minio(
-            settings.MINIO_ENDPOINT,
-            access_key=settings.MINIO_ACCESS_KEY,
-            secret_key=settings.MINIO_SECRET_KEY,
-            secure=settings.MINIO_SECURE
-        )
-        self.bucket = settings.MINIO_BUCKET
-        self._ensure_bucket()
+        try:
+            self.client = Minio(
+                settings.MINIO_ENDPOINT,
+                access_key=settings.MINIO_ACCESS_KEY,
+                secret_key=settings.MINIO_SECRET_KEY,
+                secure=settings.MINIO_SECURE
+            )
+            self.bucket = settings.MINIO_BUCKET
+            self._ensure_bucket()
+        except Exception as e:
+            print(f"MinIO initialization error: {e}")
+            # Allow application to start even if MinIO is unavailable
+            self.client = None
+            self.bucket = settings.MINIO_BUCKET
 
     def _ensure_bucket(self):
         """버킷이 없으면 생성"""
         try:
-            if not self.client.bucket_exists(self.bucket):
+            if self.client and not self.client.bucket_exists(self.bucket):
                 self.client.make_bucket(self.bucket)
-        except S3Error as e:
+        except Exception as e:
             print(f"MinIO bucket check error: {e}")
 
     def upload_file(
@@ -44,6 +50,9 @@ class MinIOService:
         Returns: (file_path, file_size)
         Secure: 파일명 sanitization, 크기 제한
         """
+        if not self.client:
+            raise RuntimeError("MinIO service is not available")
+
         # Sanitize filename (Secure: Path Traversal Prevention)
         safe_filename = self._sanitize_filename(filename)
 
@@ -96,6 +105,9 @@ class MinIOService:
         """
         파일 다운로드용 presigned URL 생성
         """
+        if not self.client:
+            raise RuntimeError("MinIO service is not available")
+
         try:
             url = self.client.presigned_get_object(
                 self.bucket,
@@ -108,6 +120,10 @@ class MinIOService:
 
     def delete_file(self, object_name: str):
         """파일 삭제"""
+        if not self.client:
+            print("MinIO service is not available, skip delete")
+            return
+
         try:
             self.client.remove_object(self.bucket, object_name)
         except S3Error as e:
