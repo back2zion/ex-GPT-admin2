@@ -13,6 +13,13 @@ from app.models.satisfaction import SatisfactionSurvey
 from app.models.pii_detection import PIIDetectionResult, PIIStatus
 from app.models.ip_whitelist import IPWhitelist
 from app.models.stt import STTBatch, STTTranscription, STTSummary, STTEmailLog
+from app.models.chat_models import (
+    ConversationSummary,
+    Conversation,
+    ReferenceDocument,
+    SuggestedQuestion,
+    UploadedFile
+)
 
 __all__ = [
     "Base",
@@ -43,4 +50,9 @@ __all__ = [
     "STTTranscription",
     "STTSummary",
     "STTEmailLog",
+    "ConversationSummary",
+    "Conversation",
+    "ReferenceDocument",
+    "SuggestedQuestion",
+    "UploadedFile",
 ]
