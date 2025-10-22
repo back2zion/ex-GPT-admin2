@@ -43,6 +43,7 @@ class STTBatch(Base):
     estimated_duration = Column(Integer, comment="예상 소요 시간 (초)")
     started_at = Column(DateTime, comment="시작 시간")
     completed_at = Column(DateTime, comment="완료 시간")
+    error_message = Column(Text, comment="에러 메시지 (실패 시)")
 
     # 메타데이터
     created_by = Column(String(100), nullable=False, comment="생성자 (user_id)")
@@ -97,6 +98,9 @@ class STTTranscription(Base):
 
     # 처리 정보
     processing_duration = Column(Float, comment="처리 소요 시간 (초)")
+    processing_started_at = Column(DateTime, comment="처리 시작 시간")
+    processing_completed_at = Column(DateTime, comment="처리 완료 시간")
+    ex_gpt_task_id = Column(String(100), comment="ex-GPT-STT Task ID", index=True)
     stt_engine = Column(String(50), comment="STT 엔진 (예: whisper-large-v3, google-stt)")
     status = Column(String(20), default="pending", comment="상태: pending, processing, success, failed, partial")
     error_message = Column(Text, comment="에러 메시지")

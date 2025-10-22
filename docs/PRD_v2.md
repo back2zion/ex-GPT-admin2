@@ -600,6 +600,7 @@
 
 | 버전 | 날짜 | 변경 내용 | 작성자 |
 |------|------|-----------|--------|
+| 2.3 | 2025-10-22 | **UI 개선**: Material-UI DatePicker 적용<br>- ConversationsPage, ErrorReportManagementPage, UsersPage, ExGPTStatsPage<br>- 브라우저 기본 `<input type="date"` → Material-UI DatePicker<br>- 한국어 로케일 지원, 일관된 캘린더 UI<br>- dayjs 기반 날짜 관리<br>**RFP 요구사항**: "날짜 관련은 달력 기능이 제공되어야 해" ✅ 완료 | Claude |
 | 2.2 | 2025-10-20 | **기술 스택 업데이트**: Frontend Vanilla JS → React 18 + Vite<br>**P0-1 완료**: 대화내역 조회 기능 구현 완료<br>- ConversationsPage.jsx 추가<br>- /api/v1/admin/conversations/simple 엔드포인트<br>- /api/chat_stream 프록시 (layout.html 연동)<br>- thinking 중복 저장 방지<br>- Apache/GitLab nginx 프록시 설정 | Claude |
 | 2.1 | 2025-10-20 | RFP 누락 기능 추가 (개인정보 검출, 학습데이터 범위, A/B 테스트)<br>로드맵 11주로 확장, KPI 상세화 | Claude |
 | 2.0 | 2025-10-20 | RFP 요건 중심 재작성, TDD 전략 추가, 한국도로공사 컬러 적용 | Claude |
@@ -961,3 +962,297 @@ def detect_document_changes(
 **문서 작성**: 곽두일 PM
 **최종 검토**: 곽두일 PM
 **승인**: 곽두일 PM
+
+---
+
+## 🔐 프론트엔드 인증 가이드 (중요)
+
+### 문제 상황
+React 프론트엔드에서 백엔드 API 호출 시 **401 Unauthorized 에러가 자주 발생**하는 문제가 있습니다.
+
+### 원인
+백엔드 API (`/home/aigen/admin-api/app/dependencies.py`의 `get_principal` 함수)가 모든 요청에 대해 인증 헤더를 요구합니다:
+
+```python
+# dependencies.py:72-77
+if not auth_header and not auth_token and not test_auth:
+    raise HTTPException(
+        status_code=401,
+        detail="인증이 필요합니다. Authorization 헤더를 제공해주세요."
+    )
+```
+
+### 해결 방법
+
+#### 1. axios 사용하는 경우 (권장)
+**파일 위치**: `/home/aigen/react-project/src/axiosConfig.js`
+
+```javascript
+import axios from 'axios';
+
+// Axios 인터셉터 설정
+axios.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      // 임시: 테스트 환경에서 인증 우회
+      config.headers['X-Test-Auth'] = 'admin';
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+export default axios;
+```
+
+**사용법**:
+```javascript
+// ❌ 잘못된 방법
+import axios from 'axios';
+
+// ✅ 올바른 방법
+import axios from '../axiosConfig';
+```
+
+#### 2. fetch 사용하는 경우
+**모든 fetch 호출에 인증 헤더를 수동으로 추가해야 합니다.**
+
+```javascript
+// ❌ 잘못된 방법 (401 에러 발생)
+const response = await fetch('/api/v1/admin/stats/dashboard');
+
+// ✅ 올바른 방법
+const headers = {
+    'Accept': 'application/json',
+    'X-Test-Auth': 'admin'  // 또는 Authorization: `Bearer ${token}`
+};
+const response = await fetch('/api/v1/admin/stats/dashboard', { headers });
+```
+
+#### 3. react-admin dataProvider
+**파일 위치**: `/home/aigen/react-project/src/dataProvider.js`
+
+이미 `httpClient` 함수에서 자동으로 헤더를 추가하도록 구현되어 있습니다:
+
+```javascript
+// dataProvider.js:32-39
+const token = localStorage.getItem('authToken');
+if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+} else {
+    // 임시: 테스트 환경에서 인증 우회
+    headers.set('X-Test-Auth', 'admin');
+}
+```
+
+### 수정이 필요한 파일 체크리스트
+
+새로운 페이지를 만들거나 API를 호출할 때는 반드시 다음을 확인하세요:
+
+- [ ] axios를 사용하는가? → `import axios from '../axiosConfig'` 사용
+- [ ] fetch를 사용하는가? → 모든 호출에 `headers` 파라미터 추가
+- [ ] react-admin Resource를 사용하는가? → dataProvider가 자동 처리
+- [ ] CustomRoutes를 사용하는가? → axios 또는 fetch + headers 확인
+
+### 실제 수정 사례
+
+#### 사례 1: Dashboard.jsx (fetch 사용)
+**문제**: 통계 API 호출 시 401 에러
+**해결**: 모든 fetch 호출에 헤더 추가
+
+```javascript
+// Before
+const dashboardRes = await fetch('/api/v1/admin/stats/dashboard');
+
+// After
+const headers = { 'Accept': 'application/json', 'X-Test-Auth': 'admin' };
+const dashboardRes = await fetch('/api/v1/admin/stats/dashboard', { headers });
+```
+
+#### 사례 2: UsersPage.jsx (axios 사용)
+**문제**: 사용자 목록 조회 시 401 에러
+**해결**: axios import 경로 수정
+
+```javascript
+// Before
+import axios from 'axios';
+
+// After
+import axios from '../axiosConfig';
+```
+
+### 향후 개선 계획
+
+현재는 `X-Test-Auth: admin` 헤더를 사용하여 임시로 인증을 우회하고 있습니다.
+
+**Phase 2**에서 다음을 구현해야 합니다:
+1. JWT 기반 실제 인증 시스템 구현
+2. 로그인 페이지 활성화
+3. 토큰 갱신 로직 구현
+4. 권한별 접근 제어 강화
+
+**참고**: `dependencies.py:24-92` 주석에 JWT 인증 구현 예시가 상세히 작성되어 있습니다.
+
+---
+
+**작성일**: 2025-10-22
+**작성자**: 곽두일
+**중요도**: ⭐⭐⭐⭐⭐ (모든 API 호출에 영향)
+
+---
+
+## 📅 날짜 선택 UI 가이드 (Calendar 기능)
+
+### 구현 현황 ✅ **완료 (2025-10-22)**
+
+RFP 요구사항에 따라 모든 날짜 입력 필드에 **Material-UI DatePicker**를 적용하여 사용자 친화적인 캘린더 UI를 제공합니다.
+
+### 적용 페이지
+
+다음 페이지들의 모든 날짜 입력이 브라우저 기본 `<input type="date">`에서 Material-UI DatePicker로 개선되었습니다:
+
+1. **ConversationsPage.jsx** - 대화내역 조회 페이지
+   - 시작 날짜, 종료 날짜 (기본값: 최근 7일)
+   - 위치: `/home/aigen/react-project/src/pages/ConversationsPage.jsx:287-310`
+
+2. **ErrorReportManagementPage.jsx** - 오류신고관리 페이지
+   - 시작일, 종료일 필터
+   - 위치: `/home/aigen/react-project/src/pages/ErrorReportManagementPage.jsx:136-159`
+
+3. **UsersPage.jsx** - 사용자 관리 페이지 (접근승인관리 탭)
+   - 시작일, 종료일 (접근 신청 조회)
+   - 위치: `/home/aigen/react-project/src/pages/UsersPage.jsx:829-852`
+
+4. **ExGPTStatsPage.jsx** - ex-GPT 통계 대시보드
+   - 시작 날짜, 종료 날짜 (기본값: 최근 30일)
+   - 위치: `/home/aigen/react-project/src/pages/ExGPTStatsPage.jsx:372-396`
+
+### 기술 구현
+
+#### 1. 필수 패키지 설치
+```bash
+npm install @mui/x-date-pickers dayjs
+```
+
+#### 2. 표준 구현 패턴
+
+**Import 구문**:
+```javascript
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
+import 'dayjs/locale/ko';
+
+// dayjs 한국어 설정
+dayjs.locale('ko');
+```
+
+**State 관리** (dayjs 객체 사용):
+```javascript
+// ❌ 잘못된 방법 (문자열 사용)
+const [startDate, setStartDate] = useState('');
+
+// ✅ 올바른 방법 (dayjs 객체 사용)
+const [startDate, setStartDate] = useState(dayjs('2025-10-15'));
+```
+
+**DatePicker 컴포넌트**:
+```javascript
+<LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
+  <DatePicker
+    label="시작 날짜"
+    value={startDate}
+    onChange={(newValue) => setStartDate(newValue)}
+    slotProps={{
+      textField: {
+        size: 'small',
+        sx: { minWidth: 160 }
+      }
+    }}
+  />
+</LocalizationProvider>
+```
+
+**API 전송 시 변환**:
+```javascript
+// dayjs 객체를 YYYY-MM-DD 형식으로 변환
+const apiParams = {
+  start_date: startDate.format('YYYY-MM-DD'),
+  end_date: endDate.format('YYYY-MM-DD')
+};
+```
+
+### UI/UX 개선사항
+
+#### Before (브라우저 기본)
+```javascript
+<TextField
+  type="date"
+  label="시작일"
+  InputLabelProps={{ shrink: true }}
+  value={startDate}
+  onChange={(e) => setStartDate(e.target.value)}
+/>
+```
+- ❌ 브라우저마다 다른 UI
+- ❌ 모바일 UX 불편
+- ❌ 한국어 지원 불완전
+
+#### After (Material-UI DatePicker)
+```javascript
+<DatePicker
+  label="시작 날짜"
+  value={dayjs(startDate)}
+  onChange={(newValue) => setStartDate(newValue)}
+/>
+```
+- ✅ 일관된 캘린더 UI
+- ✅ 한국어 로케일 지원
+- ✅ 모바일 친화적
+- ✅ 키보드 입력 + 클릭 지원
+
+### 주의사항
+
+1. **null 처리**: 날짜 미선택 시 `null`이 반환됨
+   ```javascript
+   // 초기화 핸들러
+   const handleReset = () => {
+     setStartDate(null);  // ✅ 올바른 방법
+     setEndDate(null);
+   };
+   ```
+
+2. **format() 호출 전 null 체크**:
+   ```javascript
+   // ❌ 잘못된 방법 (null일 때 에러)
+   const start = startDate.format('YYYY-MM-DD');
+
+   // ✅ 올바른 방법
+   const start = startDate ? startDate.format('YYYY-MM-DD') : null;
+   ```
+
+3. **LocalizationProvider 중복 방지**:
+   - DatePicker가 여러 개인 경우 하나의 LocalizationProvider로 묶어야 함
+   - 각 DatePicker마다 별도의 Provider를 사용하지 말 것
+
+### 빌드 검증 ✅
+
+```bash
+cd /home/aigen/react-project
+npm run build
+# ✓ built in 20.19s (성공)
+```
+
+모든 페이지의 캘린더 기능이 정상적으로 빌드되었습니다.
+
+---
+
+**작성일**: 2025-10-22
+**작성자**: Claude
+**중요도**: ⭐⭐⭐⭐ (RFP 요구사항: "날짜 관련은 달력 기능이 제공되어야 해")

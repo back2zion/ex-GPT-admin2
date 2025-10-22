@@ -93,7 +93,7 @@ class ApprovalWorkflowService:
             stmt = stmt.where(DocumentChangeRequest.status == status)
 
         result = await self.db_session.execute(stmt)
-        return result.scalars().all()
+        return result.unique().scalars().all()
 
     async def get_change_request(
         self,

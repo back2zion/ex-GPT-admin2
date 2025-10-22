@@ -27,9 +27,10 @@ from app.routers.admin import (
     documents,
     stt_batches,
     file_browser,
-    file_upload
+    file_upload,
+    legacy_sync
 )
-from app.routers import chat_proxy
+from app.routers import chat_proxy, health
 from app.routers.chat import chat, rooms, history
 from app.routers.chat import files as chat_files
 import os
@@ -81,6 +82,9 @@ app.include_router(pii_detections.router)
 app.include_router(ip_whitelist.router)
 app.include_router(access_requests.router)
 
+# Admin 라우터 등록 (P0 - 레거시 시스템 연계)
+app.include_router(legacy_sync.router)
+
 # Admin 라우터 등록 (Vector Data Management - 학습데이터 관리)
 app.include_router(categories.router)
 app.include_router(documents.router)
@@ -89,6 +93,9 @@ app.include_router(documents.router)
 app.include_router(stt_batches.router)
 app.include_router(file_browser.router)
 app.include_router(file_upload.router)
+
+# Health Check 라우터 등록 (프로덕션 배포)
+app.include_router(health.router)
 
 # Chat 라우터 등록 (채팅 시스템 마이그레이션)
 app.include_router(chat.router)
@@ -105,12 +112,9 @@ async def root():
         "message": "AI Streams Admin API",
         "version": "0.1.0",
         "docs": "/docs",
-        "admin": "/admin"
+        "admin": "/admin",
+        "health": "/health"
     }
-
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
 
 # React SPA 라우팅 지원 (모든 /admin/* 경로를 index.html로)
 if os.path.exists(admin_path):

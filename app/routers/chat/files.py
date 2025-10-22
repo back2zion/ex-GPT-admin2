@@ -16,7 +16,17 @@ router = APIRouter(prefix="/api/v1/files", tags=["chat-files"])
 logger = logging.getLogger(__name__)
 
 # 허용된 파일 확장자
-ALLOWED_EXTENSIONS = {'.pdf', '.docx', '.xlsx', '.txt', '.png', '.jpg', '.jpeg'}
+ALLOWED_EXTENSIONS = {
+    # Documents
+    '.pdf',
+    '.doc', '.docx',   # MS Word
+    '.xls', '.xlsx',   # MS Excel
+    '.ppt', '.pptx',   # MS PowerPoint
+    '.hwp', '.hwpx',   # Hangul (한글)
+    '.txt',            # Text
+    # Images
+    '.png', '.jpg', '.jpeg'
+}
 
 # 파일 크기 제한 (100MB)
 MAX_FILE_SIZE = 100 * 1024 * 1024
