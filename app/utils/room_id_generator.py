@@ -56,12 +56,16 @@ def parse_room_id(room_id: str) -> Dict[str, str]:
             "microseconds": "345678"
         }
     """
-    parts = room_id.split("_")
-    if len(parts) != 2:
+    # 마지막 언더스코어를 기준으로 분리 (user_id에 언더스코어가 있을 수 있음)
+    if "_" not in room_id:
         raise ValueError(f"Invalid room_id format: {room_id}")
 
-    user_id = parts[0]
-    time_part = parts[1]
+    last_underscore_idx = room_id.rfind("_")
+    user_id = room_id[:last_underscore_idx]
+    time_part = room_id[last_underscore_idx + 1:]
+
+    if not user_id or not time_part:
+        raise ValueError(f"Invalid room_id format: {room_id}")
 
     if len(time_part) != 20:  # 14 + 6
         raise ValueError(f"Invalid time part length: {time_part}")

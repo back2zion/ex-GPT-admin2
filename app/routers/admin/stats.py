@@ -11,6 +11,9 @@ from datetime import date, datetime, timedelta
 import httpx
 import logging
 import time
+import psutil
+import subprocess
+from typing import Dict, Any
 
 from app.models import UsageHistory, SatisfactionSurvey, Notice
 from app.core.database import get_db
@@ -19,6 +22,13 @@ from cerbos.sdk.model import Principal
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+# Server monitoring cache (30 seconds TTL for real-time data)
+_server_stats_cache = {
+    "cpu_history": {"data": [], "timestamp": 0},
+    "memory_history": {"data": [], "timestamp": 0},
+}
+SERVER_STATS_CACHE_TTL = 30  # 30 seconds
 
 router = APIRouter(prefix="/api/v1/admin/stats", tags=["admin-stats"])
 
@@ -534,3 +544,396 @@ async def get_system_info(
         "active_sessions": 0,  # TODO: Redis session count
         "total_notices": total_notices  # ✅ 실제 DB 연동
     }
+
+
+# =============================================================================
+# Server Monitoring Endpoints
+# =============================================================================
+
+@router.get("/server/summary")
+async def get_server_summary(
+    principal: Principal = Depends(get_principal)
+):
+    """
+    서버 전체 요약 정보
+
+    **보안**: 인증 필수
+
+    **반환값**:
+    - cpu_percent: 현재 CPU 사용률 (%)
+    - memory_percent: 현재 메모리 사용률 (%)
+    - disk_percent: 디스크 사용률 (%)
+    - uptime_seconds: 시스템 가동 시간 (초)
+    """
+    try:
+        # CPU 사용률 (1초 간격 측정)
+        cpu_percent = psutil.cpu_percent(interval=1)
+
+        # 메모리 사용률
+        memory = psutil.virtual_memory()
+
+        # 디스크 사용률 (루트 파일시스템)
+        disk = psutil.disk_usage('/')
+
+        # 시스템 부팅 시간
+        boot_time = psutil.boot_time()
+        uptime_seconds = time.time() - boot_time
+
+        return {
+            "cpu_percent": round(cpu_percent, 2),
+            "memory_percent": round(memory.percent, 2),
+            "disk_percent": round(disk.percent, 2),
+            "uptime_seconds": int(uptime_seconds)
+        }
+    except Exception as e:
+        logger.error(f"Failed to get server summary: {e}")
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve server summary: {str(e)}")
+
+
+@router.get("/server/cpu-history")
+async def get_cpu_history(
+    principal: Principal = Depends(get_principal)
+):
+    """
+    CPU 사용 이력 (최근 10개 데이터 포인트)
+
+    **보안**: 인증 필수
+
+    **반환값**:
+    - items: CPU 사용률 배열
+      - timestamp: 타임스탬프 (ISO 8601)
+      - cpu_percent: CPU 사용률 (%)
+      - cpu_count: CPU 코어 수
+    """
+    try:
+        current_time = time.time()
+
+        # 캐시 확인
+        if (current_time - _server_stats_cache["cpu_history"]["timestamp"] < SERVER_STATS_CACHE_TTL
+            and len(_server_stats_cache["cpu_history"]["data"]) > 0):
+            return {"items": _server_stats_cache["cpu_history"]["data"]}
+
+        # CPU 정보 수집
+        cpu_percent = psutil.cpu_percent(interval=1, percpu=False)
+        cpu_count = psutil.cpu_count()
+
+        # 새 데이터 포인트 생성
+        data_point = {
+            "timestamp": datetime.now().isoformat(),
+            "cpu_percent": round(cpu_percent, 2),
+            "cpu_count": cpu_count
+        }
+
+        # 히스토리에 추가 (최대 10개 유지)
+        history = _server_stats_cache["cpu_history"]["data"]
+        history.append(data_point)
+        if len(history) > 10:
+            history = history[-10:]
+
+        # 캐시 업데이트
+        _server_stats_cache["cpu_history"] = {
+            "data": history,
+            "timestamp": current_time
+        }
+
+        return {"items": history}
+
+    except Exception as e:
+        logger.error(f"Failed to get CPU history: {e}")
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve CPU history: {str(e)}")
+
+
+@router.get("/server/memory-history")
+async def get_memory_history(
+    principal: Principal = Depends(get_principal)
+):
+    """
+    메모리 사용 이력 (최근 10개 데이터 포인트)
+
+    **보안**: 인증 필수
+
+    **반환값**:
+    - items: 메모리 사용률 배열
+      - timestamp: 타임스탬프 (ISO 8601)
+      - memory_percent: 메모리 사용률 (%)
+      - memory_used_gb: 사용 중인 메모리 (GB)
+      - memory_total_gb: 전체 메모리 (GB)
+    """
+    try:
+        current_time = time.time()
+
+        # 캐시 확인
+        if (current_time - _server_stats_cache["memory_history"]["timestamp"] < SERVER_STATS_CACHE_TTL
+            and len(_server_stats_cache["memory_history"]["data"]) > 0):
+            return {"items": _server_stats_cache["memory_history"]["data"]}
+
+        # 메모리 정보 수집
+        memory = psutil.virtual_memory()
+
+        # 새 데이터 포인트 생성
+        data_point = {
+            "timestamp": datetime.now().isoformat(),
+            "memory_percent": round(memory.percent, 2),
+            "memory_used_gb": round(memory.used / (1024**3), 2),
+            "memory_total_gb": round(memory.total / (1024**3), 2)
+        }
+
+        # 히스토리에 추가 (최대 10개 유지)
+        history = _server_stats_cache["memory_history"]["data"]
+        history.append(data_point)
+        if len(history) > 10:
+            history = history[-10:]
+
+        # 캐시 업데이트
+        _server_stats_cache["memory_history"] = {
+            "data": history,
+            "timestamp": current_time
+        }
+
+        return {"items": history}
+
+    except Exception as e:
+        logger.error(f"Failed to get memory history: {e}")
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve memory history: {str(e)}")
+
+
+@router.get("/server/disk")
+async def get_disk_usage(
+    principal: Principal = Depends(get_principal)
+):
+    """
+    디스크 사용량 정보
+
+    **보안**: 인증 필수
+
+    **반환값**:
+    - items: 디스크 파티션별 사용량 배열
+      - mountpoint: 마운트 포인트
+      - total_gb: 전체 용량 (GB)
+      - used_gb: 사용 중 용량 (GB)
+      - free_gb: 남은 용량 (GB)
+      - percent: 사용률 (%)
+    """
+    try:
+        partitions = []
+
+        # 주요 마운트 포인트만 조회
+        for partition in psutil.disk_partitions(all=False):
+            try:
+                usage = psutil.disk_usage(partition.mountpoint)
+                partitions.append({
+                    "mountpoint": partition.mountpoint,
+                    "device": partition.device,
+                    "fstype": partition.fstype,
+                    "total_gb": round(usage.total / (1024**3), 2),
+                    "used_gb": round(usage.used / (1024**3), 2),
+                    "free_gb": round(usage.free / (1024**3), 2),
+                    "percent": round(usage.percent, 2)
+                })
+            except (PermissionError, OSError):
+                # 일부 마운트 포인트는 접근 권한이 없을 수 있음
+                continue
+
+        return {"items": partitions}
+
+    except Exception as e:
+        logger.error(f"Failed to get disk usage: {e}")
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve disk usage: {str(e)}")
+
+
+@router.get("/server/gpu")
+async def get_gpu_info(
+    principal: Principal = Depends(get_principal)
+):
+    """
+    GPU 정보 (nvidia-smi 사용)
+
+    **보안**: 인증 필수
+
+    **반환값**:
+    - items: GPU 배열
+      - index: GPU 인덱스
+      - name: GPU 모델명
+      - utilization_percent: GPU 사용률 (%)
+      - memory_used_mb: 사용 중인 메모리 (MB)
+      - memory_total_mb: 전체 메모리 (MB)
+      - temperature_c: 온도 (°C)
+    """
+    try:
+        # nvidia-smi 명령어 실행
+        result = subprocess.run(
+            [
+                'nvidia-smi',
+                '--query-gpu=index,name,utilization.gpu,memory.used,memory.total,temperature.gpu',
+                '--format=csv,noheader,nounits'
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+
+        if result.returncode != 0:
+            # GPU가 없거나 nvidia-smi가 설치되지 않은 경우
+            return {"items": [], "available": False}
+
+        # CSV 파싱
+        gpus = []
+        for line in result.stdout.strip().split('\n'):
+            if not line.strip():
+                continue
+
+            parts = [p.strip() for p in line.split(',')]
+            if len(parts) >= 6:
+                gpus.append({
+                    "index": int(parts[0]),
+                    "name": parts[1],
+                    "utilization_percent": float(parts[2]),
+                    "memory_used_mb": float(parts[3]),
+                    "memory_total_mb": float(parts[4]),
+                    "temperature_c": float(parts[5])
+                })
+
+        return {"items": gpus, "available": True}
+
+    except FileNotFoundError:
+        # nvidia-smi가 설치되지 않음
+        return {"items": [], "available": False, "error": "nvidia-smi not found"}
+    except subprocess.TimeoutExpired:
+        logger.error("nvidia-smi command timed out")
+        return {"items": [], "available": False, "error": "Command timed out"}
+    except Exception as e:
+        logger.error(f"Failed to get GPU info: {e}")
+        return {"items": [], "available": False, "error": str(e)}
+
+
+@router.get("/server/docker")
+async def get_docker_stats(
+    principal: Principal = Depends(get_principal)
+):
+    """
+    Docker 컨테이너 통계
+
+    **보안**: 인증 필수
+
+    **반환값**:
+    - items: 컨테이너 배열
+      - id: 컨테이너 ID (짧은 형식)
+      - name: 컨테이너 이름
+      - status: 상태 (running, exited 등)
+      - cpu_percent: CPU 사용률 (%)
+      - memory_usage_mb: 메모리 사용량 (MB)
+      - memory_limit_mb: 메모리 제한 (MB)
+    """
+    try:
+        # docker ps 명령어 실행 (실행 중인 컨테이너만)
+        result = subprocess.run(
+            ['docker', 'ps', '--format', '{{.ID}}|{{.Names}}|{{.Status}}'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+
+        if result.returncode != 0:
+            return {"items": [], "available": False, "error": "Docker not available"}
+
+        containers = []
+        for line in result.stdout.strip().split('\n'):
+            if not line.strip():
+                continue
+
+            parts = line.split('|')
+            if len(parts) >= 3:
+                container_id = parts[0].strip()
+                container_name = parts[1].strip()
+                status = parts[2].strip()
+
+                # docker stats 명령어로 실시간 통계 가져오기 (no-stream으로 한 번만 조회)
+                try:
+                    stats_result = subprocess.run(
+                        ['docker', 'stats', container_id, '--no-stream', '--format', '{{.CPUPerc}}|{{.MemUsage}}'],
+                        capture_output=True,
+                        text=True,
+                        timeout=3
+                    )
+
+                    if stats_result.returncode == 0:
+                        stats_line = stats_result.stdout.strip()
+                        stats_parts = stats_line.split('|')
+
+                        if len(stats_parts) >= 2:
+                            # CPU 사용률 파싱 (예: "2.50%" -> 2.50)
+                            cpu_str = stats_parts[0].replace('%', '').strip()
+                            cpu_percent = float(cpu_str) if cpu_str else 0.0
+
+                            # 메모리 사용량 파싱 (예: "256MiB / 4GiB")
+                            mem_str = stats_parts[1].strip()
+                            mem_parts = mem_str.split('/')
+
+                            # 메모리 사용량 (MB 단위로 변환)
+                            mem_used_str = mem_parts[0].strip()
+                            mem_used_mb = parse_memory_size(mem_used_str)
+
+                            # 메모리 제한 (MB 단위로 변환)
+                            mem_limit_mb = 0
+                            if len(mem_parts) > 1:
+                                mem_limit_str = mem_parts[1].strip()
+                                mem_limit_mb = parse_memory_size(mem_limit_str)
+
+                            containers.append({
+                                "id": container_id,
+                                "name": container_name,
+                                "status": status,
+                                "cpu_percent": round(cpu_percent, 2),
+                                "memory_usage_mb": round(mem_used_mb, 2),
+                                "memory_limit_mb": round(mem_limit_mb, 2)
+                            })
+                except subprocess.TimeoutExpired:
+                    logger.warning(f"Timeout getting stats for container {container_id}")
+                    continue
+
+        return {"items": containers, "available": True}
+
+    except FileNotFoundError:
+        return {"items": [], "available": False, "error": "Docker command not found"}
+    except subprocess.TimeoutExpired:
+        return {"items": [], "available": False, "error": "Command timed out"}
+    except Exception as e:
+        logger.error(f"Failed to get Docker stats: {e}")
+        return {"items": [], "available": False, "error": str(e)}
+
+
+def parse_memory_size(mem_str: str) -> float:
+    """
+    메모리 크기 문자열을 MB로 변환
+
+    예: "256MiB" -> 256.0
+        "4GiB" -> 4096.0
+        "512KiB" -> 0.5
+    """
+    mem_str = mem_str.strip().upper()
+
+    # 숫자와 단위 분리
+    import re
+    match = re.match(r'([\d.]+)\s*([KMGT]I?B?)', mem_str)
+
+    if not match:
+        return 0.0
+
+    value = float(match.group(1))
+    unit = match.group(2)
+
+    # MB로 변환
+    if 'K' in unit:
+        return value / 1024
+    elif 'M' in unit:
+        return value
+    elif 'G' in unit:
+        return value * 1024
+    elif 'T' in unit:
+        return value * 1024 * 1024
+    else:
+        return value

@@ -612,14 +612,21 @@
 ### 아키텍처
 
 ```
-Browser (https://ui.datastreams.co.kr:20443)
+Browser (https://ui.datastreams.co.kr:443)
   ↓
-Apache HTTPS Proxy (port 20443)
-  ↓ /admin/ → http://172.25.101.91:8010/admin/
-Docker: admin-api (port 8010 → container 8001)
+Apache HTTPS Proxy (port 443)
+  │
+  ├── /admin/ → http://localhost:8010/admin/ (React SPA)
+  ├── /api/v1/admin/ → http://localhost:8010/api/v1/admin/ (Admin API)
+  ├── /api/v1/satisfaction/ → http://localhost:8010/api/v1/satisfaction/ (Satisfaction API)
+  └── /api/chat_stream → http://localhost:8080/api/chat_stream (Chat Stream API)
+  ↓
+Docker: admin-api-admin-api-1 (port 8010 → container 8001)
   ├── FastAPI Backend
   │   ├── /api/v1/admin/conversations/simple (GET)
   │   ├── /api/v1/admin/conversations/simple/{id} (GET)
+  │   ├── /api/v1/admin/stats/server/* (GET) - 서버 모니터링
+  │   ├── /api/v1/admin/file-browser/* (GET) - 파일 브라우저
   │   └── /api/chat_stream (POST) → vLLM (port 8000)
   └── React Frontend (Vite build)
       ├── /admin/ → index.html
@@ -629,6 +636,55 @@ Docker: admin-api (port 8010 → container 8001)
 PostgreSQL (port 5432)
   └── admin_db.usage_history
 ```
+
+#### API 경로 구성 (중요: 상대경로 vs 절대경로)
+
+**Frontend API 설정** (상대경로 사용):
+```javascript
+// react-project/src/utils/api.js
+const apiClient = axios.create({
+  baseURL: "/api/v1",  // ⭐ 상대경로 (절대경로 아님!)
+  headers: { "Content-Type": "application/json" }
+});
+```
+
+**요청 흐름**:
+1. 프론트엔드: `GET /api/v1/admin/stats/server/summary`
+2. 브라우저: `https://ui.datastreams.co.kr/api/v1/admin/stats/server/summary` (현재 호스트 기준)
+3. Apache 프록시: `/api/v1/admin/*` → `http://localhost:8010/api/v1/admin/*`
+4. FastAPI 백엔드: `http://localhost:8010/api/v1/admin/stats/server/summary` 처리
+
+**Apache 프록시 설정** (`/etc/httpd/conf.d/ssl.conf`):
+```apache
+<VirtualHost _default_:443>
+  ServerName ui.datastreams.co.kr:443
+
+  # Admin API proxy (중요: 순서 주의 - 구체적인 경로 먼저)
+  ProxyPass /api/v1/admin/ http://localhost:8010/api/v1/admin/
+  ProxyPassReverse /api/v1/admin/ http://localhost:8010/api/v1/admin/
+
+  # Satisfaction API proxy
+  ProxyPass /api/v1/satisfaction/ http://localhost:8010/api/v1/satisfaction/
+  ProxyPassReverse /api/v1/satisfaction/ http://localhost:8010/api/v1/satisfaction/
+
+  # General API proxy (모든 /api/* 요청)
+  ProxyPass /api http://localhost:8010/api
+  ProxyPassReverse /api http://localhost:8010/api
+
+  # Admin UI proxy
+  ProxyPass /admin/ http://localhost:8010/admin/
+  ProxyPassReverse /admin/ http://localhost:8010/admin/
+
+  # Chat Stream API proxy (공개 사용자용 - port 8080)
+  ProxyPass /api/chat_stream http://localhost:8080/api/chat_stream
+  ProxyPassReverse /api/chat_stream http://localhost:8080/api/chat_stream
+</VirtualHost>
+```
+
+**주의사항**:
+- ❌ **절대경로 사용 금지**: `baseURL: "http://localhost:8010/api/v1"` (CORS 에러 발생)
+- ✅ **상대경로 사용**: `baseURL: "/api/v1"` (프록시를 통해 정상 동작)
+- ProxyPass 설정 시 trailing slash(/) 일관성 유지 필수
 
 ### 데이터베이스 스키마
 

@@ -39,7 +39,8 @@ async def save_usage_to_db(
     session_id: str,
     question: str,
     answer: str,
-    conversation_title: Optional[str] = None
+    conversation_title: Optional[str] = None,
+    thinking_content: Optional[str] = None
 ):
     """usage_history에 대화 저장"""
     try:
@@ -62,6 +63,7 @@ async def save_usage_to_db(
             conversation_title=conversation_title,
             question=question,
             answer=answer,
+            thinking_content=thinking_content,  # thinking 내용 저장
             model_name="ex-GPT",
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
@@ -105,6 +107,7 @@ async def chat_stream_proxy(
     # 현재 메시지 추가
     messages.append({"role": "user", "content": request.message})
 
+    # vLLM OpenAI 호환 형식으로 변환 (thinking 모드 지원)
     llm_payload = {
         "model": "default-model",
         "messages": messages,
@@ -113,11 +116,22 @@ async def chat_stream_proxy(
         "temperature": 0.7
     }
 
+    # Think mode 활성화 (DeepSeek-R1 등 thinking 지원 모델용)
+    if request.think_mode:
+        # vLLM extra_body로 전달
+        llm_payload["extra_body"] = {
+            "enable_thinking": True,
+            "thinking_budget": 2000  # thinking 토큰 예산
+        }
+        print(f"🧠 Think mode 활성화: {request.think_mode}")
+
     # 응답 데이터 누적 (DB 저장용)
     accumulated_response = ""
+    accumulated_thinking = ""  # thinking 내용 별도 저장
+    is_thinking = False  # 현재 thinking 처리 중인지 여부
 
     async def stream_and_save():
-        nonlocal accumulated_response
+        nonlocal accumulated_response, accumulated_thinking, is_thinking
 
         try:
             # LLM API로 스트리밍 요청 (follow_redirects=True 추가)
@@ -163,7 +177,17 @@ async def chat_stream_proxy(
                                         token = delta.get("content", "")
 
                                         if token:
-                                            accumulated_response += token
+                                            # Thinking 태그 감지 및 분리
+                                            if '<think>' in token:
+                                                is_thinking = True
+
+                                            if is_thinking:
+                                                accumulated_thinking += token
+                                                if '</think>' in token:
+                                                    is_thinking = False
+                                            else:
+                                                accumulated_response += token
+
                                             # layout.html이 기대하는 형식으로 변환 (type: "token" 필드 추가)
                                             yield f"data: {json.dumps({'type': 'token', 'content': token}, ensure_ascii=False)}\n\n"
 
@@ -171,15 +195,23 @@ async def chat_stream_proxy(
                                     pass
 
             # 스트리밍 완료 후 DB에 저장
-            # thinking 내용만 있는 경우는 저장하지 않음
-            if accumulated_response and not accumulated_response.strip().startswith('<think>'):
+            # 제목 생성용 세션은 DB에 저장하지 않음
+            if request.session_id and request.session_id.startswith('title_gen_'):
+                print(f"⏭️ 제목 생성 세션 ({request.session_id}) - DB 저장 생략")
+            elif accumulated_response or accumulated_thinking:
+                # 응답이 있거나 thinking이 있으면 저장
+                # thinking 태그 제거 (내용만 저장)
+                clean_thinking = accumulated_thinking.replace('<think>', '').replace('</think>', '').strip()
+
                 await save_usage_to_db(
                     db=db,
                     user_id=request.user_id,
                     session_id=request.session_id,
                     question=request.message,
-                    answer=accumulated_response
+                    answer=accumulated_response.strip(),
+                    thinking_content=clean_thinking if clean_thinking else None
                 )
+                print(f"💾 DB 저장 완료: answer={len(accumulated_response)} chars, thinking={len(clean_thinking)} chars")
 
         except Exception as e:
             error_msg = f"프록시 오류: {str(e)}"
@@ -214,6 +246,7 @@ async def get_chat_sessions(
 ):
     """
     사용자의 대화 세션 목록 조회 (사이드바용)
+    제목 생성용 세션(title_gen_)은 제외
 
     Returns:
         List of unique sessions with their titles and latest message time
@@ -221,11 +254,14 @@ async def get_chat_sessions(
     from sqlalchemy import func, distinct
 
     # 각 세션의 첫 메시지(대화 제목)와 최신 시간 조회
+    # 제목 생성용 세션 제외
     query = select(
         UsageHistory.session_id,
         UsageHistory.conversation_title,
         func.max(UsageHistory.created_at).label('latest_time'),
         func.count(UsageHistory.id).label('message_count')
+    ).filter(
+        ~UsageHistory.session_id.like('title_gen_%')  # title_gen_ 세션 제외
     ).group_by(
         UsageHistory.session_id,
         UsageHistory.conversation_title
@@ -276,10 +312,80 @@ async def get_session_messages(
                 "id": msg.id,
                 "question": msg.question,
                 "answer": msg.answer,
+                "thinking_content": msg.thinking_content,  # thinking 포함
                 "created_at": msg.created_at.isoformat() if msg.created_at else None
             }
             for msg in messages
         ]
+    }
+
+
+@router.delete("/chat/sessions/{session_id}")
+async def delete_session(
+    session_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    특정 세션의 모든 메시지 삭제
+    """
+    from sqlalchemy import delete as sql_delete
+
+    # 해당 세션의 모든 메시지 삭제
+    delete_query = sql_delete(UsageHistory).filter(
+        UsageHistory.session_id == session_id
+    )
+
+    result = await db.execute(delete_query)
+    await db.commit()
+
+    deleted_count = result.rowcount
+
+    print(f"🗑️ 세션 삭제: {session_id}, {deleted_count}개 메시지 삭제됨")
+
+    return {
+        "session_id": session_id,
+        "deleted_count": deleted_count,
+        "message": "Session deleted successfully"
+    }
+
+
+class UpdateSessionTitleRequest(BaseModel):
+    """세션 제목 업데이트 요청"""
+    session_id: str
+    title: str
+
+
+@router.patch("/chat/sessions/{session_id}/title")
+async def update_session_title(
+    session_id: str,
+    request: UpdateSessionTitleRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    특정 세션의 대화 제목 업데이트
+    """
+    from sqlalchemy import update
+
+    # 해당 세션의 모든 레코드의 conversation_title 업데이트
+    update_query = update(UsageHistory).where(
+        UsageHistory.session_id == session_id
+    ).values(
+        conversation_title=request.title,
+        updated_at=datetime.utcnow()
+    )
+
+    result = await db.execute(update_query)
+    await db.commit()
+
+    updated_count = result.rowcount
+
+    print(f"📝 세션 제목 업데이트: {session_id}, 제목='{request.title}', {updated_count}개 레코드 업데이트됨")
+
+    return {
+        "session_id": session_id,
+        "title": request.title,
+        "updated_count": updated_count,
+        "message": "Session title updated successfully"
     }
 
 

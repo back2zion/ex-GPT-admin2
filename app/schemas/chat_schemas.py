@@ -29,7 +29,7 @@ class ConversationSummary(BaseModel):
     """대화 요약 (목록용)"""
     cnvs_idt_id: str
     cnvs_smry_txt: str
-    reg_dt: Optional[str]
+    reg_dt: Optional[str] = None
 
 
 class ConversationListResponse(BaseModel):

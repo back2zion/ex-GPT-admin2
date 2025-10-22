@@ -3,6 +3,7 @@ Chat Service
 채팅 비즈니스 로직 (Room ID 생성/검증, 메시지 저장 등)
 """
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
 from app.schemas.chat_schemas import ChatRequest
 from app.utils.room_id_generator import generate_room_id
 from app.services.ai_service import ai_service
@@ -38,13 +39,13 @@ async def validate_room_id(
         return False
 
     result = await db.execute(
-        """
+        text("""
         SELECT COUNT(*)
-        FROM USR_CNVS_SMRY
-        WHERE CNVS_IDT_ID = :room_id
-          AND USR_ID = :user_id
-          AND USE_YN = 'Y'
-        """,
+        FROM "USR_CNVS_SMRY"
+        WHERE "CNVS_IDT_ID" = :room_id
+          AND "USR_ID" = :user_id
+          AND "USE_YN" = 'Y'
+        """),
         {"room_id": room_id, "user_id": user_id}
     )
 
@@ -78,13 +79,13 @@ async def create_room(
     summary = first_question[:50] + "..." if len(first_question) > 50 else first_question
 
     await db.execute(
-        """
-        INSERT INTO USR_CNVS_SMRY (
-            CNVS_IDT_ID, CNVS_SMRY_TXT, USR_ID, USE_YN, REG_DT
+        text("""
+        INSERT INTO "USR_CNVS_SMRY" (
+            "CNVS_IDT_ID", "CNVS_SMRY_TXT", "USR_ID", "USE_YN", "REG_DT"
         ) VALUES (
             :room_id, :summary, :user_id, 'Y', CURRENT_TIMESTAMP
         )
-        """,
+        """),
         {
             "room_id": room_id,
             "summary": summary,
@@ -116,14 +117,14 @@ async def save_question(
         int: CNVS_ID (생성된 메시지 ID)
     """
     result = await db.execute(
-        """
-        INSERT INTO USR_CNVS (
-            CNVS_IDT_ID, QUES_TXT, SESN_ID, USE_YN, REG_DT
+        text("""
+        INSERT INTO "USR_CNVS" (
+            "CNVS_IDT_ID", "QUES_TXT", "SESN_ID", "USE_YN", "REG_DT"
         ) VALUES (
             :room_id, :question, :session_id, 'Y', CURRENT_TIMESTAMP
         )
-        RETURNING CNVS_ID
-        """,
+        RETURNING "CNVS_ID"
+        """),
         {
             "room_id": room_id,
             "question": question,
@@ -155,14 +156,14 @@ async def save_answer(
         response_time_ms: 응답 시간 (밀리초)
     """
     await db.execute(
-        """
-        UPDATE USR_CNVS
-        SET ANS_TXT = :answer,
-            TKN_USE_CNT = :tokens,
-            RSP_TIM_MS = :response_time,
-            MOD_DT = CURRENT_TIMESTAMP
-        WHERE CNVS_ID = :cnvs_id
-        """,
+        text("""
+        UPDATE "USR_CNVS"
+        SET "ANS_TXT" = :answer,
+            "TKN_USE_CNT" = :tokens,
+            "RSP_TIM_MS" = :response_time,
+            "MOD_DT" = CURRENT_TIMESTAMP
+        WHERE "CNVS_ID" = :cnvs_id
+        """),
         {
             "answer": answer,
             "tokens": token_count,
@@ -190,15 +191,15 @@ async def save_reference_documents(
     """
     for idx, doc in enumerate(search_results):
         await db.execute(
-            """
-            INSERT INTO USR_CNVS_REF_DOC_LST (
-                CNVS_ID, REF_SEQ, ATT_DOC_NM,
-                DOC_CHNK_TXT, SMLT_RTE, REG_DT
+            text("""
+            INSERT INTO "USR_CNVS_REF_DOC_LST" (
+                "CNVS_ID", "REF_SEQ", "ATT_DOC_NM",
+                "DOC_CHNK_TXT", "SMLT_RTE", "REG_DT"
             ) VALUES (
                 :cnvs_id, :ref_seq, :doc_name,
                 :chunk_text, :score, CURRENT_TIMESTAMP
             )
-            """,
+            """),
             {
                 "cnvs_id": cnvs_id,
                 "ref_seq": idx,
