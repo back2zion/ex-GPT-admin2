@@ -4,6 +4,7 @@ Files API Router
 """
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
 from app.core.database import get_db
 from app.services.minio_service import minio_service
 from app.utils.auth import get_current_user_from_session
@@ -91,15 +92,15 @@ async def upload_chat_file(
     file_download_url = minio_service.get_file_url(object_name)
 
     await db.execute(
-        """
-        INSERT INTO USR_UPLD_DOC_MNG (
-            CNVS_IDT_ID, FILE_NM, FILE_UID, FILE_DOWN_URL,
-            FILE_SIZE, FILE_TYP_CD, USR_ID, REG_DT
+        text("""
+        INSERT INTO "USR_UPLD_DOC_MNG" (
+            "CNVS_IDT_ID", "FILE_NM", "FILE_UID", "FILE_DOWN_URL",
+            "FILE_SIZE", "FILE_TYP_CD", "USR_ID", "REG_DT"
         ) VALUES (
             :room_id, :filename, :file_uid, :file_url,
             :file_size, :file_type, :user_id, CURRENT_TIMESTAMP
         )
-        """,
+        """),
         {
             "room_id": room_id,
             "filename": file.filename,

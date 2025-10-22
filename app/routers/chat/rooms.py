@@ -4,20 +4,22 @@ Rooms API Router
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
 from app.core.database import get_db
 from app.utils.auth import get_current_user_from_session
 from app.services.chat_service import validate_room_id
+from app.schemas.chat_schemas import RoomNameUpdateRequest
 from datetime import datetime
 import logging
 
-router = APIRouter(prefix="/api/v1/chat/rooms", tags=["chat-rooms"])
+router = APIRouter(prefix="/api/v1/rooms", tags=["chat-rooms"])
 logger = logging.getLogger(__name__)
 
 
 @router.patch("/{room_id}/name")
 async def update_room_name(
     room_id: str,
-    name: str,
+    request: RoomNameUpdateRequest,
     current_user: dict = Depends(get_current_user_from_session),
     db: AsyncSession = Depends(get_db)
 ):
@@ -26,7 +28,7 @@ async def update_room_name(
 
     Args:
         room_id: 대화방 ID (CNVS_IDT_ID)
-        name: 새 대화명
+        request: 대화명 변경 요청
         current_user: 인증된 사용자
         db: 데이터베이스 세션
 
@@ -45,21 +47,22 @@ async def update_room_name(
 
     # 대화명 업데이트
     await db.execute(
-        """
-        UPDATE USR_CNVS_SMRY
-        SET REP_CNVS_NM = :name,
-            MOD_DT = CURRENT_TIMESTAMP
-        WHERE CNVS_IDT_ID = :room_id
-        """,
-        {"name": name, "room_id": room_id}
+        text("""
+        UPDATE "USR_CNVS_SMRY"
+        SET "REP_CNVS_NM" = :name,
+            "MOD_DT" = CURRENT_TIMESTAMP
+        WHERE "CNVS_IDT_ID" = :room_id
+        """),
+        {"name": request.name, "room_id": room_id}
     )
     await db.commit()
 
     logger.info(f"Room name updated - room_id: {room_id}, user: {user_id}")
 
     return {
+        "success": True,
         "cnvs_idt_id": room_id,
-        "name": name,
+        "name": request.name,
         "updated_at": datetime.now().isoformat()
     }
 
@@ -94,23 +97,23 @@ async def delete_room(
 
     # 소프트 삭제: USR_CNVS_SMRY
     await db.execute(
-        """
-        UPDATE USR_CNVS_SMRY
-        SET USE_YN = 'N',
-            MOD_DT = CURRENT_TIMESTAMP
-        WHERE CNVS_IDT_ID = :room_id
-        """,
+        text("""
+        UPDATE "USR_CNVS_SMRY"
+        SET "USE_YN" = 'N',
+            "MOD_DT" = CURRENT_TIMESTAMP
+        WHERE "CNVS_IDT_ID" = :room_id
+        """),
         {"room_id": room_id}
     )
 
     # 소프트 삭제: USR_CNVS (하위 메시지)
     await db.execute(
-        """
-        UPDATE USR_CNVS
-        SET USE_YN = 'N',
-            MOD_DT = CURRENT_TIMESTAMP
-        WHERE CNVS_IDT_ID = :room_id
-        """,
+        text("""
+        UPDATE "USR_CNVS"
+        SET "USE_YN" = 'N',
+            "MOD_DT" = CURRENT_TIMESTAMP
+        WHERE "CNVS_IDT_ID" = :room_id
+        """),
         {"room_id": room_id}
     )
 
@@ -119,6 +122,7 @@ async def delete_room(
     logger.info(f"Room deleted - room_id: {room_id}, user: {user_id}")
 
     return {
+        "success": True,
         "cnvs_idt_id": room_id,
         "deleted": True,
         "deleted_at": datetime.now().isoformat()

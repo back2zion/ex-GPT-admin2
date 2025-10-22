@@ -8,6 +8,7 @@ from app.core.config import settings
 import uuid
 import os
 from typing import BinaryIO, Tuple
+from datetime import timedelta
 import hashlib
 
 
@@ -99,7 +100,7 @@ class MinIOService:
             url = self.client.presigned_get_object(
                 self.bucket,
                 object_name,
-                expires=expires_in
+                expires=timedelta(seconds=expires_in)
             )
             return url
         except S3Error as e:

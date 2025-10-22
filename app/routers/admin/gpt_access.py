@@ -260,3 +260,98 @@ async def reject_access_request(
         status="rejected",
         message="접근 신청이 거부되었습니다"
     )
+
+
+@router.get("/stats/departments", response_model=DepartmentStatsListResponse)
+async def get_department_stats(
+    department_id: Optional[int] = Query(None, description="특정 부서 ID 필터"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    부서별 GPT 접근 권한 통계 조회
+    - department_id: 특정 부서만 조회 (선택)
+    """
+    # 부서 목록 조회
+    dept_query = select(Department)
+    if department_id is not None:
+        dept_query = dept_query.where(Department.id == department_id)
+
+    dept_result = await db.execute(dept_query)
+    departments = dept_result.scalars().all()
+
+    departments_data = []
+    total_users = 0
+    total_users_with_access = 0
+
+    for dept in departments:
+        # 부서별 전체 사용자 수
+        user_count_query = select(func.count(User.id)).where(User.department_id == dept.id)
+        user_count_result = await db.execute(user_count_query)
+        users_count = user_count_result.scalar() or 0
+
+        # 부서별 GPT 접근 권한 보유자 수
+        access_count_query = select(func.count(User.id)).where(
+            and_(User.department_id == dept.id, User.gpt_access_granted == True)
+        )
+        access_count_result = await db.execute(access_count_query)
+        access_count = access_count_result.scalar() or 0
+
+        access_rate = (access_count / users_count * 100) if users_count > 0 else 0.0
+
+        departments_data.append(DepartmentStatsResponse(
+            id=dept.id,
+            name=dept.name,
+            code=dept.code,
+            total_users=users_count,
+            users_with_gpt_access=access_count,
+            access_rate=round(access_rate, 2)
+        ))
+
+        total_users += users_count
+        total_users_with_access += access_count
+
+    return DepartmentStatsListResponse(
+        departments=departments_data,
+        total_departments=len(departments_data),
+        total_users=total_users,
+        total_users_with_access=total_users_with_access
+    )
+
+
+@router.get("/stats/models", response_model=ModelDistributionListResponse)
+async def get_model_distribution(
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    모델별 사용자 분포 통계 조회
+    """
+    # 모델별 사용자 수 집계
+    query = select(
+        User.allowed_model,
+        func.count(User.id).label("user_count")
+    ).where(
+        and_(
+            User.gpt_access_granted == True,
+            User.allowed_model.isnot(None)
+        )
+    ).group_by(User.allowed_model)
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    # 전체 사용자 수 계산
+    total_users = sum(row.user_count for row in rows)
+
+    models_data = []
+    for row in rows:
+        percentage = (row.user_count / total_users * 100) if total_users > 0 else 0.0
+        models_data.append(ModelDistributionResponse(
+            model=row.allowed_model,
+            user_count=row.user_count,
+            percentage=round(percentage, 2)
+        ))
+
+    return ModelDistributionListResponse(
+        models=models_data,
+        total_users_with_access=total_users
+    )

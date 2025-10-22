@@ -130,10 +130,12 @@ class TestAuthService:
     async def test_authenticate_user_success(self, db_session):
         """사용자 인증 성공"""
         # Given: 사용자 생성
+        import uuid
+        username = f"testuser_{uuid.uuid4().hex[:8]}"
         password = "SecurePass123!"
         user = User(
-            username="testuser",
-            email="test@ex.co.kr",
+            username=username,
+            email=f"{username}@ex.co.kr",
             hashed_password=get_password_hash(password),
             is_active=True
         )
@@ -144,22 +146,24 @@ class TestAuthService:
 
         # When: 올바른 username과 password로 인증
         authenticated_user = await auth_service.authenticate_user(
-            username="testuser",
+            username=username,
             password=password,
             db=db_session
         )
 
         # Then: 인증 성공
         assert authenticated_user is not None
-        assert authenticated_user.username == "testuser"
+        assert authenticated_user.username == username
 
     async def test_authenticate_user_wrong_password(self, db_session):
         """잘못된 비밀번호로 인증 실패"""
         # Given: 사용자 생성
+        import uuid
+        username = f"testuser_{uuid.uuid4().hex[:8]}"
         password = "SecurePass123!"
         user = User(
-            username="testuser",
-            email="test@ex.co.kr",
+            username=username,
+            email=f"{username}@ex.co.kr",
             hashed_password=get_password_hash(password),
             is_active=True
         )
@@ -170,7 +174,7 @@ class TestAuthService:
 
         # When: 잘못된 password로 인증
         authenticated_user = await auth_service.authenticate_user(
-            username="testuser",
+            username=username,
             password="WrongPassword",
             db=db_session
         )
@@ -181,10 +185,12 @@ class TestAuthService:
     async def test_authenticate_inactive_user(self, db_session):
         """비활성 사용자 인증 실패"""
         # Given: 비활성 사용자
+        import uuid
+        username = f"inactive_{uuid.uuid4().hex[:8]}"
         password = "SecurePass123!"
         user = User(
-            username="inactive",
-            email="inactive@ex.co.kr",
+            username=username,
+            email=f"{username}@ex.co.kr",
             hashed_password=get_password_hash(password),
             is_active=False
         )
@@ -195,7 +201,7 @@ class TestAuthService:
 
         # When: 비활성 사용자 인증
         authenticated_user = await auth_service.authenticate_user(
-            username="inactive",
+            username=username,
             password=password,
             db=db_session
         )
@@ -206,10 +212,12 @@ class TestAuthService:
     async def test_login_updates_last_login(self, db_session):
         """로그인 시 마지막 로그인 시간 업데이트"""
         # Given: 사용자 생성
+        import uuid
+        username = f"testuser_{uuid.uuid4().hex[:8]}"
         password = "SecurePass123!"
         user = User(
-            username="testuser",
-            email="test@ex.co.kr",
+            username=username,
+            email=f"{username}@ex.co.kr",
             hashed_password=get_password_hash(password),
             is_active=True,
             last_login_at=None
@@ -221,7 +229,7 @@ class TestAuthService:
 
         # When: 로그인
         authenticated_user = await auth_service.authenticate_user(
-            username="testuser",
+            username=username,
             password=password,
             db=db_session
         )
