@@ -51,8 +51,13 @@ class Settings(BaseSettings):
     # Qdrant
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6335  # ex-gpt Qdrant port (maps to qdrant:6333 inside Docker)
-    QDRANT_COLLECTION: str = "130825-512-v2"  # Main collection (must match ex-gpt-api)
-    QDRANT_API_KEY: str = ""  # Optional
+    QDRANT_COLLECTION: str = "130825-512-v3"  # Main collection (must match ex-gpt-api)
+    QDRANT_API_KEY: str = "QFy9YlRTm0Y1yo6D"  # API key
+
+    # vLLM (AI Service)
+    VLLM_API_URL: str = "http://localhost:8000/v1"  # vLLM OpenAI-compatible API
+    VLLM_MODEL_NAME: str = "Qwen/Qwen3-32B-Instruct"  # Chat model
+    EMBEDDING_API_URL: str = "http://localhost:8001/v1"  # Embedding model API
 
     # CORS
     ALLOWED_ORIGINS: List[str] = [
