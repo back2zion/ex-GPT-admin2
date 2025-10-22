@@ -30,6 +30,8 @@ from app.routers.admin import (
     file_upload
 )
 from app.routers import chat_proxy
+from app.routers.chat import chat, rooms, history
+from app.routers.chat import files as chat_files
 import os
 
 app = FastAPI(
@@ -87,6 +89,12 @@ app.include_router(documents.router)
 app.include_router(stt_batches.router)
 app.include_router(file_browser.router)
 app.include_router(file_upload.router)
+
+# Chat 라우터 등록 (채팅 시스템 마이그레이션)
+app.include_router(chat.router)
+app.include_router(rooms.router)
+app.include_router(history.router)
+app.include_router(chat_files.router)
 
 # 정적 파일 제공 (React 관리자 페이지)
 admin_path = "/home/aigen/html/admin"

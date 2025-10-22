@@ -5,6 +5,7 @@ Authentication Utilities
 from fastapi import Cookie, HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
+from app.core.config import settings
 import redis.asyncio as aioredis
 import json
 import logging
@@ -13,7 +14,6 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # Redis 클라이언트 (세션 스토어)
-# TODO: app/core/redis.py로 이동
 redis_client: Optional[aioredis.Redis] = None
 
 
@@ -21,7 +21,10 @@ async def get_redis_client():
     """Redis 클라이언트 가져오기"""
     global redis_client
     if redis_client is None:
-        redis_client = await aioredis.from_url("redis://localhost:6379")
+        # Docker 컨테이너 내부: redis:6379
+        # 로컬: localhost:6379
+        redis_url = settings.REDIS_URL.replace("localhost", "redis") if "localhost" in settings.REDIS_URL else settings.REDIS_URL
+        redis_client = await aioredis.from_url(redis_url)
     return redis_client
 
 
