@@ -151,7 +151,7 @@ class DocumentSyncScheduler:
                     content=new_doc["content"],
                     document_type=new_doc["document_type"],
                     status="pending",
-                    legacy_id=new_doc["legacy_id"]
+                    legacy_id=str(new_doc["legacy_id"])  # int to str
                 )
                 db_session.add(doc)
                 await db_session.flush()
@@ -159,7 +159,7 @@ class DocumentSyncScheduler:
                 # 변경 요청 생성
                 await approval_service.create_change_request(
                     document_id=doc.id,
-                    legacy_id=new_doc["legacy_id"],
+                    legacy_id=str(new_doc["legacy_id"]),  # int to str
                     change_type="new",
                     old_data=None,
                     new_data=new_doc,
@@ -171,7 +171,7 @@ class DocumentSyncScheduler:
             for modified_doc in changes["modified"]:
                 # 기존 문서 조회
                 stmt = select(Document).where(
-                    Document.legacy_id == modified_doc["legacy_id"]
+                    Document.legacy_id == str(modified_doc["legacy_id"])  # int to str
                 )
                 result = await db_session.execute(stmt)
                 existing_doc = result.scalar_one_or_none()
@@ -192,7 +192,7 @@ class DocumentSyncScheduler:
                     # 변경 요청 생성
                     await approval_service.create_change_request(
                         document_id=existing_doc.id,
-                        legacy_id=modified_doc["legacy_id"],
+                        legacy_id=str(modified_doc["legacy_id"]),  # int to str
                         change_type="modified",
                         old_data={
                             "title": existing_doc.title,
@@ -210,7 +210,7 @@ class DocumentSyncScheduler:
             for deleted_doc in changes["deleted"]:
                 # 변경 요청 생성 (삭제)
                 stmt = select(Document).where(
-                    Document.legacy_id == deleted_doc["legacy_id"]
+                    Document.legacy_id == str(deleted_doc["legacy_id"])  # int to str
                 )
                 result = await db_session.execute(stmt)
                 existing_doc = result.scalar_one_or_none()
@@ -218,7 +218,7 @@ class DocumentSyncScheduler:
                 if existing_doc:
                     await approval_service.create_change_request(
                         document_id=existing_doc.id,
-                        legacy_id=deleted_doc["legacy_id"],
+                        legacy_id=str(deleted_doc["legacy_id"]),  # int to str
                         change_type="deleted",
                         old_data={
                             "title": existing_doc.title,
