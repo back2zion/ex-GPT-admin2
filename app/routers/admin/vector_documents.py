@@ -29,6 +29,44 @@ def get_vector_store() -> VectorStoreService:
     )
 
 
+@router.get("/stats")
+async def get_vector_documents_stats(
+    vector_store: VectorStoreService = Depends(get_vector_store)
+):
+    """
+    벡터 문서 통계 조회 (doctype별 문서 수)
+
+    Returns:
+        {"total": int, "by_doctype": {...}}
+    """
+    try:
+        documents, total = await vector_store.get_unique_documents(
+            collection_name=QDRANT_COLLECTION,
+            skip=0,
+            limit=10000  # 전체 문서 가져오기
+        )
+
+        # doctype별 집계
+        doctype_counts = {}
+        for doc in documents:
+            doctype = doc.get("doctype", "기타")
+            doctype_counts[doctype] = doctype_counts.get(doctype, 0) + 1
+
+        return {
+            "total": total,
+            "by_doctype": doctype_counts
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get vector documents stats: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"벡터 문서 통계 조회 실패: {str(e)}"
+        )
+    finally:
+        vector_store.close()
+
+
 @router.get("")
 async def list_vector_documents(
     skip: int = Query(0, ge=0),

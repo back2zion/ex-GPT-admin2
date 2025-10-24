@@ -47,21 +47,8 @@ import axios from '../axiosConfig';
 
 const API_BASE = '/api/v1/admin';
 
-// 카테고리 목록
-const CATEGORIES = ['법령', '업무가이드', '업무기준', '지침', '사규', '노동조합', '일반사항', '참고자료'];
-
-// 카테고리별 건수 (Mock 데이터)
-const CATEGORY_COUNTS = {
-  '전체': 2196,
-  '법령': 1113,
-  '업무가이드': 586,
-  '업무기준': 240,
-  '지침': 175,
-  '사규': 70,
-  '노동조합': 7,
-  '일반사항': 3,
-  '참고자료': 2,
-};
+// 문서 타입 목록 (Qdrant doctype 기준)
+const DOC_TYPES = ['D', '기타'];
 
 // 경로 선택 옵션
 const PATH_OPTIONS = {
@@ -79,6 +66,9 @@ export default function VectorDataManagementPage() {
   // 필터 상태
   const [categoryFilter, setCategoryFilter] = useState('전체');
   const [searchText, setSearchText] = useState('');
+
+  // 통계 상태 (실제 Qdrant 데이터)
+  const [stats, setStats] = useState({ total: 0, by_doctype: {} });
 
   // 테이블 상태
   const [documents, setDocuments] = useState([]);
@@ -107,8 +97,22 @@ export default function VectorDataManagementPage() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
 
   useEffect(() => {
+    loadStats();
     loadDocuments();
   }, [page, rowsPerPage, categoryFilter]);
+
+  /**
+   * 통계 로드 (실제 Qdrant 데이터)
+   */
+  const loadStats = async () => {
+    try {
+      const response = await axios.get(`${API_BASE}/vector-documents/stats`);
+      setStats(response.data);
+    } catch (error) {
+      console.error('통계 로딩 실패:', error);
+      setStats({ total: 0, by_doctype: {} });
+    }
+  };
 
   /**
    * 문서 목록 로드
@@ -336,34 +340,64 @@ export default function VectorDataManagementPage() {
         </Box>
       </Paper>
 
-      {/* 카테고리 통계 박스 */}
+      {/* 통계 박스 (실제 Qdrant 데이터) */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        {Object.entries(CATEGORY_COUNTS).map(([category, count]) => (
-          <Grid item xs={12} sm={6} md={4} lg={1.33} key={category}>
-            <Card
-              elevation={3}
-              sx={{
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                border: categoryFilter === category ? '2px solid #1976d2' : '2px solid transparent',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: 6,
-                },
-              }}
-              onClick={() => setCategoryFilter(category)}
-            >
-              <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                  {category}
-                </Typography>
-                <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold' }}>
-                  {count.toLocaleString()}건
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
+        {/* 전체 */}
+        <Grid item xs={12} sm={6} md={4} lg={3} key="전체">
+          <Card
+            elevation={3}
+            sx={{
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              border: categoryFilter === '전체' ? '2px solid #1976d2' : '2px solid transparent',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: 6,
+              },
+            }}
+            onClick={() => setCategoryFilter('전체')}
+          >
+            <CardContent sx={{ textAlign: 'center', py: 2 }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                전체
+              </Typography>
+              <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold' }}>
+                {stats.total.toLocaleString()}건
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* doctype별 통계 */}
+        {Object.entries(stats.by_doctype || {}).map(([doctype, count]) => {
+          const displayName = doctype || '기타';
+          return (
+            <Grid item xs={12} sm={6} md={4} lg={3} key={doctype}>
+              <Card
+                elevation={3}
+                sx={{
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  border: categoryFilter === displayName ? '2px solid #1976d2' : '2px solid transparent',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: 6,
+                  },
+                }}
+                onClick={() => setCategoryFilter(displayName)}
+              >
+                <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                    {displayName}
+                  </Typography>
+                  <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold' }}>
+                    {count.toLocaleString()}건
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          );
+        })}
       </Grid>
 
       {/* 테이블 상단 */}
