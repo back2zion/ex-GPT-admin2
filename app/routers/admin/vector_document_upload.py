@@ -179,21 +179,30 @@ async def save_document_metadata(
 
 async def process_document_with_exgpt(file: UploadFile, document_id: int) -> dict:
     """
-    ex-gpt API로 파일을 업로드하여 벡터 임베딩 생성
+    ex-gpt API로 파일을 업로드하여 벡터 임베딩 생성 (3단계 워크플로우)
+
+    1. Upload: 파일을 S3(MinIO)에 업로드
+    2. Parse: 파일에서 텍스트 추출
+    3. Process: 벡터 임베딩 생성 및 Qdrant에 저장
 
     Args:
         file: 업로드할 파일
         document_id: EDB에 저장된 문서 ID
 
     Returns:
-        ex-gpt API 응답
+        ex-gpt API 최종 상태
     """
     try:
         # 파일을 다시 읽기 위해 처음으로 이동
         file.file.seek(0)
 
-        # ex-gpt API로 파일 업로드
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        # ex-gpt API 3단계 워크플로우 실행
+        async with httpx.AsyncClient(timeout=300.0) as client:  # 타임아웃 5분으로 증가
+            headers = {
+                "x-api-key": EXGPT_API_KEY
+            }
+
+            # 1단계: 파일 업로드
             files = {
                 "file": (file.filename, file.file, file.content_type)
             }
@@ -201,27 +210,66 @@ async def process_document_with_exgpt(file: UploadFile, document_id: int) -> dic
                 "file_id": str(document_id),
                 "overwrite": False
             }
-            headers = {
-                "x-api-key": EXGPT_API_KEY
-            }
 
-            response = await client.post(
+            upload_response = await client.post(
                 f"{EXGPT_API_URL}/v1/file/",
                 files=files,
                 params=params,
                 headers=headers
             )
 
-            if response.status_code != 200:
-                logger.error(f"ex-gpt API upload failed: {response.status_code} - {response.text}")
+            if upload_response.status_code != 200:
+                logger.error(f"ex-gpt API upload failed: {upload_response.status_code} - {upload_response.text}")
                 raise HTTPException(
                     status_code=500,
-                    detail=f"벡터 임베딩 생성 실패: {response.text}"
+                    detail=f"파일 업로드 실패: {upload_response.text}"
                 )
 
-            result = response.json()
-            logger.info(f"Document {document_id} processed by ex-gpt API successfully")
-            return result
+            logger.info(f"Document {document_id} uploaded to ex-gpt (step 1/3)")
+
+            # 2단계: 파일 파싱 (텍스트 추출)
+            parse_response = await client.post(
+                f"{EXGPT_API_URL}/v1/file/{document_id}/parse?wait=true",
+                headers=headers
+            )
+
+            if parse_response.status_code != 200:
+                logger.error(f"ex-gpt API parse failed: {parse_response.status_code} - {parse_response.text}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"파일 파싱 실패: {parse_response.text}"
+                )
+
+            logger.info(f"Document {document_id} parsed by ex-gpt (step 2/3)")
+
+            # 3단계: 벡터 임베딩 생성 및 Qdrant 저장
+            process_response = await client.post(
+                f"{EXGPT_API_URL}/v1/file/{document_id}/process?wait=true",
+                headers=headers
+            )
+
+            if process_response.status_code != 200:
+                logger.error(f"ex-gpt API process failed: {process_response.status_code} - {process_response.text}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"벡터 임베딩 생성 실패: {process_response.text}"
+                )
+
+            logger.info(f"Document {document_id} vector embedding created in Qdrant (step 3/3)")
+
+            # 최종 상태 확인
+            status_response = await client.get(
+                f"{EXGPT_API_URL}/v1/file/{document_id}/status",
+                headers=headers
+            )
+
+            if status_response.status_code == 200:
+                status_data = status_response.json()
+                logger.info(f"Document {document_id} final status: {status_data.get('status')}")
+                return status_data
+            else:
+                # 상태 확인 실패해도 process까지 성공했으면 OK
+                return {"status": "ready", "file_id": str(document_id)}
 
     except httpx.RequestError as e:
         logger.error(f"Failed to connect to ex-gpt API: {e}")
