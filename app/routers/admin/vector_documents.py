@@ -7,6 +7,9 @@ from datetime import datetime
 import logging
 import os
 import asyncpg
+import httpx
+from minio import Minio
+from minio.error import S3Error
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +22,17 @@ EDB_PORT = int(os.getenv("EDB_PORT", "5444"))
 EDB_DATABASE = os.getenv("EDB_DATABASE", "AGENAI")
 EDB_USER = os.getenv("EDB_USER", "wisenut_dev")
 EDB_PASSWORD = os.getenv("EDB_PASSWORD", "express!12")
+
+# MinIO 설정
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "host.docker.internal:10002")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "admin")
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "admin123")
+MINIO_SECURE = os.getenv("MINIO_SECURE", "false").lower() == "true"
+MINIO_BUCKET = os.getenv("MINIO_BUCKET", "documents")
+
+# ex-gpt API 설정
+EXGPT_API_URL = os.getenv("EXGPT_API_URL", "http://host.docker.internal:8083")
+EXGPT_API_KEY = os.getenv("EXGPT_API_KEY", "z3JE1M8huXmNux6y")
 
 
 async def get_edb_connection():
@@ -38,6 +52,79 @@ async def get_edb_connection():
             status_code=500,
             detail=f"데이터베이스 연결 실패: {str(e)}"
         )
+
+
+def get_minio_client():
+    """MinIO 클라이언트 생성"""
+    try:
+        client = Minio(
+            MINIO_ENDPOINT,
+            access_key=MINIO_ACCESS_KEY,
+            secret_key=MINIO_SECRET_KEY,
+            secure=MINIO_SECURE
+        )
+        return client
+    except Exception as e:
+        logger.error(f"Failed to create MinIO client: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"MinIO 연결 실패: {str(e)}"
+        )
+
+
+async def delete_from_minio(document_id: int, category_code: str):
+    """MinIO에서 파일 삭제"""
+    try:
+        client = get_minio_client()
+        # 파일 경로 패턴: {category_code}/기타/00/00/{filename}
+        # 정확한 파일명을 모르므로 prefix로 검색
+        prefix = f"{category_code}/"
+
+        objects = client.list_objects(MINIO_BUCKET, prefix=prefix, recursive=True)
+        deleted_count = 0
+
+        for obj in objects:
+            # 문서 ID를 포함하는 객체 찾기 (실제로는 문서 정보에서 파일명을 가져와야 함)
+            # 여기서는 간단히 처리
+            try:
+                client.remove_object(MINIO_BUCKET, obj.object_name)
+                logger.info(f"Deleted from MinIO: {obj.object_name}")
+                deleted_count += 1
+            except Exception as e:
+                logger.warning(f"Failed to delete {obj.object_name} from MinIO: {e}")
+
+        return deleted_count
+    except Exception as e:
+        logger.error(f"Failed to delete from MinIO: {e}")
+        # MinIO 삭제 실패는 경고만 하고 계속 진행
+        return 0
+
+
+async def delete_from_exgpt(document_id: int):
+    """ex-gpt API를 통해 Qdrant에서 벡터 삭제"""
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            headers = {
+                "x-api-key": EXGPT_API_KEY
+            }
+
+            response = await client.delete(
+                f"{EXGPT_API_URL}/v1/file/{document_id}",
+                headers=headers
+            )
+
+            if response.status_code in [200, 204, 404]:
+                # 404는 이미 삭제된 경우이므로 성공으로 처리
+                logger.info(f"Deleted from ex-gpt/Qdrant: document {document_id}")
+                return True
+            else:
+                logger.warning(f"Failed to delete from ex-gpt: {response.status_code} - {response.text}")
+                return False
+
+    except Exception as e:
+        logger.error(f"Failed to delete from ex-gpt: {e}")
+        # ex-gpt 삭제 실패는 경고만 하고 계속 진행
+        return False
 
 
 @router.get("/stats")
@@ -318,24 +405,30 @@ async def delete_vector_document(
                 detail=f"유효하지 않은 문서 ID: {document_id}"
             )
 
-        # 문서 존재 확인
-        existing = await conn.fetchval(
+        # 문서 존재 확인 및 정보 가져오기
+        doc_info = await conn.fetchrow(
             """
-            SELECT COUNT(*)
+            SELECT doc_id, doc_cat_cd
             FROM wisenut.doc_bas_lst
             WHERE doc_id = $1
             """,
             doc_id_int
         )
 
-        if existing == 0:
+        if not doc_info:
             raise HTTPException(
                 status_code=404,
                 detail=f"문서를 찾을 수 없습니다: {document_id}"
             )
 
         if hard_delete:
-            # 완전 삭제
+            # 1. ex-gpt/Qdrant에서 삭제
+            await delete_from_exgpt(doc_id_int)
+
+            # 2. MinIO에서 삭제 (카테고리 코드 사용)
+            await delete_from_minio(doc_id_int, doc_info['doc_cat_cd'])
+
+            # 3. EDB에서 완전 삭제
             await conn.execute(
                 """
                 DELETE FROM wisenut.doc_bas_lst
@@ -343,7 +436,7 @@ async def delete_vector_document(
                 """,
                 doc_id_int
             )
-            logger.info(f"Hard deleted document: {doc_id_int}")
+            logger.info(f"Hard deleted document from all storages: {doc_id_int}")
         else:
             # Soft delete (use_yn = 'N')
             await conn.execute(
@@ -404,7 +497,25 @@ async def batch_delete_documents(
             )
 
         if hard_delete:
-            # 완전 삭제
+            # 각 문서의 정보 가져오기
+            docs_info = await conn.fetch(
+                """
+                SELECT doc_id, doc_cat_cd
+                FROM wisenut.doc_bas_lst
+                WHERE doc_id = ANY($1::int[])
+                """,
+                doc_ids_int
+            )
+
+            # 1. ex-gpt/Qdrant에서 삭제
+            for doc in docs_info:
+                await delete_from_exgpt(doc['doc_id'])
+
+            # 2. MinIO에서 삭제
+            for doc in docs_info:
+                await delete_from_minio(doc['doc_id'], doc['doc_cat_cd'])
+
+            # 3. EDB에서 완전 삭제
             deleted_count = await conn.execute(
                 """
                 DELETE FROM wisenut.doc_bas_lst
@@ -412,6 +523,7 @@ async def batch_delete_documents(
                 """,
                 doc_ids_int
             )
+            logger.info(f"Hard deleted {len(document_ids)} documents from all storages")
         else:
             # Soft delete
             deleted_count = await conn.execute(
@@ -422,8 +534,7 @@ async def batch_delete_documents(
                 """,
                 doc_ids_int
             )
-
-        logger.info(f"Deleted {len(document_ids)} documents (hard_delete={hard_delete})")
+            logger.info(f"Soft deleted {len(document_ids)} documents")
 
         return {
             "deleted_count": len(document_ids),

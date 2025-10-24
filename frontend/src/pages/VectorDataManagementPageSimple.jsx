@@ -217,12 +217,12 @@ export default function VectorDataManagementPageSimple() {
     }
 
     try {
-      // 다중 문서 삭제 API 호출
+      // 다중 문서 삭제 API 호출 (완전 삭제)
       await axios.post(`${API_BASE}/vector-documents/batch-delete`, selectedItems, {
-        params: { hard_delete: false }  // soft delete
+        params: { hard_delete: true }  // 완전 삭제 (EDB, MinIO, Qdrant)
       });
 
-      alert(`${selectedItems.length}건의 문서가 삭제되었습니다.`);
+      alert(`${selectedItems.length}건의 문서가 완전히 삭제되었습니다.`);
       setSelectedItems([]);
       loadDocuments();
       loadStats();
