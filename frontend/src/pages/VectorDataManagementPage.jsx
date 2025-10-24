@@ -127,7 +127,7 @@ export default function VectorDataManagementPage() {
         params.append('category', categoryFilter);
       }
 
-      const response = await axios.get(`${API_BASE}/documents?${params}`);
+      const response = await axios.get(`${API_BASE}/vector-documents?${params}`);
       const data = response.data;
 
       setDocuments(data.items || []);
@@ -262,12 +262,11 @@ export default function VectorDataManagementPage() {
     const ws = XLSX.utils.json_to_sheet(
       documents.map((doc, index) => ({
         번호: (page - 1) * rowsPerPage + index + 1,
-        카테고리: doc.category_name || '-',
         제목: doc.title,
-        문서타입: doc.document_type,
-        상태: doc.status,
-        청크수: doc.vector_info?.total_chunks || 0,
-        등록일: doc.created_at,
+        문서타입: doc.doctype || 'D',
+        토큰수: doc.token_count || 0,
+        활성화: doc.is_active ? 'Y' : 'N',
+        '파일 ID': doc.id,
       }))
     );
     const wb = XLSX.utils.book_new();
@@ -423,13 +422,11 @@ export default function VectorDataManagementPage() {
                 />
               </TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>번호</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>카테고리</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>제목</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>문서타입</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>상태</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>청크수</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>삭제</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>등록일</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>토큰수</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>활성화</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>파일 ID</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -442,24 +439,11 @@ export default function VectorDataManagementPage() {
                   />
                 </TableCell>
                 <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
-                <TableCell>{doc.category_name || '-'}</TableCell>
                 <TableCell>{doc.title}</TableCell>
-                <TableCell>{doc.document_type}</TableCell>
-                <TableCell>{doc.status}</TableCell>
-                <TableCell>{doc.vector_info?.total_chunks ? doc.vector_info.total_chunks.toLocaleString() : '-'}</TableCell>
-                <TableCell>
-                  <IconButton
-                    size="small"
-                    onClick={() => {
-                      if (window.confirm('이 문서를 삭제하시겠습니까?')) {
-                        console.log('삭제:', doc.id);
-                      }
-                    }}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </TableCell>
-                <TableCell>{doc.created_at}</TableCell>
+                <TableCell>{doc.doctype || 'D'}</TableCell>
+                <TableCell>{doc.token_count ? doc.token_count.toLocaleString() : 0}</TableCell>
+                <TableCell>{doc.is_active ? 'Y' : 'N'}</TableCell>
+                <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{doc.id}</TableCell>
               </TableRow>
             ))}
           </TableBody>

@@ -17,6 +17,7 @@ class VectorStoreService:
         self,
         host: str = "localhost",
         port: int = 6333,
+        api_key: str = None,
         ds_api_url: str = "http://localhost:8085"
     ):
         """
@@ -25,6 +26,7 @@ class VectorStoreService:
         Args:
             host: Qdrant 호스트
             port: Qdrant 포트
+            api_key: Qdrant API 키
             ds_api_url: ds-api 서버 URL
         """
         self.ds_api_url = ds_api_url
@@ -32,7 +34,13 @@ class VectorStoreService:
         self.port = port
 
         try:
-            self.client = QdrantClient(host=host, port=port)
+            self.client = QdrantClient(
+                host=host,
+                port=port,
+                api_key=api_key,
+                https=False,  # HTTP만 사용
+                prefer_grpc=False  # REST API 사용
+            )
             logger.info(f"Qdrant client initialized: {host}:{port}")
         except Exception as e:
             logger.warning(f"Failed to initialize Qdrant client: {e}")
@@ -311,6 +319,106 @@ class VectorStoreService:
         except Exception as e:
             logger.error(f"Failed to delete points: {e}")
             return False
+
+    async def get_unique_documents(
+        self,
+        collection_name: str,
+        skip: int = 0,
+        limit: int = 100
+    ) -> tuple[List[Dict], int]:
+        """
+        Qdrant에서 유니크한 문서 목록 조회 (file_id 기준)
+
+        Args:
+            collection_name: 컬렉션 이름
+            skip: 스킵할 문서 수
+            limit: 가져올 문서 수
+
+        Returns:
+            tuple[List[Dict], int]: (문서 목록, 전체 문서 수)
+        """
+        if not self.client:
+            logger.error("Qdrant client not initialized")
+            return [], 0
+
+        try:
+            # 모든 포인트를 스크롤하면서 유니크한 file_id 수집
+            documents_dict = {}
+            offset = None
+            batch_size = 100
+            total_points_processed = 0
+
+            while True:
+                # Qdrant scroll API로 배치 가져오기
+                result = self.client.scroll(
+                    collection_name=collection_name,
+                    limit=batch_size,
+                    offset=offset,
+                    with_payload=True,
+                    with_vectors=False
+                )
+
+                points, next_offset = result
+
+                if not points:
+                    break
+
+                total_points_processed += len(points)
+
+                # file_id 기준으로 유니크한 문서만 저장
+                for point in points:
+                    payload = point.payload or {}
+                    metadata = payload.get("metadata", {})
+
+                    file_id = metadata.get("file_id")
+                    if not file_id:
+                        continue
+
+                    # 이미 처리한 문서면 스킵
+                    if file_id in documents_dict:
+                        continue
+
+                    # 문서 정보 저장
+                    file_path = metadata.get("file_path", [])
+                    title = file_path[0] if file_path else "제목 없음"
+
+                    documents_dict[file_id] = {
+                        "id": file_id,
+                        "title": title,
+                        "file_path": file_path,
+                        "metadata_uri": metadata.get("metadata_uri", ""),
+                        "doctype": metadata.get("doctype", ""),
+                        "token_count": metadata.get("token_count", 0),
+                        "migrated": metadata.get("migrated", False)
+                    }
+
+                # 다음 오프셋이 없으면 종료
+                if next_offset is None:
+                    break
+
+                offset = next_offset
+
+                # 충분한 문서를 수집했으면 조기 종료 (성능 최적화)
+                if len(documents_dict) >= skip + limit + 1000:
+                    break
+
+            # 문서 목록을 리스트로 변환
+            all_documents = list(documents_dict.values())
+            total_count = len(all_documents)
+
+            # 페이징 적용
+            paginated_documents = all_documents[skip:skip + limit]
+
+            logger.info(
+                f"Found {total_count} unique documents in {collection_name} "
+                f"(processed {total_points_processed} points)"
+            )
+
+            return paginated_documents, total_count
+
+        except Exception as e:
+            logger.error(f"Failed to get unique documents: {e}")
+            return [], 0
 
     def close(self):
         """연결 종료"""

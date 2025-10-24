@@ -1,118 +1,171 @@
 """
-벡터 문서 관리 API 엔드포인트
+벡터 문서 관리 API 엔드포인트 (Qdrant 기반)
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import Optional
 from datetime import datetime
+import logging
+import os
 
-router = APIRouter(prefix="/api/v1/admin/vector_documents", tags=["admin-vector-documents"])
+from app.services.vector_store import VectorStoreService
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api/v1/admin/vector-documents", tags=["admin-vector-documents"])
+
+# Qdrant 설정
+QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
+QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
+QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "130825-512-v3")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 
 
-# Mock 데이터
-MOCK_DOCUMENTS = [
-    {
-        "id": 1,
-        "title": "도로교통법 제1조 - 법의 목적",
-        "category": "법규",
-        "chunk_count": 15,
-        "is_active": True,
-        "created_at": "2025-01-15T10:30:00",
-        "updated_at": "2025-01-15T10:30:00"
-    },
-    {
-        "id": 2,
-        "title": "고속도로 안전운행 지침",
-        "category": "지침",
-        "chunk_count": 32,
-        "is_active": True,
-        "created_at": "2025-01-14T14:20:00",
-        "updated_at": "2025-01-14T14:20:00"
-    },
-    {
-        "id": 3,
-        "title": "톨게이트 요금 정산 매뉴얼",
-        "category": "매뉴얼",
-        "chunk_count": 28,
-        "is_active": False,
-        "created_at": "2025-01-10T09:15:00",
-        "updated_at": "2025-01-10T09:15:00"
-    }
-]
+def get_vector_store() -> VectorStoreService:
+    """VectorStoreService 인스턴스 생성"""
+    return VectorStoreService(
+        host=QDRANT_HOST,
+        port=QDRANT_PORT,
+        api_key=QDRANT_API_KEY
+    )
 
 
 @router.get("")
 async def list_vector_documents(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, le=1000),
-    category: Optional[str] = None,
-    is_active: Optional[bool] = None
+    search: Optional[str] = None,
+    doctype: Optional[str] = None,
+    vector_store: VectorStoreService = Depends(get_vector_store)
 ):
-    """벡터 문서 목록 조회"""
-    items = MOCK_DOCUMENTS.copy()
+    """
+    벡터 문서 목록 조회 (Qdrant에서 실제 데이터 가져오기)
 
-    # 필터링
-    if category:
-        items = [doc for doc in items if doc.get("category") == category]
-    if is_active is not None:
-        items = [doc for doc in items if doc.get("is_active") == is_active]
+    Args:
+        skip: 스킵할 문서 수
+        limit: 가져올 문서 수 (최대 1000)
+        search: 제목 검색어
+        doctype: 문서 타입 필터
+        vector_store: VectorStoreService 인스턴스
 
-    # 페이징
-    total = len(items)
-    items = items[skip:skip + limit]
+    Returns:
+        {"items": [...], "total": int}
+    """
+    try:
+        # Qdrant에서 유니크한 문서 목록 가져오기
+        documents, total = await vector_store.get_unique_documents(
+            collection_name=QDRANT_COLLECTION,
+            skip=skip,
+            limit=limit
+        )
 
-    return {"items": items, "total": total}
+        # 필터링 (검색어, 문서 타입)
+        if search:
+            documents = [
+                doc for doc in documents
+                if search.lower() in doc.get("title", "").lower()
+            ]
+            total = len(documents)
+
+        if doctype:
+            documents = [
+                doc for doc in documents
+                if doc.get("doctype") == doctype
+            ]
+            total = len(documents)
+
+        # 응답 형식 변환 (프론트엔드 호환)
+        formatted_docs = []
+        for doc in documents:
+            formatted_docs.append({
+                "id": doc["id"],
+                "title": doc["title"],
+                "file_path": doc.get("file_path", []),
+                "metadata_uri": doc.get("metadata_uri", ""),
+                "doctype": doc.get("doctype", "D"),
+                "token_count": doc.get("token_count", 0),
+                "is_active": doc.get("migrated", True),  # migrated를 is_active로 매핑
+                "created_at": None,  # Qdrant에는 없음
+            })
+
+        logger.info(f"Returned {len(formatted_docs)} documents from Qdrant (total: {total})")
+
+        return {
+            "items": formatted_docs,
+            "total": total
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to list vector documents: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"벡터 문서 목록 조회 실패: {str(e)}"
+        )
+    finally:
+        vector_store.close()
 
 
 @router.get("/{document_id}")
 async def get_vector_document(
-    document_id: int
+    document_id: str,
+    vector_store: VectorStoreService = Depends(get_vector_store)
 ):
-    """벡터 문서 상세 조회"""
-    for doc in MOCK_DOCUMENTS:
-        if doc["id"] == document_id:
-            return doc
+    """
+    벡터 문서 상세 조회
 
-    raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
+    Args:
+        document_id: 문서 ID (file_id)
+        vector_store: VectorStoreService 인스턴스
+
+    Returns:
+        문서 상세 정보
+    """
+    try:
+        # Qdrant에서 해당 file_id를 가진 첫 번째 포인트 조회
+        result = vector_store.client.scroll(
+            collection_name=QDRANT_COLLECTION,
+            scroll_filter={
+                "must": [
+                    {
+                        "key": "metadata.file_id",
+                        "match": {"value": document_id}
+                    }
+                ]
+            },
+            limit=1,
+            with_payload=True,
+            with_vectors=False
+        )
+
+        points, _ = result
+        if not points:
+            raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
+
+        point = points[0]
+        metadata = point.payload.get("metadata", {})
+
+        return {
+            "id": document_id,
+            "title": metadata.get("file_path", ["제목 없음"])[0],
+            "file_path": metadata.get("file_path", []),
+            "metadata_uri": metadata.get("metadata_uri", ""),
+            "doctype": metadata.get("doctype", ""),
+            "token_count": metadata.get("token_count", 0),
+            "is_active": metadata.get("migrated", True),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get vector document: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"벡터 문서 조회 실패: {str(e)}"
+        )
+    finally:
+        vector_store.close()
 
 
-@router.post("")
-async def create_vector_document(
-    data: dict
-):
-    """벡터 문서 생성"""
-    new_id = max([doc["id"] for doc in MOCK_DOCUMENTS]) + 1
-    new_doc = {
-        "id": new_id,
-        **data,
-        "created_at": datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat()
-    }
-    MOCK_DOCUMENTS.append(new_doc)
-    return new_doc
-
-
-@router.put("/{document_id}")
-async def update_vector_document(
-    document_id: int,
-    data: dict
-):
-    """벡터 문서 수정"""
-    for i, doc in enumerate(MOCK_DOCUMENTS):
-        if doc["id"] == document_id:
-            MOCK_DOCUMENTS[i] = {**doc, **data, "updated_at": datetime.now().isoformat()}
-            return MOCK_DOCUMENTS[i]
-
-    raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
-
-
-@router.delete("/{document_id}")
-async def delete_vector_document(
-    document_id: int
-):
-    """벡터 문서 삭제"""
-    for i, doc in enumerate(MOCK_DOCUMENTS):
-        if doc["id"] == document_id:
-            MOCK_DOCUMENTS.pop(i)
-            return {"message": "문서가 삭제되었습니다", "id": document_id}
-
-    raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
+# TODO: 벡터 문서 생성/수정/삭제는 별도의 문서 업로드 파이프라인을 통해 처리
+# @router.post("")
+# @router.put("/{document_id}")
+# @router.delete("/{document_id}")
