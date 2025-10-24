@@ -29,7 +29,6 @@ from app.routers.admin import (
     file_browser,
     file_upload,
     legacy_sync,
-    deployment,
     vector_documents,
     vector_categories,
     vector_document_upload,
@@ -37,6 +36,14 @@ from app.routers.admin import (
     error_reports,
     recommended_questions
 )
+
+# Deployment router (optional - mlflow dependency)
+try:
+    from app.routers.admin import deployment
+    DEPLOYMENT_AVAILABLE = True
+except ImportError:
+    DEPLOYMENT_AVAILABLE = False
+    print("Warning: deployment router not available (mlflow not installed)")
 from app.routers import chat_proxy, health
 from app.routers.chat import chat, rooms, history
 from app.routers.chat import files as chat_files
@@ -108,7 +115,8 @@ app.include_router(file_browser.router)
 app.include_router(file_upload.router)
 
 # Admin 라우터 등록 (배포관리)
-app.include_router(deployment.router)
+if DEPLOYMENT_AVAILABLE:
+    app.include_router(deployment.router)
 
 # Health Check 라우터 등록 (프로덕션 배포)
 app.include_router(health.router)
@@ -121,7 +129,7 @@ app.include_router(history.router)
 app.include_router(chat_files.router)
 
 # 정적 파일 제공 (React 관리자 페이지)
-admin_path = "/home/aigen/html/admin"
+admin_path = "/app/frontend/dist"
 
 @app.get("/")
 async def root():

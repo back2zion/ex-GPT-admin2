@@ -407,19 +407,6 @@ const CoreUIMenu = () => {
                 </List>
             </Collapse>
 
-            {/* STT 음성 전사 */}
-            <ListItem disablePadding>
-                <ListItemButton
-                    onClick={() => handleMenuClick('/stt-batches')}
-                    sx={menuItemStyle(isActive('/stt-batches'))}
-                >
-                    <ListItemIcon sx={iconStyle(isActive('/stt-batches'))}>
-                        <STTIcon />
-                    </ListItemIcon>
-                    {open && <ListItemText primary="STT 음성 전사" />}
-                </ListItemButton>
-            </ListItem>
-
             {/* 배포관리 (Expandable) */}
             <ListItem disablePadding>
                 <ListItemButton
@@ -490,6 +477,19 @@ const CoreUIMenu = () => {
                     </ListItemButton>
                 </List>
             </Collapse>
+
+            {/* STT 음성 전사 */}
+            <ListItem disablePadding>
+                <ListItemButton
+                    onClick={() => handleMenuClick('/stt-batches')}
+                    sx={menuItemStyle(isActive('/stt-batches'))}
+                >
+                    <ListItemIcon sx={iconStyle(isActive('/stt-batches'))}>
+                        <STTIcon />
+                    </ListItemIcon>
+                    {open && <ListItemText primary="STT 음성 전사" />}
+                </ListItemButton>
+            </ListItem>
 
             {/* System Info */}
             {open && (

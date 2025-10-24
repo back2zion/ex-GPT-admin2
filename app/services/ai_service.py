@@ -1,12 +1,14 @@
 """
 AI Service
-AI 모델 연동 (vLLM + RAG)
+AI 모델 연동 (vLLM + RAG + Synonym Expansion)
 """
 from typing import AsyncGenerator, List, Dict, Any, Optional
+from sqlalchemy.ext.asyncio import AsyncSession
 import httpx
 import json
 import logging
 from app.core.config import settings
+from app.services.dictionary_service import dictionary_service
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +61,8 @@ class AIService:
         search_scope: Optional[List[str]] = None,
         max_context_tokens: int = 4000,
         temperature: float = 0.7,
-        think_mode: bool = False
+        think_mode: bool = False,
+        db: Optional[AsyncSession] = None
     ) -> AsyncGenerator[str, None]:
         """
         채팅 스트리밍 생성
@@ -73,16 +76,25 @@ class AIService:
             max_context_tokens: 최대 컨텍스트 토큰 수
             temperature: 샘플링 온도
             think_mode: 추론 모드 (DeepSeek-R1 등)
+            db: 데이터베이스 세션 (동의어 처리용)
 
         Yields:
             str: 스트리밍 텍스트 청크
         """
         try:
-            # 1. RAG 문서 검색 (옵션)
+            # 1. 동의어 치환 (db가 있을 경우)
+            expanded_message = message
+            if db:
+                expanded_message = await dictionary_service.replace_query(message, db)
+                if expanded_message != message:
+                    logger.info(f"Synonym replacement: '{message}' → '{expanded_message}'")
+
+            # 2. RAG 문서 검색 (옵션)
             context = ""
             if search_documents:
+                # 동의어 치환된 쿼리로 검색
                 search_results = await self._search_documents(
-                    query=message,
+                    query=expanded_message,
                     department=department,
                     search_scope=search_scope,
                     limit=5
@@ -92,7 +104,7 @@ class AIService:
                     context = self._format_context(search_results)
                     logger.info(f"RAG context added - {len(search_results)} documents")
 
-            # 2. 메시지 구성
+            # 3. 메시지 구성 (원본 메시지 사용, 검색은 치환된 메시지로)
             messages = self._build_messages(
                 message=message,
                 history=history or [],
@@ -100,7 +112,7 @@ class AIService:
                 think_mode=think_mode
             )
 
-            # 3. vLLM API 호출 (스트리밍)
+            # 4. vLLM API 호출 (스트리밍)
             payload = {
                 "model": self.vllm_model_name,
                 "messages": messages,

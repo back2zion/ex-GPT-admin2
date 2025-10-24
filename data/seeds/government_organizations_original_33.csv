@@ -1,0 +1,34 @@
+정식명칭,공식약칭,통용약칭1,통용약칭2,통용약칭3,영문명,영문약칭,기관유형,상위기관,설립근거,비고
+기획재정부,기재부,,,,,Ministry of Economy and Finance,MOEF,중앙행정기관,,정부조직법,
+교육부,교육부,,,,,Ministry of Education,MOE,중앙행정기관,,정부조직법,약칭동일
+과학기술정보통신부,과기부,과기정통부,,,Ministry of Science and ICT,MSIT,중앙행정기관,,정부조직법,
+외교부,외교부,,,,,Ministry of Foreign Affairs,MOFA,중앙행정기관,,정부조직법,약칭동일
+통일부,통일부,,,,,Ministry of Unification,MOU,중앙행정기관,,정부조직법,약칭동일
+법무부,법무부,,,,,Ministry of Justice,MOJ,중앙행정기관,,정부조직법,약칭동일
+국방부,국방부,,,,,Ministry of National Defense,MND,중앙행정기관,,정부조직법,약칭동일
+행정안전부,행안부,,,,,Ministry of the Interior and Safety,MOIS,중앙행정기관,,정부조직법,
+문화체육관광부,문체부,문화부,관광부,,Ministry of Culture Sports and Tourism,MCST,중앙행정기관,,정부조직법,
+농림축산식품부,농식품부,농림부,농축부,,Ministry of Agriculture Food and Rural Affairs,MAFRA,중앙행정기관,,정부조직법,
+산업통상자원부,산자부,산업부,통상부,,Ministry of Trade Industry and Energy,MOTIE,중앙행정기관,,정부조직법,
+보건복지부,복지부,보건부,,,Ministry of Health and Welfare,MOHW,중앙행정기관,,정부조직법,
+환경부,환경부,,,,,Ministry of Environment,ME,중앙행정기관,,정부조직법,약칭동일
+고용노동부,고용부,노동부,,,Ministry of Employment and Labor,MOEL,중앙행정기관,,정부조직법,
+여성가족부,여가부,,,,,Ministry of Gender Equality and Family,MOGEF,중앙행정기관,,정부조직법,
+국토교통부,국토부,국교부,,,Ministry of Land Infrastructure and Transport,MOLIT,중앙행정기관,,정부조직법,
+해양수산부,해수부,해양부,수산부,,Ministry of Oceans and Fisheries,MOF,중앙행정기관,,정부조직법,
+중소벤처기업부,중기부,중소기업부,벤처부,,Ministry of SMEs and Startups,MSS,중앙행정기관,,정부조직법,
+국가보훈부,보훈부,,,,,Ministry of Patriots and Veterans Affairs,MPVA,중앙행정기관,,정부조직법,2023년승격
+우주항공청,우주청,항공청,,,Korea AeroSpace Administration,KASA,중앙행정기관,,개별법,2024년신설
+국무조정실,국조실,,,,,Office of the Prime Minister,OPM,중앙행정기관,,정부조직법,
+국가정보원,국정원,,,,,National Intelligence Service,NIS,중앙행정기관,,개별법,
+방송통신위원회,방통위,,,,,Korea Communications Commission,KCC,중앙행정기관,,개별법,
+대통령비서실,청와대,용산대통령실,대통령실,,Presidential Secretariat,PS,대통령직속,,헌법,
+대통령경호처,경호처,,,,,Presidential Security Service,PSS,대통령직속,,개별법,
+국가안보실,안보실,,,,,National Security Office,NSO,대통령직속,,개별법,
+한국도로공사,도로공사,도공,,,Korea Expressway Corporation,KEC,공기업,,개별법,
+한국전력공사,한전,,,,,Korea Electric Power Corporation,KEPCO,공기업,,개별법,
+한국가스공사,가스공사,,,,,Korea Gas Corporation,KOGAS,공기업,,개별법,
+한국철도공사,코레일,KORAIL,,,Korea Railroad Corporation,KORAIL,공기업,,개별법,
+육군본부,육본,,,,,Army Headquarters,AHQ,군기관,국방부,개별법,
+해군본부,해본,,,,,Navy Headquarters,NHQ,군기관,국방부,개별법,
+공군본부,공본,,,,,Air Force Headquarters,AFHQ,군기관,국방부,개별법,

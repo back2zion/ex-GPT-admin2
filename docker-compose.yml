@@ -40,7 +40,7 @@ services:
     volumes:
       - ./app:/app/app
       - ./tests:/app/tests
-      - /var/www/html/admin:/home/aigen/html/admin:ro
+      - ./frontend/dist:/app/frontend/dist:ro
       - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
       - /usr/lib/libnvidia-ml.so:/usr/lib/libnvidia-ml.so:ro
       - /usr/lib/libnvidia-ml.so.1:/usr/lib/libnvidia-ml.so.1:ro

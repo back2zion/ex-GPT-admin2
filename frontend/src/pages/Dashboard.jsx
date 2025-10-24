@@ -18,7 +18,7 @@ import {
 } from '@mui/icons-material';
 import {
     LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-    Tooltip, Legend, ResponsiveContainer, Area, AreaChart
+    Tooltip, Legend, ResponsiveContainer, Area, AreaChart, PieChart, Pie, Cell
 } from 'recharts';
 
 // 한국도로공사 브랜드 컬러 + 그라데이션
@@ -110,6 +110,9 @@ const Dashboard = () => {
     const [gpuStatus, setGpuStatus] = useState(null);
     const [services, setServices] = useState([]);
     const [containers, setContainers] = useState([]);
+    // 방문자/활용 현황 상태
+    const [visitorStats, setVisitorStats] = useState([]);
+    const [usageFieldStats, setUsageFieldStats] = useState(null);
 
     useEffect(() => {
         fetchDashboardStats();
@@ -130,7 +133,7 @@ const Dashboard = () => {
                 'X-Test-Auth': 'admin'
             };
 
-            const [dashboardRes, dailyRes, weeklyRes, monthlyRes, hourlyRes, systemRes, gpuRes, servicesRes, containersRes] = await Promise.all([
+            const [dashboardRes, dailyRes, weeklyRes, monthlyRes, hourlyRes, systemRes, gpuRes, servicesRes, containersRes, visitorRes, usageFieldRes] = await Promise.all([
                 fetch(`/api/v1/admin/stats/dashboard?start=${start}&end=${end}`, { headers }),
                 fetch(`/api/v1/admin/stats/daily-trend?start=${start}&end=${end}`, { headers }),
                 fetch(`/api/v1/admin/stats/weekly-trend?start=${weekStart}&end=${end}`, { headers }),
@@ -139,7 +142,9 @@ const Dashboard = () => {
                 fetch(`/api/v1/admin/stats/system`, { headers }),
                 fetch(`/api/v1/admin/deployment/gpu/status`, { headers }),
                 fetch(`/api/v1/admin/deployment/bentos`, { headers }),
-                fetch(`/api/v1/admin/deployment/docker/containers`, { headers })
+                fetch(`/api/v1/admin/deployment/docker/containers`, { headers }),
+                fetch(`/api/v1/admin/statistics/by-department?start_date=${start}&end_date=${end}`, { headers }),
+                fetch(`/api/v1/admin/statistics/questions-by-field?start_date=${start}&end_date=${end}`, { headers })
             ]);
 
             if (!dashboardRes.ok || !dailyRes.ok || !hourlyRes.ok || !systemRes.ok) {
@@ -155,6 +160,8 @@ const Dashboard = () => {
             const gpuData = gpuRes.ok ? await gpuRes.json() : { gpus: [] };
             const servicesData = servicesRes.ok ? await servicesRes.json() : { bentos: [] };
             const containersData = containersRes.ok ? await containersRes.json() : { containers: [] };
+            const visitorData = visitorRes.ok ? await visitorRes.json() : [];
+            const usageFieldData = usageFieldRes.ok ? await usageFieldRes.json() : null;
 
             setStats(dashboardData);
             setDailyTrend(dailyData.items || []);
@@ -165,6 +172,8 @@ const Dashboard = () => {
             setGpuStatus(gpuData);
             setServices(servicesData.bentos || []);
             setContainers(containersData.containers || []);
+            setVisitorStats(visitorData.slice(0, 10) || []); // 상위 10개 부서
+            setUsageFieldStats(usageFieldData);
         } catch (err) {
             console.error('Failed to fetch dashboard stats:', err);
             setError(err.message);
@@ -826,6 +835,211 @@ const Dashboard = () => {
                                 데이터가 없습니다
                             </Typography>
                         )}
+                </Paper>
+
+                {/* 방문자 현황 - 부서별 이용 통계 */}
+                <Paper
+                    elevation={0}
+                    sx={{
+                        p: 2,
+                        mt: 3,
+                        borderRadius: 2,
+                        boxShadow: '0 2px 10px 0 rgba(0,0,0,0.08)',
+                        width: '100% !important',
+                        maxWidth: 'none !important',
+                    }}
+                >
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                        <PeopleIcon sx={{ fontSize: 28, color: colors.success, mr: 1.5 }} />
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.primary }}>
+                            방문자 현황 (부서별 이용 통계)
+                        </Typography>
+                    </Box>
+                    {loading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                            <CircularProgress />
+                        </Box>
+                    ) : visitorStats.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={400}>
+                            <BarChart
+                                data={visitorStats}
+                                layout="vertical"
+                                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+                            >
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                <XAxis
+                                    type="number"
+                                    tick={{ fontSize: 12, fill: '#64748b' }}
+                                    stroke="#cbd5e1"
+                                />
+                                <YAxis
+                                    type="category"
+                                    dataKey="department_name"
+                                    tick={{ fontSize: 12, fill: '#64748b' }}
+                                    stroke="#cbd5e1"
+                                    width={90}
+                                />
+                                <Tooltip
+                                    contentStyle={{
+                                        backgroundColor: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                    }}
+                                />
+                                <Bar
+                                    dataKey="count"
+                                    fill={colors.success}
+                                    name="질문 수"
+                                    radius={[0, 8, 8, 0]}
+                                />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', p: 3 }}>
+                            데이터가 없습니다
+                        </Typography>
+                    )}
+                </Paper>
+
+                {/* 활용 현황 - 분야별 질의 통계 */}
+                <Paper
+                    elevation={0}
+                    sx={{
+                        p: 2,
+                        mt: 3,
+                        mb: 3,
+                        borderRadius: 2,
+                        boxShadow: '0 2px 10px 0 rgba(0,0,0,0.08)',
+                        width: '100% !important',
+                        maxWidth: 'none !important',
+                    }}
+                >
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                        <QuestionAnswerIcon sx={{ fontSize: 28, color: colors.accent, mr: 1.5 }} />
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.primary }}>
+                            활용 현황 (분야별 질의 통계)
+                        </Typography>
+                    </Box>
+                    {loading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                            <CircularProgress />
+                        </Box>
+                    ) : usageFieldStats ? (
+                        <Grid container spacing={2}>
+                            {/* 경영분야 */}
+                            <Grid item xs={12} md={4}>
+                                <Box sx={{
+                                    p: 3,
+                                    borderRadius: 2,
+                                    backgroundColor: '#f8fafc',
+                                    border: `2px solid ${colors.primary}`,
+                                    height: '100%'
+                                }}>
+                                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.primary, mb: 2 }}>
+                                        📊 경영분야
+                                    </Typography>
+                                    <Typography variant="h4" sx={{ fontWeight: 'bold', color: colors.primary, mb: 2 }}>
+                                        {formatNumber(usageFieldStats.management?.total || 0)}건
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <Typography variant="body2" color="text.secondary">관리/홍보</Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                                {formatNumber(usageFieldStats.management?.subcategories?.admin_pr || 0)}
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <Typography variant="body2" color="text.secondary">기획/감사</Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                                {formatNumber(usageFieldStats.management?.subcategories?.planning_audit || 0)}
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <Typography variant="body2" color="text.secondary">영업/디지털</Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                                {formatNumber(usageFieldStats.management?.subcategories?.sales_digital || 0)}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                </Box>
+                            </Grid>
+
+                            {/* 기술분야 */}
+                            <Grid item xs={12} md={4}>
+                                <Box sx={{
+                                    p: 3,
+                                    borderRadius: 2,
+                                    backgroundColor: '#f8fafc',
+                                    border: `2px solid ${colors.info}`,
+                                    height: '100%'
+                                }}>
+                                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.info, mb: 2 }}>
+                                        🔧 기술분야
+                                    </Typography>
+                                    <Typography variant="h4" sx={{ fontWeight: 'bold', color: colors.info, mb: 2 }}>
+                                        {formatNumber(usageFieldStats.technical?.total || 0)}건
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <Typography variant="body2" color="text.secondary">도로/안전</Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                                {formatNumber(usageFieldStats.technical?.subcategories?.road_safety || 0)}
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <Typography variant="body2" color="text.secondary">건설</Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                                {formatNumber(usageFieldStats.technical?.subcategories?.construction || 0)}
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <Typography variant="body2" color="text.secondary">교통</Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                                {formatNumber(usageFieldStats.technical?.subcategories?.traffic || 0)}
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <Typography variant="body2" color="text.secondary">신사업</Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                                {formatNumber(usageFieldStats.technical?.subcategories?.new_business || 0)}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                </Box>
+                            </Grid>
+
+                            {/* 기타 */}
+                            <Grid item xs={12} md={4}>
+                                <Box sx={{
+                                    p: 3,
+                                    borderRadius: 2,
+                                    backgroundColor: '#f8fafc',
+                                    border: `2px solid ${colors.warning}`,
+                                    height: '100%'
+                                }}>
+                                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.warning, mb: 2 }}>
+                                        📂 경영/기술 외
+                                    </Typography>
+                                    <Typography variant="h4" sx={{ fontWeight: 'bold', color: colors.warning, mb: 2 }}>
+                                        {formatNumber(usageFieldStats.other?.total || 0)}건
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <Typography variant="body2" color="text.secondary">기타</Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                                {formatNumber(usageFieldStats.other?.subcategories?.etc || 0)}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                </Box>
+                            </Grid>
+                        </Grid>
+                    ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', p: 3 }}>
+                            데이터가 없습니다
+                        </Typography>
+                    )}
                 </Paper>
             </Box>
         </Box>

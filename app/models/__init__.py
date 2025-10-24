@@ -20,6 +20,7 @@ from app.models.chat_models import (
     SuggestedQuestion,
     UploadedFile
 )
+from app.models.dictionary import Dictionary, DictionaryTerm, DictType
 
 __all__ = [
     "Base",
@@ -55,4 +56,7 @@ __all__ = [
     "ReferenceDocument",
     "SuggestedQuestion",
     "UploadedFile",
+    "Dictionary",
+    "DictionaryTerm",
+    "DictType",
 ]

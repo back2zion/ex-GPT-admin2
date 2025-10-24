@@ -1,10 +1,11 @@
 """
 FastAPI Dependencies - Cerbos 권한 관리 및 공통 의존성
 """
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, HTTPException, Request, Cookie
 from cerbos.sdk.client import AsyncCerbosClient
 from cerbos.sdk.model import Principal, Resource, ResourceAction, ResourceList
 from app.core.config import settings
+from app.middleware.spring_session_auth import spring_auth
 from typing import Callable, Optional
 
 # Cerbos 클라이언트 싱글톤
@@ -21,76 +22,73 @@ async def get_cerbos_client() -> AsyncCerbosClient:
     return _cerbos_client
 
 
-async def get_principal(request: Request) -> Principal:
+async def get_principal(
+    request: Request,
+    JSESSIONID: Optional[str] = Cookie(None)
+) -> Principal:
     """
     현재 사용자 Principal 추출
 
-    ⚠️ **보안 경고**: 현재 하드코딩된 admin 사용자 사용 중
-    ⚠️ **프로덕션 배포 전 필수**: JWT 인증 구현 필요
+    Spring Boot 세션 인증 통합:
+    1. JSESSIONID 쿠키를 통해 Spring Boot 세션 검증
+    2. Spring Boot API를 호출하여 사용자 정보 조회
+    3. 사용자 정보를 Cerbos Principal 객체로 변환
 
-    **TODO Phase 1**: JWT 토큰 기반 인증 구현
-    1. Authorization 헤더에서 Bearer 토큰 추출
-    2. JWT 서명 검증 (HS256 또는 RS256)
-    3. 토큰에서 사용자 정보 추출 (user_id, roles, department)
-    4. 토큰 만료 시간 검증
-    5. 블랙리스트 확인 (옵션)
-
-    **구현 예시**:
-    ```python
-    from jose import JWTError, jwt
-    from datetime import datetime
-
-    token = request.headers.get("Authorization", "").replace("Bearer ", "")
-    if not token:
-        raise HTTPException(status_code=401, detail="인증 토큰이 필요합니다")
-
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        user_id = payload.get("sub")
-        roles = payload.get("roles", [])
-        department = payload.get("department")
-
-        if not user_id:
-            raise HTTPException(status_code=401, detail="유효하지 않은 토큰")
-
-        return Principal(
-            id=user_id,
-            roles=set(roles),
-            attr={"department": department}
-        )
-    except JWTError:
-        raise HTTPException(status_code=401, detail="토큰 검증 실패")
-    ```
+    개발/테스트 모드:
+    - X-Test-Auth 헤더가 있으면 테스트 사용자로 인증 우회
+    - 프로덕션에서는 반드시 JSESSIONID 필수
     """
-    # 기본적인 인증 체크: Authorization 헤더 또는 X-Auth-Token 체크
-    auth_header = request.headers.get("Authorization", "")
-    auth_token = request.headers.get("X-Auth-Token", "")
-
     # 테스트 환경에서 인증 우회 (X-Test-Auth 헤더)
     test_auth = request.headers.get("X-Test-Auth", "")
 
-    # 개발 환경: 인증 체크 완전 비활성화 (INSECURE - 개발용)
-    # TODO: 프로덕션에서는 아래 주석을 제거하고 인증 필수로 설정
-    # if not auth_header and not auth_token and not test_auth:
-    #     raise HTTPException(
-    #         status_code=401,
-    #         detail="인증이 필요합니다. Authorization 헤더를 제공해주세요."
-    #     )
+    if test_auth:
+        # 개발/테스트 모드: X-Test-Auth 헤더로 테스트 사용자 생성
+        return Principal(
+            id=test_auth,  # "admin", "user", etc.
+            roles={test_auth} if test_auth in ["admin", "user"] else {"user"},
+            attr={"department": "test", "auth_method": "test"}
+        )
 
-    # ⚠️ MVP ONLY: 임시 하드코딩 (프로덕션 사용 금지)
-    # TODO: 위의 JWT 인증 코드로 교체 필요
-    import warnings
-    warnings.warn(
-        "하드코딩된 admin principal 사용 중! 프로덕션 배포 전 JWT 인증 구현 필수",
-        UserWarning,
-        stacklevel=2
-    )
+    # 프로덕션 모드: Spring Boot 세션 검증
+    if not JSESSIONID:
+        raise HTTPException(
+            status_code=401,
+            detail="인증이 필요합니다. 로그인 후 다시 시도해주세요.",
+            headers={"WWW-Authenticate": "Cookie"}
+        )
 
-    return Principal(
-        id="admin",  # ⚠️ HARDCODED - INSECURE
-        roles={"admin"},  # ⚠️ ALL PERMISSIONS
-        attr={"department": "engineering"}
-    )
+    try:
+        # Spring Boot API를 통해 세션 검증 및 사용자 정보 조회
+        user_info = await spring_auth.get_current_user(JSESSIONID)
+
+        # Cerbos Principal 객체로 변환
+        user_id = user_info.get("user_id", user_info.get("username", "unknown"))
+        roles = user_info.get("roles", [])
+
+        # roles가 문자열 리스트인 경우 set으로 변환
+        if isinstance(roles, list):
+            roles = set(role.lower() for role in roles)
+        else:
+            roles = {"user"}
+
+        return Principal(
+            id=user_id,
+            roles=roles,
+            attr={
+                "department": user_info.get("department", "unknown"),
+                "email": user_info.get("email"),
+                "auth_method": "spring_session"
+            }
+        )
+    except HTTPException:
+        # Spring 인증 실패 시 그대로 전파
+        raise
+    except Exception as e:
+        # 예상치 못한 오류
+        raise HTTPException(
+            status_code=500,
+            detail=f"인증 처리 중 오류가 발생했습니다: {str(e)}"
+        )
 
 
 async def check_resource_permission(

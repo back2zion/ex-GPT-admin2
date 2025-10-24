@@ -300,7 +300,8 @@ async def generate_chat_stream(
             search_scope=request.search_scope,
             max_context_tokens=request.max_context_tokens,
             temperature=request.temperature,
-            think_mode=request.think_mode
+            think_mode=request.think_mode,
+            db=db  # 동의어 처리를 위한 DB 세션
         ):
             accumulated_response += chunk
             yield f"data: {json.dumps({'content': {'response': chunk}})}\n\n"

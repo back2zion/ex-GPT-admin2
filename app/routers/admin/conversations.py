@@ -2,6 +2,7 @@
 대화내역 조회 API 엔드포인트
 """
 from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, desc
 from sqlalchemy.orm import joinedload
@@ -14,6 +15,7 @@ from app.models.user import User
 from app.core.database import get_db
 from app.dependencies import get_principal
 from cerbos.sdk.model import Principal
+from app.services.excel_service import ExcelService
 
 router = APIRouter(prefix="/api/v1/admin/conversations", tags=["admin-conversations"])
 
@@ -310,3 +312,116 @@ async def get_conversation_detail(
     - 메타데이터
     """
     return await get_conversation_detail_simple(conversation_id, db)
+
+
+@router.get("/export/excel")
+async def export_conversations_excel(
+    start: Optional[date] = Query(None, description="시작일 (YYYY-MM-DD)"),
+    end: Optional[date] = Query(None, description="종료일 (YYYY-MM-DD)"),
+    main_category: Optional[str] = Query(None, description="대분류"),
+    sub_category: Optional[str] = Query(None, description="소분류"),
+    limit: int = Query(10000, ge=1, le=100000, description="최대 다운로드 개수"),
+    db: AsyncSession = Depends(get_db),
+    principal: Principal = Depends(get_principal)
+):
+    """
+    대화내역 엑셀 다운로드 (xlsx)
+
+    - 필터링 조건 적용 가능
+    - 최대 100,000개까지 다운로드 가능
+    - 한국도로공사 브랜드 스타일 적용
+    """
+    conditions = []
+
+    # 날짜 필터
+    if start:
+        conditions.append(func.date(UsageHistory.created_at) >= start)
+    if end:
+        conditions.append(func.date(UsageHistory.created_at) <= end)
+
+    # 대분류 필터
+    if main_category and main_category != "전체":
+        if main_category == "미분류":
+            conditions.append(
+                (UsageHistory.main_category.is_(None)) |
+                (UsageHistory.main_category == "") |
+                (UsageHistory.main_category == "미분류")
+            )
+        else:
+            conditions.append(UsageHistory.main_category == main_category)
+
+    # 소분류 필터
+    if sub_category and sub_category != "전체":
+        conditions.append(UsageHistory.sub_category == sub_category)
+
+    # 데이터 조회 (User와 LEFT JOIN)
+    query = select(
+        UsageHistory,
+        User.position,
+        User.rank,
+        User.team,
+        User.join_year
+    ).outerjoin(
+        User, UsageHistory.user_id == User.username
+    )
+
+    if conditions:
+        query = query.filter(and_(*conditions))
+
+    query = query.order_by(UsageHistory.created_at.desc()).limit(limit)
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    # 엑셀용 데이터 변환
+    excel_data = []
+    for row in rows:
+        usage_history, position, rank, team, join_year = row
+        excel_data.append({
+            'id': usage_history.id,
+            'user_id': usage_history.user_id,
+            'position': position or '',
+            'rank': rank or '',
+            'team': team or '',
+            'join_year': join_year or '',
+            'question': usage_history.question or '',
+            'answer': usage_history.answer or '',
+            'response_time': usage_history.response_time or 0,
+            'main_category': usage_history.main_category or '미분류',
+            'sub_category': usage_history.sub_category or '미분류',
+            'model_name': usage_history.model_name or '',
+            'created_at': usage_history.created_at
+        })
+
+    # 엑셀 파일 생성
+    headers = {
+        'id': 'ID',
+        'user_id': '사용자 ID',
+        'position': '직급',
+        'rank': '직위',
+        'team': '팀명',
+        'join_year': '입사년도',
+        'question': '질문',
+        'answer': '답변',
+        'response_time': '응답시간(ms)',
+        'main_category': '대분류',
+        'sub_category': '소분류',
+        'model_name': '모델',
+        'created_at': '생성일시'
+    }
+
+    excel_file = ExcelService.create_workbook_from_data(
+        data=excel_data,
+        headers=headers,
+        sheet_name="대화내역",
+        title="ex-GPT 대화 내역"
+    )
+
+    # 파일명 생성
+    filename = f"conversations_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+    return StreamingResponse(
+        excel_file,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )

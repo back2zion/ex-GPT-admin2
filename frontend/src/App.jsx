@@ -31,6 +31,7 @@ import StatsDashboard from './pages/StatsDashboard';
 import VectorDataManagementPage from './pages/VectorDataManagementPage';
 import VectorDataManagementPageSimple from './pages/VectorDataManagementPageSimple';
 import DictionaryManagementPage from './pages/DictionaryManagementPage';
+import DictionaryDetailPage from './pages/DictionaryDetailPage';
 import VersionManagementPage from './pages/VersionManagementPage';
 import ErrorReportManagementPage from './pages/ErrorReportManagementPage';
 import RecommendedQuestionsPage from './pages/RecommendedQuestionsPage';
@@ -169,6 +170,7 @@ export default function App() {
         {/* 학습데이터 관리 */}
         <Route path="/vector-data/documents" element={<VectorDataManagementPageSimple />} />
         <Route path="/vector-data/dictionaries" element={<DictionaryManagementPage />} />
+        <Route path="/vector-data/dictionaries/:dictId" element={<DictionaryDetailPage />} />
 
         {/* 부가서비스 관리 */}
         <Route path="/services/version" element={<VersionManagementPage />} />
