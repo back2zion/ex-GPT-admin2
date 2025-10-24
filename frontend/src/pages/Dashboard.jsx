@@ -639,6 +639,33 @@ const Dashboard = () => {
                                 <StarIcon sx={{ mr: 2, fontSize: 24 }} />
                                 <Typography sx={{ fontWeight: 500 }}>만족도 조사 결과</Typography>
                             </Box>
+                            <Box
+                                component="a"
+                                href="https://ui.datastreams.co.kr:20443/exGenBotDS/testOld"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    p: 2,
+                                    borderRadius: 2,
+                                    textDecoration: 'none',
+                                    color: 'inherit',
+                                    backgroundColor: '#f8fafc',
+                                    border: '1px solid #e2e8f0',
+                                    transition: 'all 0.2s',
+                                    '&:hover': {
+                                        backgroundColor: colors.accent,
+                                        borderColor: colors.accent,
+                                        color: 'white',
+                                        transform: 'translateX(8px)',
+                                        boxShadow: '0 4px 12px rgba(230, 71, 1, 0.2)',
+                                    },
+                                }}
+                            >
+                                <QuestionAnswerIcon sx={{ mr: 2, fontSize: 24 }} />
+                                <Typography sx={{ fontWeight: 500 }}>ex-GPT 사용자 UI</Typography>
+                            </Box>
                         </Box>
                     </Paper>
                 </Grid>
