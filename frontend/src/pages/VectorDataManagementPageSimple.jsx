@@ -332,7 +332,6 @@ export default function VectorDataManagementPageSimple() {
                 value={categoryFilter}
                 label="카테고리"
                 onChange={(e) => {
-                  console.log('Select changed to:', e.target.value);
                   setCategoryFilter(e.target.value);
                   setPage(1);
                 }}
@@ -410,7 +409,6 @@ export default function VectorDataManagementPageSimple() {
             }}
             onClick={(e) => {
               e.stopPropagation();
-              console.log('전체 Card clicked');
               setCategoryFilter('');
               setPage(1);
             }}
@@ -456,7 +454,6 @@ export default function VectorDataManagementPageSimple() {
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  console.log('Card clicked, setting category:', doctype);
                   setCategoryFilter(doctype);
                   setPage(1);
                 }}
@@ -536,6 +533,7 @@ export default function VectorDataManagementPageSimple() {
                     <input
                       type="checkbox"
                       id="checkbox-select-all"
+                      name="select-all"
                       checked={documents.length > 0 && selectedItems.length === documents.length}
                       onChange={handleSelectAll}
                       style={{ width: '18px', height: '18px', cursor: 'pointer' }}
@@ -570,6 +568,7 @@ export default function VectorDataManagementPageSimple() {
                         <input
                           type="checkbox"
                           id={`checkbox-${doc.id}`}
+                          name={`select-doc-${doc.id}`}
                           checked={selectedItems.includes(doc.id)}
                           onChange={() => handleSelectOne(doc.id)}
                           style={{ width: '18px', height: '18px', cursor: 'pointer' }}
