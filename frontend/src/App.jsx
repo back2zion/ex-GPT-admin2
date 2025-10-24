@@ -29,6 +29,7 @@ import ExGPTStatsPage from './pages/ExGPTStatsPage';
 import ServerStatsPage from './pages/ServerStatsPage';
 import StatsDashboard from './pages/StatsDashboard';
 import VectorDataManagementPage from './pages/VectorDataManagementPage';
+import VectorDataManagementPageSimple from './pages/VectorDataManagementPageSimple';
 import DictionaryManagementPage from './pages/DictionaryManagementPage';
 import VersionManagementPage from './pages/VersionManagementPage';
 import ErrorReportManagementPage from './pages/ErrorReportManagementPage';
@@ -166,7 +167,7 @@ export default function App() {
         {/* <Route path="/stats/server" element={<ServerStatsPage />} /> */}
 
         {/* 학습데이터 관리 */}
-        <Route path="/vector-data/documents" element={<VectorDataManagementPage />} />
+        <Route path="/vector-data/documents" element={<VectorDataManagementPageSimple />} />
         <Route path="/vector-data/dictionaries" element={<DictionaryManagementPage />} />
 
         {/* 부가서비스 관리 */}

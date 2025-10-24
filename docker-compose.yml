@@ -39,6 +39,7 @@ services:
       - cerbos
     volumes:
       - ./app:/app/app
+      - ./tests:/app/tests
       - /var/www/html/admin:/home/aigen/html/admin:ro
       - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
       - /usr/lib/libnvidia-ml.so:/usr/lib/libnvidia-ml.so:ro

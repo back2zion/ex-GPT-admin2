@@ -2,7 +2,7 @@
 
 ## 개요
 
-AI Streams 관리 시스템의 데이터베이스 스키마입니다. PostgreSQL을 사용하며, SQLAlchemy ORM을 통해 관리됩니다.
+ex-GPT 관리 시스템의 데이터베이스 스키마입니다. PostgreSQL을 사용하며, SQLAlchemy ORM을 통해 관리됩니다.
 
 ## 테이블 목록
 

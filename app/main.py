@@ -31,6 +31,8 @@ from app.routers.admin import (
     legacy_sync,
     deployment,
     vector_documents,
+    vector_categories,
+    vector_document_upload,
     dictionaries,
     error_reports,
     recommended_questions
@@ -94,6 +96,8 @@ app.include_router(legacy_sync.router)
 app.include_router(categories.router)
 app.include_router(documents.router)
 app.include_router(vector_documents.router)
+app.include_router(vector_categories.router)
+app.include_router(vector_document_upload.router)
 app.include_router(dictionaries.router)
 app.include_router(error_reports.router)
 app.include_router(recommended_questions.router)

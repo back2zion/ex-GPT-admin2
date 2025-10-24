@@ -1,0 +1,709 @@
+/**
+ * 벡터 데이터 관리 페이지
+ */
+import { useState, useEffect } from 'react';
+import {
+  Box,
+  Paper,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Pagination,
+  TextField,
+  Button,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Checkbox,
+  InputAdornment,
+  CircularProgress,
+  Grid,
+  Card,
+  CardContent,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+} from '@mui/material';
+import {
+  Search as SearchIcon,
+  Refresh as RefreshIcon,
+  Upload as UploadIcon,
+  Download as DownloadIcon,
+  Add as AddIcon,
+} from '@mui/icons-material';
+import axios from '../axiosConfig';
+
+const API_BASE = '/api/v1/admin';
+
+export default function VectorDataManagementPageSimple() {
+  // 상태 관리
+  const [documents, setDocuments] = useState([]);
+  const [stats, setStats] = useState({ total: 0, by_doctype: {} });
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [selectedItems, setSelectedItems] = useState([]);
+
+  // 카테고리 생성 모달
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [newCategoryCode, setNewCategoryCode] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryDesc, setNewCategoryDesc] = useState('');
+
+  useEffect(() => {
+    loadCategories();
+    loadStats();
+  }, []);
+
+  useEffect(() => {
+    loadDocuments();
+  }, [page, rowsPerPage, categoryFilter, searchText]);
+
+  // 카테고리 통계 로딩
+  const loadStats = async () => {
+    try {
+      const response = await axios.get(`${API_BASE}/vector-documents/stats`);
+      setStats(response.data);
+    } catch (error) {
+      console.error('통계 로딩 실패:', error);
+      setStats({ total: 0, by_doctype: {} });
+    }
+  };
+
+  // 카테고리 목록 로딩
+  const loadCategories = async () => {
+    try {
+      const response = await axios.get(`${API_BASE}/vector-categories`);
+      setCategories(response.data);
+    } catch (error) {
+      console.error('카테고리 로딩 실패:', error);
+    }
+  };
+
+  // 문서 목록 로딩
+  const loadDocuments = async () => {
+    try {
+      setLoading(true);
+      const skip = (page - 1) * rowsPerPage;
+      const params = new URLSearchParams({
+        skip: skip.toString(),
+        limit: rowsPerPage.toString(),
+      });
+
+      if (categoryFilter) {
+        params.append('doctype', categoryFilter);
+      }
+
+      if (searchText) {
+        params.append('search', searchText);
+      }
+
+      const response = await axios.get(`${API_BASE}/vector-documents?${params}`);
+      setDocuments(response.data.items || []);
+      setTotal(response.data.total || 0);
+    } catch (error) {
+      console.error('문서 목록 로딩 실패:', error);
+      setDocuments([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 검색 실행
+  const handleSearch = () => {
+    setPage(1);
+    loadDocuments();
+  };
+
+  // 초기화
+  const handleReset = () => {
+    setCategoryFilter('');
+    setSearchText('');
+    setPage(1);
+  };
+
+  // 카테고리 생성 모달 열기
+  const handleOpenCategoryModal = async () => {
+    try {
+      // 다음 사용 가능한 코드 가져오기
+      const response = await axios.get(`${API_BASE}/vector-categories/next-code`);
+      setNewCategoryCode(response.data.next_code);
+      setNewCategoryName('');
+      setNewCategoryDesc('');
+      setCategoryModalOpen(true);
+    } catch (error) {
+      console.error('다음 코드 조회 실패:', error);
+      setNewCategoryCode('');
+      setNewCategoryName('');
+      setNewCategoryDesc('');
+      setCategoryModalOpen(true);
+    }
+  };
+
+  // 카테고리 생성 제출
+  const handleCategorySubmit = async () => {
+    if (!newCategoryCode || !newCategoryName) {
+      alert('코드와 이름을 입력해주세요.');
+      return;
+    }
+
+    try {
+      await axios.post(`${API_BASE}/vector-categories`, {
+        code: newCategoryCode,
+        name: newCategoryName,
+        description: newCategoryDesc,
+      });
+
+      alert('카테고리가 생성되었습니다.');
+      setCategoryModalOpen(false);
+      loadCategories();
+      loadStats();
+    } catch (error) {
+      console.error('카테고리 생성 실패:', error);
+      alert(error.response?.data?.detail || '카테고리 생성에 실패했습니다.');
+    }
+  };
+
+  // 전체 선택/해제
+  const handleSelectAll = (event) => {
+    if (event.target.checked) {
+      setSelectedItems(documents.map((doc) => doc.id));
+    } else {
+      setSelectedItems([]);
+    }
+  };
+
+  // 개별 선택/해제
+  const handleSelectOne = (id) => {
+    setSelectedItems((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  // 엑셀 다운로드
+  const handleExcelDownload = async () => {
+    try {
+      let documentsToExport = [];
+
+      // 선택한 항목이 있으면 선택 항목만, 없으면 전체
+      if (selectedItems.length > 0) {
+        // 선택한 항목만 필터링
+        documentsToExport = documents.filter((doc) => selectedItems.includes(doc.id));
+      } else {
+        // 전체 데이터 가져오기
+        const skip = 0;
+        const limit = total;
+        const params = new URLSearchParams({
+          skip: skip.toString(),
+          limit: limit.toString(),
+        });
+
+        if (categoryFilter) {
+          params.append('doctype', categoryFilter);
+        }
+
+        if (searchText) {
+          params.append('search', searchText);
+        }
+
+        const response = await axios.get(`${API_BASE}/vector-documents?${params}`);
+        documentsToExport = response.data.items || [];
+      }
+
+      // CSV 형식으로 변환
+      const headers = ['번호', '분류', '파일명', '등록일'];
+      const rows = documentsToExport.map((doc, index) => [
+        index + 1,
+        doc.doctype_name || doc.doctype || '-',
+        doc.title,
+        doc.created_at ? new Date(doc.created_at).toLocaleDateString('ko-KR') : '-',
+      ]);
+
+      // CSV 생성
+      const csvContent = [
+        headers.join(','),
+        ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+      ].join('\n');
+
+      // UTF-8 BOM 추가 (엑셀에서 한글 깨짐 방지)
+      const bom = '\uFEFF';
+      const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+
+      // 다운로드
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      const filename = selectedItems.length > 0
+        ? `벡터문서목록_선택${selectedItems.length}건_${new Date().toISOString().slice(0, 10)}.csv`
+        : `벡터문서목록_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('엑셀 다운로드 실패:', error);
+      alert('엑셀 다운로드에 실패했습니다.');
+    }
+  };
+
+  // 문서 등록 모달
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadCategory, setUploadCategory] = useState('');
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadDescription, setUploadDescription] = useState('');
+
+  const handleUploadDocument = () => {
+    setUploadModalOpen(true);
+    setUploadFile(null);
+    setUploadCategory('');
+    setUploadTitle('');
+    setUploadDescription('');
+  };
+
+  const handleUploadSubmit = async () => {
+    if (!uploadFile) {
+      alert('파일을 선택해주세요.');
+      return;
+    }
+    if (!uploadCategory) {
+      alert('카테고리를 선택해주세요.');
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+      formData.append('category_code', uploadCategory);
+      if (uploadTitle) formData.append('title', uploadTitle);
+      if (uploadDescription) formData.append('description', uploadDescription);
+
+      await axios.post(`${API_BASE}/vector-documents/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      alert('문서가 등록되었습니다.');
+      setUploadModalOpen(false);
+      loadStats();
+      loadDocuments();
+    } catch (error) {
+      console.error('문서 등록 실패:', error);
+      alert(error.response?.data?.detail || '문서 등록에 실패했습니다.');
+    }
+  };
+
+  return (
+    <Box sx={{ p: 3 }}>
+      {/* 제목 */}
+      <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
+        학습 데이터 관리
+      </Typography>
+
+      {/* 소제목 */}
+      <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 3, color: '#666' }}>
+        대상문서관리
+      </Typography>
+
+      {/* 검색 영역 */}
+      <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', flex: 1 }}>
+            {/* 수집대상 */}
+            <Typography variant="body1" sx={{ fontWeight: 'bold', minWidth: 80 }}>
+              수집대상
+            </Typography>
+
+            {/* 카테고리 선택 */}
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel>카테고리</InputLabel>
+              <Select
+                value={categoryFilter}
+                label="카테고리"
+                onChange={(e) => {
+                  console.log('Select changed to:', e.target.value);
+                  setCategoryFilter(e.target.value);
+                  setPage(1);
+                }}
+                renderValue={(selected) => {
+                  if (selected === '') {
+                    return `전체 (${stats.total.toLocaleString()}건)`;
+                  }
+                  const category = categories.find(cat => cat.code === selected);
+                  const count = stats.by_doctype[selected]?.count || 0;
+                  return `${category?.name || selected} (${count.toLocaleString()}건)`;
+                }}
+              >
+                <MenuItem value="">전체 ({stats.total.toLocaleString()}건)</MenuItem>
+                {categories.map((cat) => {
+                  const count = stats.by_doctype[cat.code]?.count || 0;
+                  return (
+                    <MenuItem key={cat.code} value={cat.code}>
+                      {cat.name} ({count.toLocaleString()}건)
+                    </MenuItem>
+                  );
+                })}
+              </Select>
+            </FormControl>
+
+            {/* 검색어 입력 */}
+            <TextField
+              size="small"
+              placeholder="검색어를 입력하세요"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              sx={{ minWidth: 300 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            {/* 검색 버튼 */}
+            <Button variant="contained" onClick={handleSearch} startIcon={<SearchIcon />}>
+              검색
+            </Button>
+
+            {/* 초기화 버튼 */}
+            <Button variant="outlined" onClick={handleReset} startIcon={<RefreshIcon />}>
+              초기화
+            </Button>
+          </Box>
+
+          {/* 카테고리 생성 버튼 */}
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCategoryModal}>
+            카테고리 생성
+          </Button>
+        </Box>
+      </Paper>
+
+      {/* 카테고리 통계 카드 */}
+      <Grid container spacing={2} sx={{ marginBottom: '100px' }}>
+        {/* 전체 카드 */}
+        <Grid item xs={12} sm={6} md={4} lg={3}>
+          <Card
+            elevation={3}
+            sx={{
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              border: categoryFilter === '' ? '3px solid #00a651' : '2px solid transparent',
+              background: categoryFilter === '' ? 'linear-gradient(135deg, #00a651 0%, #00c573 100%)' : 'linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: 6,
+              },
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('전체 Card clicked');
+              setCategoryFilter('');
+              setPage(1);
+            }}
+          >
+            <CardContent sx={{ textAlign: 'center', py: 2, pointerEvents: 'none' }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, color: categoryFilter === '' ? '#fff' : '#333' }}>
+                전체
+              </Typography>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', color: categoryFilter === '' ? '#fff' : '#00a651' }}>
+                {stats.total.toLocaleString()}건
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* doctype별 카드 */}
+        {Object.entries(stats.by_doctype || {}).map(([doctype, data], index) => {
+          // 도로공사 컬러 팔레트 (녹색/청록/파란색 계열)
+          const colors = [
+            { bg: 'linear-gradient(135deg, #00a651 0%, #00c573 100%)', text: '#fff', border: '#00a651' },
+            { bg: 'linear-gradient(135deg, #0099cc 0%, #00bbdd 100%)', text: '#fff', border: '#0099cc' },
+            { bg: 'linear-gradient(135deg, #1976d2 0%, #2196f3 100%)', text: '#fff', border: '#1976d2' },
+            { bg: 'linear-gradient(135deg, #0288d1 0%, #03a9f4 100%)', text: '#fff', border: '#0288d1' },
+            { bg: 'linear-gradient(135deg, #00796b 0%, #009688 100%)', text: '#fff', border: '#00796b' },
+            { bg: 'linear-gradient(135deg, #00897b 0%, #26a69a 100%)', text: '#fff', border: '#00897b' },
+          ];
+          const colorSet = colors[index % colors.length];
+          const isSelected = categoryFilter === doctype;
+
+          return (
+            <Grid item xs={12} sm={6} md={4} lg={3} key={doctype}>
+              <Card
+                elevation={3}
+                sx={{
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  border: isSelected ? `3px solid ${colorSet.border}` : '2px solid transparent',
+                  background: isSelected ? colorSet.bg : 'linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: 6,
+                  },
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  console.log('Card clicked, setting category:', doctype);
+                  setCategoryFilter(doctype);
+                  setPage(1);
+                }}
+              >
+                <CardContent sx={{ textAlign: 'center', py: 2, pointerEvents: 'none' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, color: isSelected ? colorSet.text : '#333' }}>
+                    {data.name || `카테고리 ${doctype}`}
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: isSelected ? colorSet.text : colorSet.border }}>
+                    {data.count.toLocaleString()}건
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          );
+        })}
+      </Grid>
+
+      {/* 통계 및 액션 영역 */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, mt: 8 }}>
+        {/* 왼쪽: 총 건수 및 보기 메뉴 */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="body1">
+            총 <strong>{total.toLocaleString()}</strong>건
+          </Typography>
+
+          <FormControl size="small" sx={{ minWidth: 100 }}>
+            <InputLabel>보기</InputLabel>
+            <Select
+              value={rowsPerPage}
+              label="보기"
+              onChange={(e) => {
+                setRowsPerPage(e.target.value);
+                setPage(1);
+              }}
+            >
+              <MenuItem value={10}>10</MenuItem>
+              <MenuItem value={20}>20</MenuItem>
+              <MenuItem value={30}>30</MenuItem>
+              <MenuItem value={40}>40</MenuItem>
+              <MenuItem value={50}>50</MenuItem>
+              <MenuItem value={100}>100</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+
+        {/* 오른쪽: 문서등록, 엑셀 다운로드 */}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button variant="contained" startIcon={<UploadIcon />} onClick={handleUploadDocument}>
+            문서등록
+          </Button>
+          <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleExcelDownload}>
+            엑셀 다운로드
+          </Button>
+        </Box>
+      </Box>
+
+      {/* 테이블 */}
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          <TableContainer component={Paper} elevation={2}>
+            <Table sx={{ tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: '60px' }} />
+                <col style={{ width: '80px' }} />
+                <col style={{ width: '150px' }} />
+                <col style={{ width: 'auto' }} />
+                <col style={{ width: '120px' }} />
+              </colgroup>
+              <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+                <TableRow>
+                  <TableCell padding="checkbox">
+                    <input
+                      type="checkbox"
+                      id="checkbox-select-all"
+                      checked={documents.length > 0 && selectedItems.length === documents.length}
+                      onChange={handleSelectAll}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                      aria-label="Select all rows"
+                    />
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>번호</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>분류</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>파일명</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>등록일</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {documents.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                      데이터가 없습니다.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  documents.map((doc, index) => {
+                    const isSelected = selectedItems.includes(doc.id);
+                    return (
+                    <TableRow
+                      key={doc.id}
+                      sx={{
+                        '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
+                        bgcolor: isSelected ? 'rgba(0, 166, 81, 0.08)' : 'inherit'
+                      }}
+                    >
+                      <TableCell padding="checkbox">
+                        <input
+                          type="checkbox"
+                          id={`checkbox-${doc.id}`}
+                          checked={selectedItems.includes(doc.id)}
+                          onChange={() => handleSelectOne(doc.id)}
+                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                          aria-label={`Select row ${index + 1}`}
+                        />
+                      </TableCell>
+                      <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
+                      <TableCell>{doc.doctype_name || doc.doctype || '-'}</TableCell>
+                      <TableCell>{doc.title}</TableCell>
+                      <TableCell>
+                        {doc.created_at ? new Date(doc.created_at).toLocaleDateString('ko-KR') : '-'}
+                      </TableCell>
+                    </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {/* 페이지네이션 */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+            <Pagination
+              count={Math.ceil(total / rowsPerPage)}
+              page={page}
+              onChange={(e, value) => setPage(value)}
+              color="primary"
+              size="large"
+              showFirstButton
+              showLastButton
+            />
+          </Box>
+        </>
+      )}
+
+      {/* 카테고리 생성 모달 */}
+      <Dialog
+        open={categoryModalOpen}
+        onClose={() => setCategoryModalOpen(false)}
+        PaperProps={{ sx: { width: 500 } }}
+      >
+        <DialogTitle>카테고리 생성</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <TextField
+              label="코드"
+              value={newCategoryCode}
+              onChange={(e) => setNewCategoryCode(e.target.value)}
+              required
+              fullWidth
+            />
+            <TextField
+              label="이름"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              required
+              fullWidth
+            />
+            <TextField
+              label="설명"
+              value={newCategoryDesc}
+              onChange={(e) => setNewCategoryDesc(e.target.value)}
+              multiline
+              rows={3}
+              fullWidth
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCategoryModalOpen(false)}>취소</Button>
+          <Button onClick={handleCategorySubmit} variant="contained">
+            생성
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 문서 업로드 모달 */}
+      <Dialog
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        PaperProps={{ sx: { width: 600 } }}
+      >
+        <DialogTitle>문서 등록</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <Button variant="outlined" component="label" fullWidth>
+              {uploadFile ? uploadFile.name : '파일 선택'}
+              <input
+                type="file"
+                hidden
+                accept=".pdf,.txt,.doc,.docx,.hwp,.ppt,.pptx,.xls,.xlsx,.md,.rtf,.odt"
+                onChange={(e) => setUploadFile(e.target.files[0])}
+              />
+            </Button>
+
+            <FormControl fullWidth required>
+              <InputLabel>카테고리</InputLabel>
+              <Select
+                value={uploadCategory}
+                label="카테고리"
+                onChange={(e) => setUploadCategory(e.target.value)}
+              >
+                {categories.map((cat) => (
+                  <MenuItem key={cat.code} value={cat.code}>
+                    {cat.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <TextField
+              label="제목 (선택)"
+              value={uploadTitle}
+              onChange={(e) => setUploadTitle(e.target.value)}
+              fullWidth
+            />
+
+            <TextField
+              label="설명 (선택)"
+              value={uploadDescription}
+              onChange={(e) => setUploadDescription(e.target.value)}
+              multiline
+              rows={3}
+              fullWidth
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUploadModalOpen(false)}>취소</Button>
+          <Button onClick={handleUploadSubmit} variant="contained">
+            등록
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}

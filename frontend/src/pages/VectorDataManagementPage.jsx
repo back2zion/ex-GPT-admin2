@@ -128,7 +128,7 @@ export default function VectorDataManagementPage() {
 
       // 카테고리 필터 적용
       if (categoryFilter && categoryFilter !== '전체') {
-        params.append('category', categoryFilter);
+        params.append('doctype', categoryFilter);
       }
 
       const response = await axios.get(`${API_BASE}/vector-documents?${params}`);
