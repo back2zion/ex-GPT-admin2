@@ -25,6 +25,8 @@ from pydantic import BaseModel
 import asyncpg
 from minio import Minio
 from minio.error import S3Error
+import httpx
+import io
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +55,10 @@ MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "admin")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "admin123")
 MINIO_SECURE = os.getenv("MINIO_SECURE", "false").lower() == "true"
 MINIO_BUCKET = os.getenv("MINIO_BUCKET", "documents")
+
+# ex-gpt API 설정
+EXGPT_API_URL = os.getenv("EXGPT_API_URL", "http://host.docker.internal:8083")
+EXGPT_API_KEY = os.getenv("EXGPT_API_KEY", "z3JE1M8huXmNux6y")
 
 
 async def get_edb_connection():
@@ -171,6 +177,66 @@ async def save_document_metadata(
     return doc_id
 
 
+async def process_document_with_exgpt(file: UploadFile, document_id: int) -> dict:
+    """
+    ex-gpt API로 파일을 업로드하여 벡터 임베딩 생성
+
+    Args:
+        file: 업로드할 파일
+        document_id: EDB에 저장된 문서 ID
+
+    Returns:
+        ex-gpt API 응답
+    """
+    try:
+        # 파일을 다시 읽기 위해 처음으로 이동
+        file.file.seek(0)
+
+        # ex-gpt API로 파일 업로드
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            files = {
+                "file": (file.filename, file.file, file.content_type)
+            }
+            params = {
+                "file_id": str(document_id),
+                "overwrite": False
+            }
+            headers = {
+                "x-api-key": EXGPT_API_KEY
+            }
+
+            response = await client.post(
+                f"{EXGPT_API_URL}/v1/file/",
+                files=files,
+                params=params,
+                headers=headers
+            )
+
+            if response.status_code != 200:
+                logger.error(f"ex-gpt API upload failed: {response.status_code} - {response.text}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"벡터 임베딩 생성 실패: {response.text}"
+                )
+
+            result = response.json()
+            logger.info(f"Document {document_id} processed by ex-gpt API successfully")
+            return result
+
+    except httpx.RequestError as e:
+        logger.error(f"Failed to connect to ex-gpt API: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"ex-gpt API 연결 실패: {str(e)}"
+        )
+    except Exception as e:
+        logger.error(f"Failed to process document with ex-gpt: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"문서 처리 실패: {str(e)}"
+        )
+
+
 @router.post("/upload", status_code=201)
 async def upload_single_document(
     file: UploadFile = File(..., description="업로드할 문서 파일"),
@@ -254,6 +320,15 @@ async def upload_single_document(
 
         logger.info(f"Uploaded document: {file.filename} (ID: {document_id})")
 
+        # ex-gpt API로 벡터 임베딩 생성
+        try:
+            exgpt_result = await process_document_with_exgpt(file, document_id)
+            logger.info(f"Document {document_id} vector embedding created successfully")
+        except Exception as e:
+            logger.warning(f"Vector embedding creation failed for document {document_id}: {e}")
+            # 벡터 임베딩 실패해도 업로드는 성공으로 처리
+            exgpt_result = None
+
         return {
             "document_id": document_id,
             "filename": file.filename,
@@ -264,7 +339,8 @@ async def upload_single_document(
             "path_level1": path_level1,
             "path_level2": path_level2,
             "path_level3": path_level3,
-            "created_at": datetime.now().isoformat()
+            "created_at": datetime.now().isoformat(),
+            "vector_processing": "success" if exgpt_result else "failed"
         }
 
     except HTTPException:

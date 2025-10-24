@@ -36,6 +36,7 @@ import {
   Upload as UploadIcon,
   Download as DownloadIcon,
   Add as AddIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import axios from '../axiosConfig';
 
@@ -172,6 +173,60 @@ export default function VectorDataManagementPageSimple() {
     } catch (error) {
       console.error('카테고리 생성 실패:', error);
       alert(error.response?.data?.detail || '카테고리 생성에 실패했습니다.');
+    }
+  };
+
+  // 카테고리 삭제 (2단계 확인)
+  const handleCategoryDelete = async (categoryCode, categoryName, documentCount) => {
+    // 1차 확인
+    if (documentCount > 0) {
+      if (!window.confirm(`"${categoryName}" 카테고리에 ${documentCount}건의 문서가 있습니다.\n삭제하시겠습니까?`)) {
+        return;
+      }
+    } else {
+      if (!window.confirm(`"${categoryName}" 카테고리를 삭제하시겠습니까?`)) {
+        return;
+      }
+    }
+
+    // 2차 확인
+    if (!window.confirm(`정말로 "${categoryName}" 카테고리를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API_BASE}/vector-categories/${categoryCode}`);
+      alert('카테고리가 삭제되었습니다.');
+      loadCategories();
+      loadStats();
+    } catch (error) {
+      console.error('카테고리 삭제 실패:', error);
+      alert(error.response?.data?.detail || '카테고리 삭제에 실패했습니다.');
+    }
+  };
+
+  // 선택된 문서 삭제
+  const handleDocumentDelete = async () => {
+    if (selectedItems.length === 0) {
+      alert('삭제할 문서를 선택해주세요.');
+      return;
+    }
+
+    if (!window.confirm(`선택한 ${selectedItems.length}건의 문서를 정말 삭제하시겠습니까?`)) {
+      return;
+    }
+
+    try {
+      // TODO: 백엔드 API에 문서 삭제 엔드포인트 추가 필요
+      // 현재는 개별 삭제 API가 없으므로 알림만 표시
+      alert('문서 삭제 API가 구현되지 않았습니다. 백엔드 API 추가가 필요합니다.');
+      // await Promise.all(selectedItems.map(id => axios.delete(`${API_BASE}/vector-documents/${id}`)));
+      // setSelectedItems([]);
+      // loadDocuments();
+      // loadStats();
+    } catch (error) {
+      console.error('문서 삭제 실패:', error);
+      alert(error.response?.data?.detail || '문서 삭제에 실패했습니다.');
     }
   };
 
@@ -461,13 +516,33 @@ export default function VectorDataManagementPageSimple() {
                   setPage(1);
                 }}
               >
-                <CardContent sx={{ textAlign: 'center', py: 2, pointerEvents: 'none' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, color: isSelected ? colorSet.text : '#333' }}>
-                    {data.name || `카테고리 ${doctype}`}
-                  </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: isSelected ? colorSet.text : colorSet.border }}>
-                    {data.count.toLocaleString()}건
-                  </Typography>
+                <CardContent sx={{ textAlign: 'center', py: 2, position: 'relative' }}>
+                  <Box sx={{ pointerEvents: 'none' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, color: isSelected ? colorSet.text : '#333' }}>
+                      {data.name || `카테고리 ${doctype}`}
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: isSelected ? colorSet.text : colorSet.border }}>
+                      {data.count.toLocaleString()}건
+                    </Typography>
+                  </Box>
+                  <Button
+                    size="small"
+                    startIcon={<DeleteIcon />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCategoryDelete(doctype, data.name, data.count);
+                    }}
+                    sx={{
+                      mt: 1,
+                      pointerEvents: 'auto',
+                      color: isSelected ? colorSet.text : '#666',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      },
+                    }}
+                  >
+                    삭제
+                  </Button>
                 </CardContent>
               </Card>
             </Grid>
@@ -591,6 +666,20 @@ export default function VectorDataManagementPageSimple() {
               </TableBody>
             </Table>
           </TableContainer>
+
+          {/* 선택된 항목 삭제 버튼 */}
+          {selectedItems.length > 0 && (
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-start' }}>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<DeleteIcon />}
+                onClick={handleDocumentDelete}
+              >
+                선택한 {selectedItems.length}건 삭제
+              </Button>
+            </Box>
+          )}
 
           {/* 페이지네이션 */}
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>

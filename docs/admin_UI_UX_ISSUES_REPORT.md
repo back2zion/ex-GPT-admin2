@@ -164,6 +164,23 @@
 ## 4. 학습데이터 관리
 
 ### P0 - 긴급
+- [ ] **문서 업로드 후 RAG 검색 불가**: 업로드한 문서가 벡터 임베딩 생성되지 않음
+  - URL: `/vector-data/documents`
+  - 파일: `app/routers/admin/vector_document_upload.py`
+  - 원인: 업로드 시 MinIO/EDB에만 저장, Qdrant 벡터 임베딩 미생성
+  - 해결: ex-gpt API (`/v1/file/`) 연동하여 자동 벡터화 처리 필요
+  - 검증일: 2025-10-24
+
+- [ ] **카테고리 삭제 기능 부재**: 카테고리 생성만 가능하고 삭제 불가
+  - URL: `/vector-data/documents`
+  - 파일: `frontend/src/pages/VectorDataManagementPageSimple.jsx`
+  - 해결: 카테고리 삭제 UI 및 기능 추가 필요
+
+- [ ] **문서 삭제 기능 부재**: 업로드한 문서 삭제 불가
+  - URL: `/vector-data/documents`
+  - 파일: `frontend/src/pages/VectorDataManagementPageSimple.jsx`
+  - 해결: 선택 체크박스 하단에 삭제 버튼 추가 및 확인 대화상자 필요
+
 - [ ] **3-1. 대상 문서 관리**: 오류 발생, 접속 불가
   - URL: `/vector-data/documents`
   - 파일: `frontend/src/pages/VectorDataManagementPage.jsx`
