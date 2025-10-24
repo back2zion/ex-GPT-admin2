@@ -31,6 +31,8 @@ build/
 # Database
 *.db
 *.sqlite3
+pg_hba_add.sql
+update_pg_hba.sh
 
 # Logs
 *.log
