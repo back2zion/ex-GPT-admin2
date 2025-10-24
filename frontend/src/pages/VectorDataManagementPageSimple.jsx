@@ -217,13 +217,15 @@ export default function VectorDataManagementPageSimple() {
     }
 
     try {
-      // TODO: 백엔드 API에 문서 삭제 엔드포인트 추가 필요
-      // 현재는 개별 삭제 API가 없으므로 알림만 표시
-      alert('문서 삭제 API가 구현되지 않았습니다. 백엔드 API 추가가 필요합니다.');
-      // await Promise.all(selectedItems.map(id => axios.delete(`${API_BASE}/vector-documents/${id}`)));
-      // setSelectedItems([]);
-      // loadDocuments();
-      // loadStats();
+      // 다중 문서 삭제 API 호출
+      await axios.post(`${API_BASE}/vector-documents/batch-delete`, selectedItems, {
+        params: { hard_delete: false }  // soft delete
+      });
+
+      alert(`${selectedItems.length}건의 문서가 삭제되었습니다.`);
+      setSelectedItems([]);
+      loadDocuments();
+      loadStats();
     } catch (error) {
       console.error('문서 삭제 실패:', error);
       alert(error.response?.data?.detail || '문서 삭제에 실패했습니다.');
@@ -323,7 +325,8 @@ export default function VectorDataManagementPageSimple() {
   const handleUploadDocument = () => {
     setUploadModalOpen(true);
     setUploadFile(null);
-    setUploadCategory('');
+    // 현재 선택된 카테고리를 기본값으로 설정
+    setUploadCategory(categoryFilter || '');
     setUploadTitle('');
     setUploadDescription('');
   };
@@ -741,29 +744,35 @@ export default function VectorDataManagementPageSimple() {
       <Dialog
         open={uploadModalOpen}
         onClose={() => setUploadModalOpen(false)}
-        PaperProps={{ sx: { width: 600 } }}
+        PaperProps={{ sx: { width: 600, maxWidth: '90vw' } }}
       >
-        <DialogTitle>문서 등록</DialogTitle>
+        <DialogTitle>대상문서 업로드</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-            <Button variant="outlined" component="label" fullWidth>
-              {uploadFile ? uploadFile.name : '파일 선택'}
-              <input
-                type="file"
-                hidden
-                accept=".pdf,.txt,.doc,.docx,.hwp,.ppt,.pptx,.xls,.xlsx,.md,.rtf,.odt"
-                onChange={(e) => setUploadFile(e.target.files[0])}
-              />
-            </Button>
+            {/* 안내 문구 */}
+            <Box sx={{
+              backgroundColor: '#f5f5f5',
+              p: 2,
+              borderRadius: 1,
+              borderLeft: '4px solid #00a651'
+            }}>
+              <Typography variant="body2" sx={{ mb: 0.5 }}>
+                1. 먼저 카테고리를 선택하세요.
+              </Typography>
+              <Typography variant="body2">
+                2. 폴더생성 버튼을 클릭하여 새로운 경로를 추가할 수 있습니다.
+              </Typography>
+            </Box>
 
+            {/* 카테고리 선택 */}
             <FormControl fullWidth required>
-              <InputLabel>카테고리</InputLabel>
+              <InputLabel>카테고리 선택</InputLabel>
               <Select
                 value={uploadCategory}
-                label="카테고리"
+                label="카테고리 선택"
                 onChange={(e) => setUploadCategory(e.target.value)}
               >
-                {categories.map((cat) => (
+                {categories.filter(cat => cat.use_yn === 'Y').map((cat) => (
                   <MenuItem key={cat.code} value={cat.code}>
                     {cat.name}
                   </MenuItem>
@@ -771,13 +780,53 @@ export default function VectorDataManagementPageSimple() {
               </Select>
             </FormControl>
 
+            {/* 파일 업로드 */}
+            <Box>
+              <Button
+                variant="outlined"
+                component="label"
+                fullWidth
+                sx={{
+                  py: 1.5,
+                  justifyContent: 'flex-start',
+                  textAlign: 'left'
+                }}
+              >
+                {uploadFile ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <UploadIcon />
+                    <Typography variant="body2">{uploadFile.name}</Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <UploadIcon />
+                    <Typography variant="body2">파일 업로드</Typography>
+                  </Box>
+                )}
+                <input
+                  type="file"
+                  hidden
+                  accept=".pdf,.txt,.doc,.docx,.hwp,.ppt,.pptx,.xls,.xlsx,.md,.rtf,.odt"
+                  onChange={(e) => setUploadFile(e.target.files[0])}
+                />
+              </Button>
+              {uploadFile && (
+                <Typography variant="caption" sx={{ mt: 1, display: 'block', color: 'text.secondary' }}>
+                  선택된 파일: {uploadFile.name} ({(uploadFile.size / 1024).toFixed(2)} KB)
+                </Typography>
+              )}
+            </Box>
+
+            {/* 제목 (선택) */}
             <TextField
               label="제목 (선택)"
               value={uploadTitle}
               onChange={(e) => setUploadTitle(e.target.value)}
               fullWidth
+              placeholder="제목을 입력하지 않으면 파일명이 사용됩니다"
             />
 
+            {/* 설명 (선택) */}
             <TextField
               label="설명 (선택)"
               value={uploadDescription}
@@ -785,13 +834,21 @@ export default function VectorDataManagementPageSimple() {
               multiline
               rows={3}
               fullWidth
+              placeholder="문서에 대한 설명을 입력하세요"
             />
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setUploadModalOpen(false)}>취소</Button>
-          <Button onClick={handleUploadSubmit} variant="contained">
-            등록
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setUploadModalOpen(false)} variant="outlined">
+            취소
+          </Button>
+          <Button
+            onClick={handleUploadSubmit}
+            variant="contained"
+            color="primary"
+            sx={{ minWidth: 100 }}
+          >
+            저장
           </Button>
         </DialogActions>
       </Dialog>

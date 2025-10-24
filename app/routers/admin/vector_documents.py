@@ -290,7 +290,153 @@ async def get_vector_document(document_id: str):
             await conn.close()
 
 
-# TODO: 벡터 문서 생성/수정/삭제는 별도의 문서 업로드 파이프라인을 통해 처리
-# @router.post("")
-# @router.put("/{document_id}")
-# @router.delete("/{document_id}")
+@router.delete("/{document_id}")
+async def delete_vector_document(
+    document_id: str,
+    hard_delete: bool = Query(False, description="완전 삭제 여부 (기본: False, soft delete)")
+):
+    """
+    벡터 문서 삭제
+
+    Args:
+        document_id: 문서 ID (doc_id)
+        hard_delete: True일 경우 완전 삭제, False일 경우 use_yn = 'N'으로 설정
+
+    Returns:
+        삭제 결과
+    """
+    conn = None
+    try:
+        conn = await get_edb_connection()
+
+        # document_id를 정수로 변환
+        try:
+            doc_id_int = int(document_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"유효하지 않은 문서 ID: {document_id}"
+            )
+
+        # 문서 존재 확인
+        existing = await conn.fetchval(
+            """
+            SELECT COUNT(*)
+            FROM wisenut.doc_bas_lst
+            WHERE doc_id = $1
+            """,
+            doc_id_int
+        )
+
+        if existing == 0:
+            raise HTTPException(
+                status_code=404,
+                detail=f"문서를 찾을 수 없습니다: {document_id}"
+            )
+
+        if hard_delete:
+            # 완전 삭제
+            await conn.execute(
+                """
+                DELETE FROM wisenut.doc_bas_lst
+                WHERE doc_id = $1
+                """,
+                doc_id_int
+            )
+            logger.info(f"Hard deleted document: {doc_id_int}")
+        else:
+            # Soft delete (use_yn = 'N')
+            await conn.execute(
+                """
+                UPDATE wisenut.doc_bas_lst
+                SET use_yn = 'N', mod_usr_id = 'admin', mod_dt = CURRENT_TIMESTAMP
+                WHERE doc_id = $1
+                """,
+                doc_id_int
+            )
+            logger.info(f"Soft deleted document: {doc_id_int}")
+
+        return {
+            "document_id": document_id,
+            "deleted": True,
+            "hard_delete": hard_delete
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete document: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"문서 삭제 실패: {str(e)}"
+        )
+    finally:
+        if conn:
+            await conn.close()
+
+
+@router.post("/batch-delete")
+async def batch_delete_documents(
+    document_ids: list[str],
+    hard_delete: bool = Query(False, description="완전 삭제 여부")
+):
+    """
+    다중 문서 삭제
+
+    Args:
+        document_ids: 삭제할 문서 ID 목록
+        hard_delete: True일 경우 완전 삭제
+
+    Returns:
+        삭제 결과
+    """
+    conn = None
+    try:
+        conn = await get_edb_connection()
+
+        # 문자열 ID를 정수로 변환
+        try:
+            doc_ids_int = [int(doc_id) for doc_id in document_ids]
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="유효하지 않은 문서 ID가 포함되어 있습니다"
+            )
+
+        if hard_delete:
+            # 완전 삭제
+            deleted_count = await conn.execute(
+                """
+                DELETE FROM wisenut.doc_bas_lst
+                WHERE doc_id = ANY($1::int[])
+                """,
+                doc_ids_int
+            )
+        else:
+            # Soft delete
+            deleted_count = await conn.execute(
+                """
+                UPDATE wisenut.doc_bas_lst
+                SET use_yn = 'N', mod_usr_id = 'admin', mod_dt = CURRENT_TIMESTAMP
+                WHERE doc_id = ANY($1::int[])
+                """,
+                doc_ids_int
+            )
+
+        logger.info(f"Deleted {len(document_ids)} documents (hard_delete={hard_delete})")
+
+        return {
+            "deleted_count": len(document_ids),
+            "document_ids": document_ids,
+            "hard_delete": hard_delete
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to batch delete documents: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"다중 문서 삭제 실패: {str(e)}"
+        )
+    finally:
+        if conn:
+            await conn.close()
