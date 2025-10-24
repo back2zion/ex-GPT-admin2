@@ -35,23 +35,6 @@ import axios from '../axiosConfig';
 
 const API_BASE = '/api/v1/admin';
 
-/**
- * Mock 데이터 생성
- */
-function generateMockQuestions(count) {
-  const mockQuestions = [];
-
-  for (let i = 1; i <= count; i++) {
-    mockQuestions.push({
-      id: i,
-      title: `추천질문 ${i}`,
-      is_active: i % 3 !== 0,
-      created_at: new Date(2024, 0, i).toISOString().split('T')[0],
-    });
-  }
-  return mockQuestions;
-}
-
 export default function RecommendedQuestionsPage() {
   // 테이블 상태
   const [questions, setQuestions] = useState([]);
@@ -72,15 +55,26 @@ export default function RecommendedQuestionsPage() {
   /**
    * 추천질문 목록 로드
    */
-  const loadQuestions = () => {
-    // TODO: 실제 API 연동
-    const mockQuestions = generateMockQuestions(50);
+  const loadQuestions = async () => {
+    try {
+      // 실제 API 호출
+      const skip = (page - 1) * rowsPerPage;
+      const params = new URLSearchParams({
+        skip: skip.toString(),
+        limit: rowsPerPage.toString(),
+      });
 
-    // 페이지네이션
-    const start = (page - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-    setQuestions(mockQuestions.slice(start, end));
-    setTotal(mockQuestions.length);
+      const response = await axios.get(`${API_BASE}/recommended-questions?${params}`);
+      const data = response.data;
+
+      setQuestions(data.items || []);
+      setTotal(data.total || 0);
+    } catch (error) {
+      console.error('추천질문 목록 로딩 실패:', error);
+      // 오류 발생 시 빈 목록 표시
+      setQuestions([]);
+      setTotal(0);
+    }
   };
 
   /**
@@ -152,7 +146,9 @@ export default function RecommendedQuestionsPage() {
     const ws = XLSX.utils.json_to_sheet(
       questions.map((q, index) => ({
         번호: (page - 1) * rowsPerPage + index + 1,
-        제목: q.title,
+        질문: q.question,
+        카테고리: q.category,
+        표시순서: q.display_order,
         사용: q.is_active ? 'Y' : 'N',
         일자: q.created_at,
       }))
@@ -220,7 +216,9 @@ export default function RecommendedQuestionsPage() {
                 />
               </TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>번호</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>제목</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>질문</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>카테고리</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>표시 순서</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>사용</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>일자</TableCell>
             </TableRow>
@@ -235,7 +233,9 @@ export default function RecommendedQuestionsPage() {
                   />
                 </TableCell>
                 <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
-                <TableCell>{question.title}</TableCell>
+                <TableCell>{question.question}</TableCell>
+                <TableCell>{question.category}</TableCell>
+                <TableCell>{question.display_order}</TableCell>
                 <TableCell>{question.is_active ? 'Y' : 'N'}</TableCell>
                 <TableCell>{question.created_at}</TableCell>
               </TableRow>

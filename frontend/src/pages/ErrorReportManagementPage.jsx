@@ -39,25 +39,6 @@ dayjs.locale('ko');
 
 const API_BASE = '/api/v1/admin';
 
-/**
- * Mock 데이터 생성
- */
-function generateMockErrorReports(count) {
-  const mockReports = [];
-  const menus = ['대화', '문서검색', '설정', '프로필'];
-
-  for (let i = 1; i <= count; i++) {
-    mockReports.push({
-      id: i,
-      menu: menus[i % menus.length],
-      content: `오류 신고 내용 ${i}`,
-      author: `사용자${i}`,
-      created_at: new Date(2024, 0, i).toISOString().split('T')[0],
-    });
-  }
-  return mockReports;
-}
-
 export default function ErrorReportManagementPage() {
   // 필터 상태 (dayjs 객체로 관리)
   const [startDate, setStartDate] = useState(null);
@@ -78,15 +59,26 @@ export default function ErrorReportManagementPage() {
   /**
    * 오류신고 목록 로드
    */
-  const loadReports = () => {
-    // TODO: 실제 API 연동
-    const mockReports = generateMockErrorReports(100);
+  const loadReports = async () => {
+    try {
+      // 실제 API 호출
+      const skip = (page - 1) * rowsPerPage;
+      const params = new URLSearchParams({
+        skip: skip.toString(),
+        limit: rowsPerPage.toString(),
+      });
 
-    // 페이지네이션
-    const start = (page - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-    setReports(mockReports.slice(start, end));
-    setTotal(mockReports.length);
+      const response = await axios.get(`${API_BASE}/error-reports?${params}`);
+      const data = response.data;
+
+      setReports(data.items || []);
+      setTotal(data.total || 0);
+    } catch (error) {
+      console.error('오류신고 목록 로딩 실패:', error);
+      // 오류 발생 시 빈 목록 표시
+      setReports([]);
+      setTotal(0);
+    }
   };
 
   /**
@@ -228,9 +220,11 @@ export default function ErrorReportManagementPage() {
           <TableHead sx={{ bgcolor: '#f5f5f5' }}>
             <TableRow>
               <TableCell sx={{ fontWeight: 'bold' }}>번호</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>메뉴명</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>신고내용</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>이름</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>오류 유형</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>오류 메시지</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>사용자 ID</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>심각도</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>해결 여부</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>일자</TableCell>
             </TableRow>
           </TableHead>
@@ -238,9 +232,11 @@ export default function ErrorReportManagementPage() {
             {reports.map((report, index) => (
               <TableRow key={report.id} hover>
                 <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
-                <TableCell>{report.menu}</TableCell>
-                <TableCell>{report.content}</TableCell>
-                <TableCell>{report.author}</TableCell>
+                <TableCell>{report.error_type}</TableCell>
+                <TableCell>{report.error_message}</TableCell>
+                <TableCell>{report.user_id}</TableCell>
+                <TableCell>{report.severity}</TableCell>
+                <TableCell>{report.is_resolved ? '해결됨' : '미해결'}</TableCell>
                 <TableCell>{report.created_at}</TableCell>
               </TableRow>
             ))}

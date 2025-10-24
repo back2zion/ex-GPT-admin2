@@ -183,10 +183,9 @@ export default function App() {
         <Route path="/learning-data/dictionary" element={<PlaceholderPage title="📖 사전 관리" />} />
 
         <Route path="/services/greetings" element={<PlaceholderPage title="👋 인사말 관리" />} />
-        <Route path="/services/notices" element={<PlaceholderPage title="📢 공지사항" />} />
-        <Route path="/services/error-reports" element={<PlaceholderPage title="⚠️ 오류사항신고 관리" />} />
-        <Route path="/services/recommended-questions" element={<PlaceholderPage title="❓ 추천질문 관리" />} />
-        <Route path="/services/satisfaction" element={<PlaceholderPage title="⭐ 만족도조사 조회" />} />
+        {/* services/error-reports 와 recommended-questions는 실제 페이지로 구현됨 (Line 174-175) */}
+        {/* <Route path="/services/error-reports" element={<PlaceholderPage title="⚠️ 오류사항신고 관리" />} /> */}
+        {/* <Route path="/services/recommended-questions" element={<PlaceholderPage title="❓ 추천질문 관리" />} /> */}
 
         <Route path="/deployment/models" element={<ModelManagement />} />
         <Route path="/deployment/services" element={<ServiceManagement />} />

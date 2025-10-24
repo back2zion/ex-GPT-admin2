@@ -75,28 +75,6 @@ const PATH_OPTIONS = {
   },
 };
 
-/**
- * Mock 데이터 생성
- */
-function generateMockDocuments(count) {
-  const mockDocs = [];
-  const categories = ['법령', '업무가이드', '업무기준', '지침', '사규', '노동조합', '일반사항', '참고자료'];
-  const statuses = ['완료', '처리중', '대기'];
-
-  for (let i = 1; i <= count; i++) {
-    mockDocs.push({
-      id: i,
-      category: categories[i % categories.length],
-      filename: `문서_${i}_${categories[i % categories.length]}.pdf`,
-      status: statuses[i % statuses.length],
-      vectorized: i % 3 === 0 ? 'Y' : 'N',
-      chunk_count: Math.floor(Math.random() * 500) + 10,
-      created_at: new Date(2024, 0, i).toISOString().split('T')[0],
-    });
-  }
-  return mockDocs;
-}
-
 export default function VectorDataManagementPage() {
   // 필터 상태
   const [categoryFilter, setCategoryFilter] = useState('전체');
@@ -135,21 +113,31 @@ export default function VectorDataManagementPage() {
   /**
    * 문서 목록 로드
    */
-  const loadDocuments = () => {
-    // TODO: 실제 API 연동
-    const mockDocs = generateMockDocuments(100);
+  const loadDocuments = async () => {
+    try {
+      // 실제 API 호출
+      const skip = (page - 1) * rowsPerPage;
+      const params = new URLSearchParams({
+        skip: skip.toString(),
+        limit: rowsPerPage.toString(),
+      });
 
-    // 카테고리 필터 적용
-    let filtered = mockDocs;
-    if (categoryFilter !== '전체') {
-      filtered = mockDocs.filter(doc => doc.category === categoryFilter);
+      // 카테고리 필터 적용
+      if (categoryFilter && categoryFilter !== '전체') {
+        params.append('category', categoryFilter);
+      }
+
+      const response = await axios.get(`${API_BASE}/documents?${params}`);
+      const data = response.data;
+
+      setDocuments(data.items || []);
+      setTotal(data.total || 0);
+    } catch (error) {
+      console.error('문서 목록 로딩 실패:', error);
+      // 오류 발생 시 빈 목록 표시
+      setDocuments([]);
+      setTotal(0);
     }
-
-    // 페이지네이션
-    const start = (page - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-    setDocuments(filtered.slice(start, end));
-    setTotal(filtered.length);
   };
 
   /**
@@ -274,11 +262,11 @@ export default function VectorDataManagementPage() {
     const ws = XLSX.utils.json_to_sheet(
       documents.map((doc, index) => ({
         번호: (page - 1) * rowsPerPage + index + 1,
-        대분류: doc.category,
-        파일명: doc.filename,
+        카테고리: doc.category_name || '-',
+        제목: doc.title,
+        문서타입: doc.document_type,
         상태: doc.status,
-        벡터화: doc.vectorized,
-        청크수: doc.chunk_count,
+        청크수: doc.vector_info?.total_chunks || 0,
         등록일: doc.created_at,
       }))
     );
@@ -435,10 +423,10 @@ export default function VectorDataManagementPage() {
                 />
               </TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>번호</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>대분류</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>파일명</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>카테고리</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>제목</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>문서타입</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>상태</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>벡터화</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>청크수</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>삭제</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>등록일</TableCell>
@@ -454,11 +442,11 @@ export default function VectorDataManagementPage() {
                   />
                 </TableCell>
                 <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
-                <TableCell>{doc.category}</TableCell>
-                <TableCell>{doc.filename}</TableCell>
+                <TableCell>{doc.category_name || '-'}</TableCell>
+                <TableCell>{doc.title}</TableCell>
+                <TableCell>{doc.document_type}</TableCell>
                 <TableCell>{doc.status}</TableCell>
-                <TableCell>{doc.vectorized}</TableCell>
-                <TableCell>{doc.chunk_count.toLocaleString()}</TableCell>
+                <TableCell>{doc.vector_info?.total_chunks ? doc.vector_info.total_chunks.toLocaleString() : '-'}</TableCell>
                 <TableCell>
                   <IconButton
                     size="small"

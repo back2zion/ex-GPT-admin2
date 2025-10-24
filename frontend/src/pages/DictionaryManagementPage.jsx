@@ -40,27 +40,6 @@ import axios from '../axiosConfig';
 
 const API_BASE = '/api/v1/admin';
 
-/**
- * Mock 데이터 생성
- */
-function generateMockDictionaries(count) {
-  const mockDicts = [];
-  const types = ['동의어사전', '사용자사전'];
-
-  for (let i = 1; i <= count; i++) {
-    mockDicts.push({
-      id: i,
-      type: types[i % 2],
-      name: `사전_${i}`,
-      description: `사전 설명 ${i}`,
-      case_sensitive: i % 3 === 0 ? 'Y' : 'N',
-      word_count: Math.floor(Math.random() * 1000) + 10,
-      created_at: new Date(2024, 0, i).toISOString().split('T')[0],
-    });
-  }
-  return mockDicts;
-}
-
 export default function DictionaryManagementPage() {
   // 필터 상태
   const [searchType, setSearchType] = useState('전체');
@@ -91,18 +70,26 @@ export default function DictionaryManagementPage() {
   /**
    * 사전 목록 로드
    */
-  const loadDictionaries = () => {
-    // TODO: 실제 API 연동
-    const mockDicts = generateMockDictionaries(50);
+  const loadDictionaries = async () => {
+    try {
+      // 실제 API 호출
+      const skip = (page - 1) * rowsPerPage;
+      const params = new URLSearchParams({
+        skip: skip.toString(),
+        limit: rowsPerPage.toString(),
+      });
 
-    // 사전 종류 필터 적용
-    const filtered = mockDicts.filter(dict => typeFilter[dict.type]);
+      const response = await axios.get(`${API_BASE}/dictionaries?${params}`);
+      const data = response.data;
 
-    // 페이지네이션
-    const start = (page - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-    setDictionaries(filtered.slice(start, end));
-    setTotal(filtered.length);
+      setDictionaries(data.items || []);
+      setTotal(data.total || 0);
+    } catch (error) {
+      console.error('사전 목록 로딩 실패:', error);
+      // 오류 발생 시 빈 목록 표시
+      setDictionaries([]);
+      setTotal(0);
+    }
   };
 
   /**
@@ -334,10 +321,11 @@ export default function DictionaryManagementPage() {
                   </MenuItem>
                 </Menu>
               </TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>사전명</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>사전설명</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>대소문자 구분</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>단어수</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>카테고리</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>용어</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>정의</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>동의어</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>사용</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>생성일</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>수정</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>삭제</TableCell>
@@ -352,11 +340,11 @@ export default function DictionaryManagementPage() {
                     onChange={() => handleSelect(dict.id)}
                   />
                 </TableCell>
-                <TableCell>{dict.type}</TableCell>
-                <TableCell>{dict.name}</TableCell>
-                <TableCell>{dict.description}</TableCell>
-                <TableCell>{dict.case_sensitive}</TableCell>
-                <TableCell>{dict.word_count.toLocaleString()}</TableCell>
+                <TableCell>{dict.category}</TableCell>
+                <TableCell>{dict.term}</TableCell>
+                <TableCell>{dict.definition}</TableCell>
+                <TableCell>{dict.synonyms}</TableCell>
+                <TableCell>{dict.is_active ? 'Y' : 'N'}</TableCell>
                 <TableCell>{dict.created_at}</TableCell>
                 <TableCell>
                   <IconButton
