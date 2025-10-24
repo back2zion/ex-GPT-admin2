@@ -425,7 +425,10 @@ export default function VectorDataManagementPageSimple() {
         </Grid>
 
         {/* doctype별 카드 */}
-        {Object.entries(stats.by_doctype || {}).map(([doctype, data], index) => {
+        {categories.map((cat, index) => {
+          const doctype = cat.code;
+          const data = stats.by_doctype[cat.code] || { name: cat.name, count: 0 };
+
           // 도로공사 컬러 팔레트 (녹색/청록/파란색 계열)
           const colors = [
             { bg: 'linear-gradient(135deg, #00a651 0%, #00c573 100%)', text: '#fff', border: '#00a651' },
