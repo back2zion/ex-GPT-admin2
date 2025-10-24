@@ -56,7 +56,7 @@ async def get_active_notices(
     return NoticeListResponse(items=items, total=total)
 
 
-@router.get("/", response_model=NoticeListResponse)
+@router.get("", response_model=NoticeListResponse)
 async def list_notices(
     skip: int = Query(0, ge=0, description="건너뛸 레코드 수"),
     limit: int = Query(100, le=1000, description="조회할 최대 레코드 수"),
@@ -116,7 +116,7 @@ async def list_notices(
     return NoticeListResponse(items=items, total=total)
 
 
-@router.post("/", response_model=NoticeResponse, status_code=201)
+@router.post("", response_model=NoticeResponse, status_code=201)
 async def create_notice(
     notice: NoticeCreate,
     db: AsyncSession = Depends(get_db),

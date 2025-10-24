@@ -15,7 +15,7 @@ from cerbos.sdk.model import Principal
 router = APIRouter(prefix="/api/v1/admin/satisfaction", tags=["admin-satisfaction"])
 
 
-@router.get("/")
+@router.get("")
 async def list_satisfaction(
     skip: int = Query(0, ge=0, description="건너뛸 레코드 수"),
     limit: int = Query(100, le=1000, description="조회할 최대 레코드 수"),

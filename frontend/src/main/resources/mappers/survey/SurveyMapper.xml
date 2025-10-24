@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.datastreams.gpt.survey.mapper.SurveyMapper">
+
+    <!-- L-012: 만족도 저장 (INSERT with RETURNING) -->
+    <select id="saveSurvey" resultType="int">
+        WITH USR_INFO
+        AS
+        (
+            SELECT #{usrId} AS REG_USR_ID /* 로그인 사용자 아이디 */
+                 , #{ractTxt} AS RACT_TXT  /* 사용자 만족도 내용 */
+                 , #{ractLevelVal} AS RACT_LEVEL_VAL /* 만족도 값  1~5 */
+                 , #{sesnId} AS SESN_ID /* 세션 아이디 */
+                 , '00' AS USR_RACT_CONF_CD  /* 사용자 만족도 : 고정값 */
+            WHERE 1=1
+        ), INS_USR_RACT
+        AS
+        (
+            INSERT INTO wisenut.USR_RACT (USR_RACT_CONF_CD, RACT_TXT, RACT_LEVEL_VAL, SESN_ID, REG_USR_ID)
+            SELECT U.USR_RACT_CONF_CD, U.RACT_TXT, U.RACT_LEVEL_VAL, U.SESN_ID, U.REG_USR_ID
+            FROM USR_INFO U
+            WHERE 1=1
+            RETURNING USR_RACT.*
+        )
+        SELECT COUNT(*) FROM INS_USR_RACT
+    </select>
+
+</mapper>

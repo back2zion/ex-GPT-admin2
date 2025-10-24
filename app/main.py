@@ -28,7 +28,12 @@ from app.routers.admin import (
     stt_batches,
     file_browser,
     file_upload,
-    legacy_sync
+    legacy_sync,
+    deployment,
+    vector_documents,
+    dictionaries,
+    error_reports,
+    recommended_questions
 )
 from app.routers import chat_proxy, health
 from app.routers.chat import chat, rooms, history
@@ -36,7 +41,7 @@ from app.routers.chat import files as chat_files
 import os
 
 app = FastAPI(
-    title="AI Streams Admin API",
+    title="ex-GPT Admin API",
     description="Enterprise AI Platform Management System",
     version="0.1.0",
     docs_url="/docs",
@@ -88,14 +93,22 @@ app.include_router(legacy_sync.router)
 # Admin 라우터 등록 (Vector Data Management - 학습데이터 관리)
 app.include_router(categories.router)
 app.include_router(documents.router)
+app.include_router(vector_documents.router)
+app.include_router(dictionaries.router)
+app.include_router(error_reports.router)
+app.include_router(recommended_questions.router)
 
 # Admin 라우터 등록 (STT 음성 전사 시스템)
 app.include_router(stt_batches.router)
 app.include_router(file_browser.router)
 app.include_router(file_upload.router)
 
+# Admin 라우터 등록 (배포관리)
+app.include_router(deployment.router)
+
 # Health Check 라우터 등록 (프로덕션 배포)
 app.include_router(health.router)
+app.include_router(health.admin_router)  # Admin API health check
 
 # Chat 라우터 등록 (채팅 시스템 마이그레이션)
 app.include_router(chat.router)
@@ -109,7 +122,7 @@ admin_path = "/home/aigen/html/admin"
 @app.get("/")
 async def root():
     return {
-        "message": "AI Streams Admin API",
+        "message": "ex-GPT Admin API",
         "version": "0.1.0",
         "docs": "/docs",
         "admin": "/admin",
@@ -120,6 +133,11 @@ async def root():
 if os.path.exists(admin_path):
     # 정적 파일 (js, css, 이미지 등)
     app.mount("/admin/assets", StaticFiles(directory=f"{admin_path}/assets"), name="admin-assets")
+
+    # images 디렉토리 마운트 (로고 등)
+    if os.path.exists(f"{admin_path}/images"):
+        app.mount("/images", StaticFiles(directory=f"{admin_path}/images"), name="admin-images")
+        app.mount("/admin/images", StaticFiles(directory=f"{admin_path}/images"), name="admin-images-alt")
 
     # /admin 루트 경로
     @app.get("/admin")

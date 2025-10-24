@@ -17,7 +17,7 @@ from cerbos.sdk.model import Principal
 router = APIRouter(prefix="/api/v1/admin/approval-lines", tags=["admin-approval-lines"])
 
 
-@router.get("/")
+@router.get("")
 async def list_approval_lines(
     skip: int = Query(0, ge=0, description="오프셋"),
     limit: int = Query(100, le=1000, description="최대 개수"),
@@ -74,7 +74,7 @@ async def list_approval_lines(
     }
 
 
-@router.post("/", response_model=ApprovalLineResponse, status_code=201)
+@router.post("", response_model=ApprovalLineResponse, status_code=201)
 async def create_approval_line(
     approval_line: ApprovalLineCreate,
     db: AsyncSession = Depends(get_db),

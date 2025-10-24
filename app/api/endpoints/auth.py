@@ -13,6 +13,9 @@ from typing import Optional
 from app.services.auth import AuthService, create_access_token, decode_access_token
 from app.core.database import get_db
 from app.core.config import settings
+from app.utils.auth import get_redis_client
+import uuid
+import json
 
 router = APIRouter(tags=["auth"])
 
@@ -85,6 +88,34 @@ async def login(
 
     # 마지막 로그인 시간 업데이트
     await auth_service.update_last_login(user.id, db)
+
+    # Redis 세션 생성 (채팅 API 호환성)
+    session_id = str(uuid.uuid4())
+    redis = await get_redis_client()
+    session_data = {
+        "user_id": str(user.id),
+        "usr_id": str(user.id),
+        "username": user.username,
+        "usr_nm": user.full_name or user.username,
+        "name": user.full_name or user.username,
+        "department": "",
+        "dept_cd": ""
+    }
+    # 세션 TTL: ACCESS_TOKEN_EXPIRE_MINUTES와 동일
+    await redis.set(
+        f"session:{session_id}",
+        json.dumps(session_data),
+        ex=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    )
+
+    # 세션 ID 쿠키 설정
+    response.set_cookie(
+        key="JSESSIONID",
+        value=session_id,
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        httponly=True,
+        samesite="lax"
+    )
 
     # 아이디 기억하기 (adminpage.txt 요구사항)
     # 쿠키에 username 저장 (보안상 비밀번호는 저장하지 않음)

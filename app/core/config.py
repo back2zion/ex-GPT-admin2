@@ -1,11 +1,15 @@
 from pydantic_settings import BaseSettings
 from pydantic import field_validator
-from typing import List, Union
+from typing import List, Union, Optional
 
 
 class Settings(BaseSettings):
-    # Database
+    # Database (Admin Tool)
     DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/admin_db"
+
+    # User UI Health Check
+    USER_UI_URL: str = "http://host.docker.internal:18180/exGenBotDS/testOld"
+    USER_DB_URL: Optional[str] = None  # Optional: User UI Database
 
     # JWT
     SECRET_KEY: str = "your-secret-key-change-this"
@@ -69,6 +73,16 @@ class Settings(BaseSettings):
         "https://ui.datastreams.co.kr",
         "http://ui.datastreams.co.kr"
     ]
+
+    # Chat Proxy Settings
+    DS_API_URL: str = "http://host.docker.internal:18180/exGenBotDS"
+    DS_API_KEY: str = "z3JE1M8huXmNux6y"
+    CHAT_TIMEOUT: float = 120.0
+    CHAT_DEFAULT_TEMPERATURE: float = 0.0
+    CHAT_MODEL_NAME: str = "ex-GPT"
+    TITLE_GEN_PREFIX: str = "title_gen_"
+    DEFAULT_USER: str = "anonymous"
+    CHAT_TITLE_MAX_LENGTH: int = 50
 
     class Config:
         env_file = ".env"

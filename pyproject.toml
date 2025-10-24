@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "admin-api"
 version = "0.1.0"
-description = "AI Streams Admin API - Management and monitoring system"
+description = "ex-GPT Admin API - Management and monitoring system"
 authors = ["Datastreams"]
 readme = "README.md"
 
@@ -30,8 +30,9 @@ PyPDF2 = "^3.0.0"
 python-docx = "^1.1.0"
 olefile = "^0.47"
 psutil = "^7.1.1"
+mlflow = "^2.10.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = "^7.4.4"
 pytest-asyncio = "^0.23.3"
 pytest-cov = "^4.1.0"

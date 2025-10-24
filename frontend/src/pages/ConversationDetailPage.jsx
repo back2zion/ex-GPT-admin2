@@ -1,0 +1,283 @@
+/**
+ * 대화내역 상세 페이지
+ * - 사용자 정보, 질문/답변/추론 내용 표시
+ * - 목록으로 돌아가기 버튼
+ */
+
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  Box,
+  Paper,
+  Typography,
+  Button,
+  CircularProgress,
+  Divider,
+  Grid,
+  Card,
+  CardContent,
+} from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { getConversationDetail } from '../utils/api';
+
+/**
+ * ISO datetime을 한국 시간으로 포맷
+ */
+function formatDateTime(isoString) {
+  if (!isoString) return '-';
+  const date = new Date(isoString);
+  return date.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
+/**
+ * 대화내역 상세 페이지 컴포넌트
+ */
+export default function ConversationDetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  const [conversation, setConversation] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  /**
+   * 대화내역 상세 로드
+   */
+  useEffect(() => {
+    const loadDetail = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const data = await getConversationDetail(id);
+        setConversation(data);
+      } catch (err) {
+        console.error('[ConversationDetailPage] 상세 조회 실패:', err);
+        setError(err.response?.data?.detail || '대화내역을 불러올 수 없습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDetail();
+  }, [id]);
+
+  /**
+   * 목록으로 돌아가기
+   */
+  const handleBackToList = () => {
+    navigate('/conversations');
+  };
+
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 4 }}>
+        <Paper elevation={3} sx={{ p: 3, bgcolor: '#f8d7da', color: '#721c24' }}>
+          {error}
+        </Paper>
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBackIcon />}
+          onClick={handleBackToList}
+          sx={{ mt: 3 }}
+        >
+          목록으로 돌아가기
+        </Button>
+      </Box>
+    );
+  }
+
+  if (!conversation) {
+    return (
+      <Box sx={{ p: 4 }}>
+        <Typography>대화내역을 찾을 수 없습니다.</Typography>
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBackIcon />}
+          onClick={handleBackToList}
+          sx={{ mt: 3 }}
+        >
+          목록으로 돌아가기
+        </Button>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ p: 4, maxWidth: 1400, margin: '0 auto' }}>
+      {/* 헤더 */}
+      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
+        💬 대화내역 상세
+      </Typography>
+
+      {/* 사용자 정보 */}
+      <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main' }}>
+          📋 사용자 정보
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Typography variant="body2" color="text.secondary">사용자 ID</Typography>
+            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+              {conversation.user_id}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Typography variant="body2" color="text.secondary">직급</Typography>
+            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+              {conversation.position || '-'}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Typography variant="body2" color="text.secondary">직위</Typography>
+            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+              {conversation.rank || '-'}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Typography variant="body2" color="text.secondary">팀명</Typography>
+            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+              {conversation.team || '-'}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Typography variant="body2" color="text.secondary">입사년도</Typography>
+            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+              {conversation.join_year || '-'}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Typography variant="body2" color="text.secondary">부처</Typography>
+            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+              {conversation.department || '-'}
+            </Typography>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* 대화 분류 정보 */}
+      <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main' }}>
+          🏷️ 대화 분류
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="body2" color="text.secondary">대분류</Typography>
+            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+              {conversation.main_category || '미분류'}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="body2" color="text.secondary">소분류</Typography>
+            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+              {conversation.sub_category || '-'}
+            </Typography>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* 시간 정보 */}
+      <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main' }}>
+          ⏰ 시간 정보
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="body2" color="text.secondary">질문 시간</Typography>
+            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+              {formatDateTime(conversation.created_at)}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="body2" color="text.secondary">응답 시간</Typography>
+            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+              {conversation.response_time ? `${conversation.response_time}ms` : '-'}
+            </Typography>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* 질문 내용 */}
+      <Card elevation={3} sx={{ mb: 3, bgcolor: '#f0f8ff' }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#1976d2' }}>
+            ❓ 질문 내용
+          </Typography>
+          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
+            {conversation.question}
+          </Typography>
+        </CardContent>
+      </Card>
+
+      {/* 추론 내용 */}
+      {conversation.thinking_content && (
+        <Card elevation={3} sx={{ mb: 3, bgcolor: '#fff8e1' }}>
+          <CardContent>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#f57c00' }}>
+              🤔 추론 내용
+            </Typography>
+            <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
+              {conversation.thinking_content}
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 답변 내용 */}
+      <Card elevation={3} sx={{ mb: 3, bgcolor: '#f1f8e9' }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#388e3c' }}>
+            💬 답변 내용
+          </Typography>
+          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
+            {conversation.answer || '답변 없음'}
+          </Typography>
+        </CardContent>
+      </Card>
+
+      {/* 참조 문서 */}
+      {conversation.referenced_documents && conversation.referenced_documents.length > 0 && (
+        <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main' }}>
+            📚 참조 문서
+          </Typography>
+          <ul>
+            {conversation.referenced_documents.map((doc, index) => (
+              <li key={index}>
+                <Typography variant="body2">{doc}</Typography>
+              </li>
+            ))}
+          </ul>
+        </Paper>
+      )}
+
+      {/* 목록으로 돌아가기 버튼 */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <Button
+          variant="contained"
+          size="large"
+          startIcon={<ArrowBackIcon />}
+          onClick={handleBackToList}
+          sx={{ minWidth: 200 }}
+        >
+          목록으로 돌아가기
+        </Button>
+      </Box>
+    </Box>
+  );
+}

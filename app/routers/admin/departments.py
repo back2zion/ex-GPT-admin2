@@ -22,7 +22,7 @@ from cerbos.sdk.model import Principal
 router = APIRouter(prefix="/api/v1/admin/departments", tags=["admin-departments"])
 
 
-@router.get("/")
+@router.get("")
 async def list_departments(
     skip: int = Query(0, ge=0, description="오프셋"),
     limit: int = Query(100, le=1000, description="최대 개수"),
@@ -129,7 +129,7 @@ async def get_department_tree(
     return tree
 
 
-@router.post("/", response_model=DepartmentResponse, status_code=201)
+@router.post("", response_model=DepartmentResponse, status_code=201)
 async def create_department(
     department: DepartmentCreate,
     db: AsyncSession = Depends(get_db),

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.datastreams.gpt.login.mapper.UserMapper">
+
+    <!-- L-005: 사용자 정보 조회 (기능정의서 오리지널 쿼리) -->
+    <select id="getUserInfo" parameterType="string" resultType="com.datastreams.gpt.login.dto.UserInfoDto">
+        WITH ETL_DAT AS (
+            SELECT #{userId} AS USR_ID
+            WHERE 1=1
+        ), DEPTS AS (
+            select t.bscode AS DEPT_CD,
+                   t.jysjilja AS STRT_YMD,
+                   t.jyjrilja AS END_YMD,
+                   t.hgbsmyeong AS DEPT_NM,
+                   TRIM(t.jsswbscode) AS UPP_DEPT_CD
+            from (
+                     select row_number() over(partition by bscode order by jysjilja desc) as rn,
+                            bscode,
+                            jysjilja,
+                            jyjrilja,
+                            hgbsmyeong,
+                            jsswbscode
+                     from wisenut.if_phabscdm
+                     where 1=1
+                 ) t
+            where 1=1 and t.rn = 1
+        ), USR_INFO AS (
+            SELECT e.SWBEONHO AS USR_ID,
+                   e.HGSEONGMYEONG AS USR_NM,
+                   e.BSCODE AS DEPT_CD,
+                   D.DEPT_NM,
+                   j.jjname AS SRT_NM,
+                   w.jwname AS GRD_NM,
+                   g.jgname as POS_NM,
+                   e.stgubun
+            FROM ETL_DAT T
+            INNER JOIN wisenut.if_phaisjbm_damo e ON T.USR_ID = e.SWBEONHO
+            LEFT OUTER JOIN wisenut.if_jikjong j on e.jikjong = j.jjcode
+            LEFT OUTER JOIN wisenut.if_jikwi w ON e.jikwi = w.jwcode
+            LEFT OUTER JOIN wisenut.if_jikgeup g on e.jikgeup = g.jgcode
+            LEFT OUTER JOIN DEPTS D on e.BSCODE = D.DEPT_CD
+            WHERE 1=1 and e.stgubun in ('N1','N2')
+        )
+        SELECT U.USR_ID,
+               U.USR_NM,
+               U.DEPT_CD,
+               U.DEPT_NM,
+               U.SRT_NM AS JIKJONG_NM,
+               U.GRD_NM AS JIKWI_NM,
+               U.POS_NM AS JIKGEUP_NM,
+               U.stgubun AS USE_YN,
+               C.FNT_SIZE_CD AS fntSizeCd,
+               C.UI_THM_CD AS uiThmCd,
+               CASE WHEN C.SYS_ACCS_YN IS NULL THEN 'Y' ELSE C.SYS_ACCS_YN END AS SYS_ACCS_YN,
+               CASE WHEN C.MGR_AUTH_YN IS NULL THEN 'N' ELSE C.MGR_AUTH_YN END AS MGR_AUTH_YN,
+               CASE WHEN C.VCE_MDL_USE_YN IS NULL THEN 'Y' ELSE C.VCE_MDL_USE_YN END AS VCE_MDL_USE_YN,
+               CASE WHEN C.IMG_MDL_USE_YN IS NULL THEN 'Y' ELSE C.IMG_MDL_USE_YN END AS IMG_MDL_USE_YN
+        FROM USR_INFO U
+        LEFT OUTER JOIN wisenut.USR_PRV_CONF C ON U.USR_ID = C.USR_ID
+        WHERE 1=1
+        LIMIT 1
+    </select>
+
+</mapper>

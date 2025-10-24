@@ -31,7 +31,7 @@ stt_service = STTService()
 email_service = EmailService()
 
 
-@router.get("/")
+@router.get("")
 async def list_stt_batches(
     skip: int = Query(0, ge=0, description="오프셋"),
     limit: int = Query(100, le=1000, description="최대 개수"),
@@ -114,7 +114,7 @@ async def list_stt_batches(
     }
 
 
-@router.post("/", response_model=STTBatchResponse, status_code=201)
+@router.post("", response_model=STTBatchResponse, status_code=201)
 async def create_stt_batch(
     batch: STTBatchCreate,
     db: AsyncSession = Depends(get_db),

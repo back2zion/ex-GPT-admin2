@@ -5,29 +5,29 @@ from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import httpx
 import json
 import asyncio
+import logging
 from datetime import datetime
 
 from app.models import UsageHistory
 from app.core.database import get_db
 from app.core.config import settings
 
-router = APIRouter(prefix="/api", tags=["chat-proxy"])
+logger = logging.getLogger(__name__)
 
-# vLLM API URL (Docker 컨테이너에서 host 접근)
-import os
-LLM_API_URL = os.getenv("LLM_API_URL", "http://host.docker.internal:8000")
+router = APIRouter(prefix="/api", tags=["chat-proxy"])
 
 
 class ChatStreamRequest(BaseModel):
     """layout.html에서 보내는 채팅 요청"""
     message: str
-    session_id: Optional[str] = None  # Optional로 변경
-    user_id: str = "anonymous"
+    session_id: Optional[str] = None
+    user_id: str = settings.DEFAULT_USER
     think_mode: bool = False
     file_ids: List[str] = []
     history: List[Dict[str, Any]] = []
@@ -41,8 +41,29 @@ async def save_usage_to_db(
     answer: str,
     conversation_title: Optional[str] = None,
     thinking_content: Optional[str] = None
-):
-    """usage_history에 대화 저장"""
+) -> None:
+    """
+    대화 내용을 usage_history 테이블에 저장
+
+    Args:
+        db: 비동기 데이터베이스 세션
+        user_id: 사용자 식별자 (예: "user_123456")
+        session_id: 대화 세션 ID (예: "user_123_session_789")
+        question: 사용자 질문 텍스트
+        answer: AI 응답 텍스트
+        conversation_title: 대화 제목 (None일 경우 자동 생성)
+        thinking_content: AI 사고 과정 (<think> 태그 내용)
+
+    Returns:
+        None
+
+    Raises:
+        SQLAlchemyError: 데이터베이스 저장 실패 시
+
+    Note:
+        - 제목이 없으면 질문의 첫 50자로 자동 생성
+        - 에러 발생 시 자동으로 롤백 처리
+    """
     try:
         # 해당 세션의 첫 대화인지 확인
         if not conversation_title:
@@ -54,7 +75,8 @@ async def save_usage_to_db(
 
             # 첫 대화라면 질문으로 제목 생성
             if not existing:
-                conversation_title = question[:50] + "..." if len(question) > 50 else question
+                max_len = settings.CHAT_TITLE_MAX_LENGTH
+                conversation_title = question[:max_len] + "..." if len(question) > max_len else question
 
         # 새 레코드 생성
         usage_record = UsageHistory(
@@ -63,8 +85,8 @@ async def save_usage_to_db(
             conversation_title=conversation_title,
             question=question,
             answer=answer,
-            thinking_content=thinking_content,  # thinking 내용 저장
-            model_name="ex-GPT",
+            thinking_content=thinking_content,
+            model_name=settings.CHAT_MODEL_NAME,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )
@@ -72,11 +94,16 @@ async def save_usage_to_db(
         db.add(usage_record)
         await db.commit()
 
-        print(f"✅ Usage saved to DB: user_id={user_id}, session_id={session_id}")
+        logger.info(f"Usage saved to DB: user_id={user_id}, session_id={session_id}")
 
-    except Exception as e:
-        print(f"❌ Failed to save usage to DB: {e}")
+    except SQLAlchemyError as e:
+        logger.error(f"Database error while saving usage: {e}", exc_info=True)
         await db.rollback()
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error while saving usage: {e}", exc_info=True)
+        await db.rollback()
+        raise
 
 
 @router.post("/chat_stream")
@@ -95,35 +122,33 @@ async def chat_stream_proxy(
         import time
         request.session_id = f"{request.user_id}_session_{int(time.time())}"
 
-    # vLLM OpenAI 호환 형식으로 변환
-    messages = []
+    # ds-api ExGPTRequest 형식으로 변환
+    history_messages = []
 
     # history가 있으면 추가
     if request.history:
         for msg in request.history:
             if isinstance(msg, dict):
-                messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
+                history_messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
 
     # 현재 메시지 추가
-    messages.append({"role": "user", "content": request.message})
+    history_messages.append({"role": "user", "content": request.message})
 
-    # vLLM OpenAI 호환 형식으로 변환 (thinking 모드 지원)
+    # ds-api WebChatRequest 형식 (RAG 검색 포함)
     llm_payload = {
-        "model": "default-model",
-        "messages": messages,
-        "stream": True,
-        "max_tokens": 2000,
-        "temperature": 0.7
+        "message": request.message,
+        "session_id": request.session_id,
+        "user_id": request.user_id,
+        "think_mode": request.think_mode,
+        "file_ids": request.file_ids,
+        "history": history_messages,
+        "temperature": settings.CHAT_DEFAULT_TEMPERATURE,
+        "search_documents": True,  # RAG 검색 활성화
+        "suggest_questions": False,
+        "generate_search_query": True
     }
 
-    # Think mode 활성화 (DeepSeek-R1 등 thinking 지원 모델용)
-    if request.think_mode:
-        # vLLM extra_body로 전달
-        llm_payload["extra_body"] = {
-            "enable_thinking": True,
-            "thinking_budget": 2000  # thinking 토큰 예산
-        }
-        print(f"🧠 Think mode 활성화: {request.think_mode}")
+    logger.info(f"Chat request to ds-api: session_id={request.session_id}, message={request.message[:50]}...")
 
     # 응답 데이터 누적 (DB 저장용)
     accumulated_response = ""
@@ -134,13 +159,16 @@ async def chat_stream_proxy(
         nonlocal accumulated_response, accumulated_thinking, is_thinking
 
         try:
-            # LLM API로 스트리밍 요청 (follow_redirects=True 추가)
-            async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
+            # ds-api 스트리밍 요청 (RAG 검색 포함)
+            async with httpx.AsyncClient(timeout=settings.CHAT_TIMEOUT, follow_redirects=True) as client:
                 async with client.stream(
                     "POST",
-                    f"{LLM_API_URL}/v1/chat/completions",
+                    f"{settings.DS_API_URL}/v1/chat/",
                     json=llm_payload,
-                    headers={"Content-Type": "application/json"}
+                    headers={
+                        "Content-Type": "application/json",
+                        "X-API-Key": settings.DS_API_KEY
+                    }
                 ) as response:
 
                     if response.status_code != 200:
@@ -158,7 +186,7 @@ async def chat_stream_proxy(
                         )
                         return
 
-                    # 스트리밍 응답 전달 및 파싱 (vLLM OpenAI 호환 형식)
+                    # ds-api SSE 응답 전달 (type: token, final, sources 등)
                     async for line in response.aiter_lines():
                         if line:
                             # 응답 데이터 파싱 및 누적
@@ -171,11 +199,9 @@ async def chat_stream_proxy(
                                 try:
                                     data = json.loads(data_str)
 
-                                    # vLLM 형식: choices[0].delta.content 추출
-                                    if "choices" in data and len(data["choices"]) > 0:
-                                        delta = data["choices"][0].get("delta", {})
-                                        token = delta.get("content", "")
-
+                                    # ds-api 형식: type 기반 처리
+                                    if data.get("type") == "token":
+                                        token = data.get("content", "")
                                         if token:
                                             # Thinking 태그 감지 및 분리
                                             if '<think>' in token:
@@ -188,16 +214,16 @@ async def chat_stream_proxy(
                                             else:
                                                 accumulated_response += token
 
-                                            # layout.html이 기대하는 형식으로 변환 (type: "token" 필드 추가)
-                                            yield f"data: {json.dumps({'type': 'token', 'content': token}, ensure_ascii=False)}\n\n"
+                                    # 응답 그대로 전달 (sources, metadata 포함)
+                                    yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
 
                                 except json.JSONDecodeError:
                                     pass
 
             # 스트리밍 완료 후 DB에 저장
             # 제목 생성용 세션은 DB에 저장하지 않음
-            if request.session_id and request.session_id.startswith('title_gen_'):
-                print(f"⏭️ 제목 생성 세션 ({request.session_id}) - DB 저장 생략")
+            if request.session_id and request.session_id.startswith(settings.TITLE_GEN_PREFIX):
+                logger.info(f"Title generation session ({request.session_id}) - skipping DB save")
             elif accumulated_response or accumulated_thinking:
                 # 응답이 있거나 thinking이 있으면 저장
                 # thinking 태그 제거 (내용만 저장)
@@ -211,22 +237,43 @@ async def chat_stream_proxy(
                     answer=accumulated_response.strip(),
                     thinking_content=clean_thinking if clean_thinking else None
                 )
-                print(f"💾 DB 저장 완료: answer={len(accumulated_response)} chars, thinking={len(clean_thinking)} chars")
+                logger.info(f"DB save completed: answer={len(accumulated_response)} chars, thinking={len(clean_thinking)} chars")
 
-        except Exception as e:
-            error_msg = f"프록시 오류: {str(e)}"
-            print(f"❌ Chat stream proxy error: {e}")
+        except httpx.HTTPError as e:
+            error_msg = f"HTTP 오류: {str(e)}"
+            logger.error(f"HTTP error during chat stream: {e}", exc_info=True)
             yield f"data: {json.dumps({'content': error_msg}, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
 
             # 오류도 DB에 저장
-            await save_usage_to_db(
-                db=db,
-                user_id=request.user_id,
-                session_id=request.session_id,
-                question=request.message,
-                answer=error_msg
-            )
+            try:
+                await save_usage_to_db(
+                    db=db,
+                    user_id=request.user_id,
+                    session_id=request.session_id,
+                    question=request.message,
+                    answer=error_msg
+                )
+            except Exception as db_error:
+                logger.error(f"Failed to save error to DB: {db_error}", exc_info=True)
+
+        except Exception as e:
+            error_msg = f"프록시 오류: {str(e)}"
+            logger.error(f"Unexpected error during chat stream: {e}", exc_info=True)
+            yield f"data: {json.dumps({'content': error_msg}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+            # 오류도 DB에 저장
+            try:
+                await save_usage_to_db(
+                    db=db,
+                    user_id=request.user_id,
+                    session_id=request.session_id,
+                    question=request.message,
+                    answer=error_msg
+                )
+            except Exception as db_error:
+                logger.error(f"Failed to save error to DB: {db_error}", exc_info=True)
 
     return StreamingResponse(
         stream_and_save(),
@@ -247,6 +294,7 @@ async def get_chat_sessions(
     """
     사용자의 대화 세션 목록 조회 (사이드바용)
     제목 생성용 세션(title_gen_)은 제외
+    삭제된 세션(is_deleted=true)은 제외
 
     Returns:
         List of unique sessions with their titles and latest message time
@@ -254,14 +302,15 @@ async def get_chat_sessions(
     from sqlalchemy import func, distinct
 
     # 각 세션의 첫 메시지(대화 제목)와 최신 시간 조회
-    # 제목 생성용 세션 제외
+    # 제목 생성용 세션 제외, 삭제된 세션 제외
     query = select(
         UsageHistory.session_id,
         UsageHistory.conversation_title,
         func.max(UsageHistory.created_at).label('latest_time'),
         func.count(UsageHistory.id).label('message_count')
     ).filter(
-        ~UsageHistory.session_id.like('title_gen_%')  # title_gen_ 세션 제외
+        ~UsageHistory.session_id.like('title_gen_%'),  # title_gen_ 세션 제외
+        UsageHistory.is_deleted == False  # 삭제되지 않은 세션만
     ).group_by(
         UsageHistory.session_id,
         UsageHistory.conversation_title
@@ -326,21 +375,25 @@ async def delete_session(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    특정 세션의 모든 메시지 삭제
+    특정 세션의 모든 메시지 소프트 딜리트 (is_deleted = true)
     """
-    from sqlalchemy import delete as sql_delete
+    from sqlalchemy import update as sql_update
+    from datetime import datetime, timezone
 
-    # 해당 세션의 모든 메시지 삭제
-    delete_query = sql_delete(UsageHistory).filter(
+    # 해당 세션의 모든 메시지를 소프트 딜리트
+    update_query = sql_update(UsageHistory).where(
         UsageHistory.session_id == session_id
+    ).values(
+        is_deleted=True,
+        deleted_at=datetime.now(timezone.utc)
     )
 
-    result = await db.execute(delete_query)
+    result = await db.execute(update_query)
     await db.commit()
 
     deleted_count = result.rowcount
 
-    print(f"🗑️ 세션 삭제: {session_id}, {deleted_count}개 메시지 삭제됨")
+    logger.info(f"Session soft deleted: {session_id}, {deleted_count} messages marked as deleted")
 
     return {
         "session_id": session_id,
@@ -379,7 +432,7 @@ async def update_session_title(
 
     updated_count = result.rowcount
 
-    print(f"📝 세션 제목 업데이트: {session_id}, 제목='{request.title}', {updated_count}개 레코드 업데이트됨")
+    logger.info(f"Session title updated: {session_id}, title='{request.title}', {updated_count} records updated")
 
     return {
         "session_id": session_id,
@@ -441,7 +494,7 @@ async def save_stt_conversation(
         await db.commit()
         await db.refresh(usage_record)
 
-        print(f"✅ STT conversation saved to DB: id={usage_record.id}, session_id={request.session_id}")
+        logger.info(f"STT conversation saved to DB: id={usage_record.id}, session_id={request.session_id}")
 
         return {
             "success": True,
@@ -449,7 +502,11 @@ async def save_stt_conversation(
             "message": "STT 대화가 저장되었습니다."
         }
 
+    except SQLAlchemyError as e:
+        logger.error(f"Database error while saving STT conversation: {e}", exc_info=True)
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"STT 대화 저장 실패: {str(e)}")
     except Exception as e:
-        print(f"❌ Failed to save STT conversation to DB: {e}")
+        logger.error(f"Unexpected error while saving STT conversation: {e}", exc_info=True)
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"STT 대화 저장 실패: {str(e)}")

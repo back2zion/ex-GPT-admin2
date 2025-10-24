@@ -16,10 +16,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from app.core.database import get_db
+from app.core.config import settings
 from datetime import datetime
 import logging
 
 router = APIRouter(tags=["health"])
+admin_router = APIRouter(prefix="/api/v1/admin", tags=["health"])
 logger = logging.getLogger(__name__)
 
 
@@ -95,6 +97,7 @@ async def health_check_database(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/health/ready")
+@admin_router.get("/health/ready")  # Admin API용 별도 라우트
 async def readiness_probe(db: AsyncSession = Depends(get_db)):
     """
     Readiness Probe (Kubernetes)
@@ -112,7 +115,8 @@ async def readiness_probe(db: AsyncSession = Depends(get_db)):
             "timestamp": "2025-10-22T12:00:00.000Z",
             "checks": {
                 "database": "ok",
-                "application": "ok"
+                "application": "ok",
+                "tomcat": "ok"
             }
         }
     """
@@ -130,14 +134,41 @@ async def readiness_probe(db: AsyncSession = Depends(get_db)):
         logger.error(f"Readiness check - Database failed: {e}")
         checks["database"] = "failed"
 
-        # Return 503 if any critical dependency is down
+    # Check Tomcat (User UI Server) - from settings
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(settings.USER_UI_URL)
+            if response.status_code == 200:
+                checks["tomcat"] = "ok"
+            else:
+                checks["tomcat"] = "failed"
+    except Exception as e:
+        logger.error(f"Readiness check - Tomcat failed: {e}")
+        checks["tomcat"] = "failed"
+
+    # Check User UI Database (if configured)
+    if settings.USER_DB_URL:
+        try:
+            from sqlalchemy.ext.asyncio import create_async_engine
+            user_engine = create_async_engine(settings.USER_DB_URL)
+            async with user_engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+                checks["user_database"] = "ok"
+            await user_engine.dispose()
+        except Exception as e:
+            logger.error(f"Readiness check - User Database failed: {e}")
+            checks["user_database"] = "failed"
+
+    # Return 503 if any critical dependency is down
+    if checks.get("database") == "failed" or checks.get("tomcat") == "failed":
         raise HTTPException(
             status_code=503,
             detail={
                 "status": "not_ready",
                 "timestamp": datetime.utcnow().isoformat() + "Z",
                 "checks": checks,
-                "error": "Database not available"
+                "error": "One or more services are not available"
             }
         )
 

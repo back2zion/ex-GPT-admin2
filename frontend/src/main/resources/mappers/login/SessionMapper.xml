@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.datastreams.gpt.login.mapper.SessionMapper">
+
+    <!-- L-006: 세션 기록 저장 (기능정의서 오리지널 쿼리) -->
+    <select id="saveSessionRecord" parameterType="map" resultType="int">
+        WITH ETL_DAT AS (
+            SELECT #{userId} AS USR_ID,
+                   #{ipAddr} AS IP_INFO,
+                   #{sessionId} AS SESN_ID,
+                   NULL::TIMESTAMP AS SESN_EXPR_DT
+            WHERE 1=1
+        ), INS_USR_CONN_LST AS (
+            INSERT INTO USR_CONN_LST(IP_INFO, SESN_ID, SESN_EXPR_DT, REG_USR_ID)
+            SELECT A.IP_INFO,
+                   A.SESN_ID,
+                   CASE WHEN A.SESN_EXPR_DT IS NULL THEN
+                       (SELECT CURRENT_TIMESTAMP + CASE WHEN MAX(LEVEL_N3_CD) IS NULL THEN 10/24.00 
+                                                        ELSE TO_NUMBER(MAX(LEVEL_N3_CD)) / 24.00 END 
+                        FROM COM_CD_LV3 
+                        WHERE 1=1 AND LEVEL_N1_CD = 'MNG_CONF' AND LEVEL_N2_CD = 'SESN_HLD_TM')
+                   ELSE A.SESN_EXPR_DT END AS SESN_EXPR_DT,
+                   A.USR_ID AS REG_USR_ID
+            FROM ETL_DAT A
+            WHERE 1=1
+            RETURNING USR_CONN_LST.*
+        )
+        SELECT COUNT(*) AS CNT
+        FROM INS_USR_CONN_LST
+        WHERE 1=1
+    </select>
+
+    <!-- L-004: 세션 유효성 체크 (기능정의서 오리지널 쿼리) -->
+    <select id="checkSessionValid" parameterType="map" resultType="string">
+        WITH ETL_DAT AS (
+            SELECT #{userId} AS REG_USR_ID,
+                   #{sessionId} AS SESN_ID
+            WHERE 1=1
+        )
+        SELECT CASE WHEN MAX(B.SESN_AVAIL_YN) IS NULL THEN 'N' 
+                    ELSE MAX(B.SESN_AVAIL_YN) END AS SESN_AVAIL_YN
+        FROM (
+            SELECT CASE WHEN C.SESN_EXPR_DT IS NULL THEN 'N'
+                        ELSE CASE WHEN C.SESN_EXPR_DT > CURRENT_TIMESTAMP THEN 'N' 
+                                  ELSE 'Y' END
+                   END AS SESN_AVAIL_YN
+            FROM ETL_DAT T
+            INNER JOIN USR_CONN_LST C ON T.REG_USR_ID = C.REG_USR_ID AND T.SESN_ID = C.SESN_ID
+            WHERE 1=1
+        ) B
+        WHERE 1=1
+    </select>
+
+</mapper>
+
+

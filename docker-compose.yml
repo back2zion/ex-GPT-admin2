@@ -11,6 +11,8 @@ services:
       - exgpt
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/admin_db
+      - USER_UI_URL=http://host.docker.internal:18180/exGenBotDS/testOld
+      - USER_DB_URL=postgresql+asyncpg://wisenut_main:express!12@host.docker.internal:5444/AGENAI
       - REDIS_URL=redis://redis:6379
       - CERBOS_HOST=cerbos
       - CERBOS_PORT=3592
@@ -28,6 +30,7 @@ services:
       - EX_GPT_QDRANT_PORT=6333
       - EX_GPT_QDRANT_API_KEY=QFy9YlRTm0Y1yo6D
       - EX_GPT_MINIO_ENDPOINT=minio:9000
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     depends_on:
@@ -45,6 +48,8 @@ services:
       # STT 음성 파일 저장소 (읽기/쓰기)
       - /data/audio:/data/audio:rw
       - /data/images:/data/images:ro
+      # Hugging Face 모델 캐시 (읽기 전용)
+      - /home/aigen/.cache/huggingface:/home/aigen/.cache/huggingface:ro
     deploy:
       resources:
         reservations:
@@ -102,6 +107,25 @@ services:
       - ./policies:/policies
     command: server --config=/policies/config.yaml
 
+  mlflow:
+    image: python:3.11-slim
+    ports:
+      - "5000:5000"
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=postgresql://postgres:password@postgres:5432/mlflow_db
+      - MLFLOW_ARTIFACT_ROOT=/mlflow/artifacts
+    depends_on:
+      - postgres
+    volumes:
+      - mlflow_artifacts:/mlflow/artifacts
+    command: >
+      sh -c "pip install mlflow psycopg2-binary &&
+             mlflow server
+             --backend-store-uri postgresql://postgres:password@postgres:5432/mlflow_db
+             --default-artifact-root /mlflow/artifacts
+             --host 0.0.0.0
+             --port 5000"
+
 networks:
   default:
     name: admin-api_default
@@ -112,3 +136,4 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  mlflow_artifacts:
