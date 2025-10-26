@@ -302,3 +302,42 @@ services:
 - [데이터베이스 스키마](./DATABASE_SCHEMA.md)
 - [Spring Boot 인증 통합](./SPRING_BOOT_AUTH_INTEGRATION.md)
 - [보안 개선 사항](./SECURITY_IMPROVEMENTS.md)
+
+## 🎨 UI/UX 디자인 가이드
+
+### 한국도로공사 컬러 스킴
+
+```css
+/* Primary Colors */
+--ex-primary: #0a2986;      /* 네이비 블루 (메인) */
+--ex-accent: #e64701;       /* 오렌지 (강조) */
+
+/* Neutral Colors */
+--ex-background: #f8f8f8;   /* 배경 */
+--ex-border: #e4e4e4;       /* 테두리 */
+--ex-text: #7b7b7b;         /* 본문 텍스트 */
+--ex-text-dark: #333333;    /* 제목 텍스트 */
+
+/* Status Colors */
+--ex-success: #10b981;      /* 성공 */
+--ex-warning: #f59e0b;      /* 경고 */
+--ex-danger: #ef4444;       /* 위험 */
+--ex-info: #3b82f6;         /* 정보 */
+```
+
+### 컴포넌트 스타일 원칙
+
+1. **버튼**
+   - Primary: `background: #0a2986`
+   - Secondary: `background: #e64701`
+   - Disabled: `background: #e4e4e4`
+
+2. **테이블**
+   - Header: `background: #0a2986; color: white`
+   - Row hover: `background: #f8f8f8`
+   - Border: `1px solid #e4e4e4`
+
+3. **카드**
+   - Background: `white`
+   - Border: `1px solid #e4e4e4`
+   - Shadow: `0 2px 4px rgba(10, 41, 134, 0.1)`

@@ -21,18 +21,23 @@ import {
     Tooltip, Legend, ResponsiveContainer, Area, AreaChart, PieChart, Pie, Cell
 } from 'recharts';
 
-// 한국도로공사 브랜드 컬러 + 그라데이션
+// 한국도로공사 브랜드 컬러 (PRD 기준)
 const colors = {
-    primary: '#0a2986',
-    primaryLight: '#1e3a8a',
-    accent: '#e64701',
-    accentLight: '#f97316',
-    success: '#10b981',
-    successLight: '#34d399',
-    info: '#3b82f6',
-    infoLight: '#60a5fa',
-    warning: '#f59e0b',
-    warningLight: '#fbbf24',
+    primary: '#0a2986',        // 네이비 블루 (메인)
+    primaryLight: '#1e3a8a',   // 그라데이션용
+    accent: '#e64701',         // 오렌지 (강조)
+    accentLight: '#f97316',    // 그라데이션용
+    success: '#10b981',        // 성공
+    successLight: '#34d399',   // 그라데이션용
+    info: '#3b82f6',          // 정보
+    infoLight: '#60a5fa',     // 그라데이션용
+    warning: '#f59e0b',       // 경고
+    warningLight: '#fbbf24',  // 그라데이션용
+    danger: '#ef4444',        // 위험
+    background: '#f8f8f8',    // 배경 (PRD)
+    border: '#e4e4e4',        // 테두리 (PRD)
+    text: '#7b7b7b',          // 본문 텍스트 (PRD)
+    textDark: '#333333',      // 제목 텍스트 (PRD)
 };
 
 // CoreUI 스타일의 그라데이션 카드
@@ -42,11 +47,11 @@ const GradientStatCard = ({ title, value, icon: Icon, gradient, trend, trendValu
             height: '100%',
             background: `linear-gradient(135deg, ${gradient[0]} 0%, ${gradient[1]} 100%)`,
             color: 'white',
-            boxShadow: '0 4px 20px 0 rgba(0,0,0,0.12)',
+            boxShadow: '0 2px 4px rgba(10, 41, 134, 0.1)',  // PRD 카드 쉐도우
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             '&:hover': {
                 transform: 'translateY(-4px)',
-                boxShadow: '0 8px 30px 0 rgba(0,0,0,0.18)',
+                boxShadow: '0 8px 16px rgba(10, 41, 134, 0.15)',  // 호버 시 강조
             },
         }}
     >
@@ -216,7 +221,7 @@ const Dashboard = () => {
     return (
         <Box sx={{
             minHeight: '100vh',
-            backgroundColor: '#f5f7fa',
+            backgroundColor: colors.background,  // PRD 배경색 (#f8f8f8)
             py: 4,
             px: { xs: 2, sm: 3, md: 4 },
         }}>
@@ -235,7 +240,7 @@ const Dashboard = () => {
                         component="h1"
                         gutterBottom
                         sx={{
-                            color: colors.primary,
+                            color: colors.textDark,  // PRD 제목 텍스트 (#333333)
                             fontWeight: 'bold',
                             display: 'flex',
                             alignItems: 'center',
@@ -244,7 +249,7 @@ const Dashboard = () => {
                     >
                         통계 대시보드
                     </Typography>
-                    <Typography variant="body1" color="text.secondary">
+                    <Typography variant="body1" sx={{ color: colors.text }}>  {/* PRD 본문 텍스트 (#7b7b7b) */}
                         최근 7일간의 ex-GPT 사용 통계 및 시스템 현황
                     </Typography>
                 </Box>
@@ -305,7 +310,7 @@ const Dashboard = () => {
                     mb: 2,
                     backgroundColor: 'white',
                     borderRadius: 2,
-                    boxShadow: '0 2px 10px 0 rgba(0,0,0,0.08)',
+                    boxShadow: '0 2px 4px rgba(10, 41, 134, 0.1)',
                     maxWidth: 'none !important',
                     width: '100% !important',
                 }}
@@ -317,7 +322,7 @@ const Dashboard = () => {
                 <Grid container spacing={2} sx={{ maxWidth: 'none !important', width: '100% !important' }}>
                     {/* vLLM 서비스 */}
                     <Grid item xs={12} md={3}>
-                        <Box sx={{ p: 2, borderRadius: 2, backgroundColor: '#f8fafc', border: `2px solid ${colors.primary}` }}>
+                        <Box sx={{ p: 2, borderRadius: 2, backgroundColor: '#f8f8f8', border: `2px solid ${colors.primary}` }}>
                             <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: colors.primary, mb: 2 }}>
                                 💬 vLLM 서비스 ({services.filter(s => s.status === 'serving').length}/{services.length})
                             </Typography>
@@ -348,7 +353,7 @@ const Dashboard = () => {
 
                     {/* Docker 컨테이너 */}
                     <Grid item xs={12} md={3}>
-                        <Box sx={{ p: 2, borderRadius: 2, backgroundColor: '#f8fafc', border: `2px solid ${colors.success}` }}>
+                        <Box sx={{ p: 2, borderRadius: 2, backgroundColor: '#f8f8f8', border: `2px solid ${colors.success}` }}>
                             <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: colors.success, mb: 2 }}>
                                 🐳 Docker 컨테이너 ({containers.filter(c => c.state === 'running').length}/{containers.length})
                             </Typography>
@@ -384,7 +389,7 @@ const Dashboard = () => {
 
                     {/* GPU 현황 */}
                     <Grid item xs={12} md={3}>
-                        <Box sx={{ p: 2, borderRadius: 2, backgroundColor: '#f8fafc', border: `2px solid ${colors.accent}` }}>
+                        <Box sx={{ p: 2, borderRadius: 2, backgroundColor: '#f8f8f8', border: `2px solid ${colors.accent}` }}>
                             <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: colors.accent, mb: 2 }}>
                                 ⚡ GPU 현황 ({gpuStatus?.gpus?.filter(gpu => gpu.utilization > 10).length || 0}/{gpuStatus?.gpus?.length || 0} 활성)
                             </Typography>
@@ -428,7 +433,7 @@ const Dashboard = () => {
                     mb: 2,
                     backgroundColor: 'white',
                     borderRadius: 2,
-                    boxShadow: '0 2px 10px 0 rgba(0,0,0,0.08)',
+                    boxShadow: '0 2px 4px rgba(10, 41, 134, 0.1)',
                     maxWidth: 'none !important',
                     width: '100% !important',
                 }}
@@ -440,7 +445,7 @@ const Dashboard = () => {
                         sx={{
                             p: 2,
                             borderRadius: 2,
-                            boxShadow: '0 2px 10px 0 rgba(0,0,0,0.08)',
+                            boxShadow: '0 2px 4px rgba(10, 41, 134, 0.1)',
                             height: '100%',
                         }}
                     >
@@ -457,7 +462,7 @@ const Dashboard = () => {
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
                                     p: 2,
-                                    backgroundColor: '#f8fafc',
+                                    backgroundColor: '#f8f8f8',
                                     borderRadius: 2,
                                     borderLeft: `4px solid ${colors.primary}`,
                                 }}
@@ -482,7 +487,7 @@ const Dashboard = () => {
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
                                     p: 2,
-                                    backgroundColor: '#f8fafc',
+                                    backgroundColor: '#f8f8f8',
                                     borderRadius: 2,
                                     borderLeft: `4px solid ${colors.info}`,
                                 }}
@@ -507,7 +512,7 @@ const Dashboard = () => {
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
                                     p: 2,
-                                    backgroundColor: '#f8fafc',
+                                    backgroundColor: '#f8f8f8',
                                     borderRadius: 2,
                                     borderLeft: `4px solid ${colors.success}`,
                                 }}
@@ -536,7 +541,7 @@ const Dashboard = () => {
                         sx={{
                             p: 2,
                             borderRadius: 2,
-                            boxShadow: '0 2px 10px 0 rgba(0,0,0,0.08)',
+                            boxShadow: '0 2px 4px rgba(10, 41, 134, 0.1)',
                             height: '100%',
                         }}
                     >
@@ -557,8 +562,8 @@ const Dashboard = () => {
                                     borderRadius: 2,
                                     textDecoration: 'none',
                                     color: 'inherit',
-                                    backgroundColor: '#f8fafc',
-                                    border: '1px solid #e2e8f0',
+                                    backgroundColor: '#f8f8f8',
+                                    border: '1px solid #e4e4e4',
                                     transition: 'all 0.2s',
                                     '&:hover': {
                                         backgroundColor: colors.primary,
@@ -582,8 +587,8 @@ const Dashboard = () => {
                                     borderRadius: 2,
                                     textDecoration: 'none',
                                     color: 'inherit',
-                                    backgroundColor: '#f8fafc',
-                                    border: '1px solid #e2e8f0',
+                                    backgroundColor: '#f8f8f8',
+                                    border: '1px solid #e4e4e4',
                                     transition: 'all 0.2s',
                                     '&:hover': {
                                         backgroundColor: colors.primary,
@@ -607,8 +612,8 @@ const Dashboard = () => {
                                     borderRadius: 2,
                                     textDecoration: 'none',
                                     color: 'inherit',
-                                    backgroundColor: '#f8fafc',
-                                    border: '1px solid #e2e8f0',
+                                    backgroundColor: '#f8f8f8',
+                                    border: '1px solid #e4e4e4',
                                     transition: 'all 0.2s',
                                     '&:hover': {
                                         backgroundColor: colors.primary,
@@ -634,8 +639,8 @@ const Dashboard = () => {
                                     borderRadius: 2,
                                     textDecoration: 'none',
                                     color: 'inherit',
-                                    backgroundColor: '#f8fafc',
-                                    border: '1px solid #e2e8f0',
+                                    backgroundColor: '#f8f8f8',
+                                    border: '1px solid #e4e4e4',
                                     transition: 'all 0.2s',
                                     '&:hover': {
                                         backgroundColor: colors.accent,
@@ -664,7 +669,7 @@ const Dashboard = () => {
                         p: 2,
                         mb: 3,
                         borderRadius: 2,
-                        boxShadow: '0 2px 10px 0 rgba(0,0,0,0.08)',
+                        boxShadow: '0 2px 4px rgba(10, 41, 134, 0.1)',
                         width: '100% !important',
                         maxWidth: 'none !important',
                     }}
@@ -790,7 +795,7 @@ const Dashboard = () => {
                     sx={{
                         p: 2,
                         borderRadius: 2,
-                        boxShadow: '0 2px 10px 0 rgba(0,0,0,0.08)',
+                        boxShadow: '0 2px 4px rgba(10, 41, 134, 0.1)',
                         width: '100% !important',
                         maxWidth: 'none !important',
                     }}
@@ -854,7 +859,7 @@ const Dashboard = () => {
                         p: 2,
                         mt: 3,
                         borderRadius: 2,
-                        boxShadow: '0 2px 10px 0 rgba(0,0,0,0.08)',
+                        boxShadow: '0 2px 4px rgba(10, 41, 134, 0.1)',
                         width: '100% !important',
                         maxWidth: 'none !important',
                     }}
@@ -920,7 +925,7 @@ const Dashboard = () => {
                         mt: 3,
                         mb: 3,
                         borderRadius: 2,
-                        boxShadow: '0 2px 10px 0 rgba(0,0,0,0.08)',
+                        boxShadow: '0 2px 4px rgba(10, 41, 134, 0.1)',
                         width: '100% !important',
                         maxWidth: 'none !important',
                     }}
@@ -942,7 +947,7 @@ const Dashboard = () => {
                                 <Box sx={{
                                     p: 3,
                                     borderRadius: 2,
-                                    backgroundColor: '#f8fafc',
+                                    backgroundColor: '#f8f8f8',
                                     border: `2px solid ${colors.primary}`,
                                     height: '100%'
                                 }}>
@@ -980,7 +985,7 @@ const Dashboard = () => {
                                 <Box sx={{
                                     p: 3,
                                     borderRadius: 2,
-                                    backgroundColor: '#f8fafc',
+                                    backgroundColor: '#f8f8f8',
                                     border: `2px solid ${colors.info}`,
                                     height: '100%'
                                 }}>
@@ -1024,7 +1029,7 @@ const Dashboard = () => {
                                 <Box sx={{
                                     p: 3,
                                     borderRadius: 2,
-                                    backgroundColor: '#f8fafc',
+                                    backgroundColor: '#f8f8f8',
                                     border: `2px solid ${colors.warning}`,
                                     height: '100%'
                                 }}>
