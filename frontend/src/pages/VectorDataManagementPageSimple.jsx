@@ -328,6 +328,7 @@ export default function VectorDataManagementPageSimple() {
   const [uploadCategory, setUploadCategory] = useState('');
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadDescription, setUploadDescription] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   const handleUploadDocument = () => {
     setUploadModalOpen(true);
@@ -349,6 +350,7 @@ export default function VectorDataManagementPageSimple() {
     }
 
     try {
+      setUploading(true);
       const formData = new FormData();
       formData.append('file', uploadFile);
       formData.append('category_code', uploadCategory);
@@ -361,11 +363,17 @@ export default function VectorDataManagementPageSimple() {
 
       alert('문서가 등록되었습니다.');
       setUploadModalOpen(false);
+      setUploadFile(null);
+      setUploadCategory('');
+      setUploadTitle('');
+      setUploadDescription('');
       loadStats();
       loadDocuments();
     } catch (error) {
       console.error('문서 등록 실패:', error);
       alert(error.response?.data?.detail || '문서 등록에 실패했습니다.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -530,8 +538,8 @@ export default function VectorDataManagementPageSimple() {
                   setPage(1);
                 }}
               >
-                <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, color: isSelected ? colorSet.text : '#333' }}>
+                <CardContent sx={{ textAlign: 'center', py: 2, px: 3 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, color: isSelected ? colorSet.text : '#333', pr: 3 }}>
                     {data.name || `카테고리 ${doctype}`}
                   </Typography>
                   <Typography variant="h6" sx={{ fontWeight: 'bold', color: isSelected ? colorSet.text : colorSet.border }}>
@@ -549,8 +557,8 @@ export default function VectorDataManagementPageSimple() {
                   }}
                   sx={{
                     position: 'absolute',
-                    top: 4,
-                    right: 4,
+                    top: 8,
+                    right: 8,
                     opacity: 0,
                     transition: 'opacity 0.2s',
                     zIndex: 10,
@@ -813,10 +821,10 @@ export default function VectorDataManagementPageSimple() {
               borderLeft: '4px solid #00a651'
             }}>
               <Typography variant="body2" sx={{ mb: 0.5 }}>
-                1. 먼저 카테고리를 선택하세요.
+                1. 카테고리를 선택하세요.
               </Typography>
               <Typography variant="body2">
-                2. 폴더생성 버튼을 클릭하여 새로운 경로를 추가할 수 있습니다.
+                2. 파일을 선택하고 저장 버튼을 클릭하세요.
               </Typography>
             </Box>
 
@@ -895,16 +903,22 @@ export default function VectorDataManagementPageSimple() {
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setUploadModalOpen(false)} variant="outlined">
+          <Button
+            onClick={() => setUploadModalOpen(false)}
+            variant="outlined"
+            disabled={uploading}
+          >
             취소
           </Button>
           <Button
             onClick={handleUploadSubmit}
             variant="contained"
             color="primary"
-            sx={{ minWidth: 100 }}
+            disabled={uploading}
+            startIcon={uploading ? <CircularProgress size={20} color="inherit" /> : null}
+            sx={{ minWidth: 120 }}
           >
-            저장
+            {uploading ? '업로드 중...' : '저장'}
           </Button>
         </DialogActions>
       </Dialog>
