@@ -143,14 +143,14 @@ class SessionFileUploadServiceTest {
     @Test
     void uploadSessionFile_FileTooLarge_ThrowsException() {
         // Given
-        when(mockFile.getSize()).thenReturn(101L * 1024 * 1024); // 101MB
+        when(mockFile.getSize()).thenReturn(201L * 1024 * 1024); // 201MB
 
         // When & Then
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             sessionFileUploadService.uploadSessionFile(validRequestDto);
         });
-        
-        assertEquals("파일 크기가 너무 큽니다. 최대 100MB까지 업로드 가능합니다.", exception.getMessage());
+
+        assertEquals("파일 크기가 너무 큽니다. 최대 200MB까지 업로드 가능합니다.", exception.getMessage());
     }
 
     @Test

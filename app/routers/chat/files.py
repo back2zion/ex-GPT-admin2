@@ -28,8 +28,8 @@ ALLOWED_EXTENSIONS = {
     '.png', '.jpg', '.jpeg'
 }
 
-# 파일 크기 제한 (100MB)
-MAX_FILE_SIZE = 100 * 1024 * 1024
+# 파일 크기 제한 (200MB)
+MAX_FILE_SIZE = 200 * 1024 * 1024
 
 
 @router.post("/upload")
@@ -53,7 +53,7 @@ async def upload_chat_file(
 
     Security:
         - 파일 타입 검증 (PDF, DOCX, XLSX, TXT, PNG, JPG)
-        - 파일 크기 제한 (100MB)
+        - 파일 크기 제한 (200MB)
         - Path Traversal 방지
         - Room ID 소유권 검증
     """
@@ -80,7 +80,7 @@ async def upload_chat_file(
     if file_size > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=400,
-            detail="파일 크기가 100MB를 초과합니다."
+            detail="파일 크기가 200MB를 초과합니다."
         )
 
     # 4. MinIO 업로드

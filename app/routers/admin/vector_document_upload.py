@@ -7,7 +7,7 @@
 - 카테고리 지정
 - 메타데이터 저장 (EDB)
 - 파일 타입 검증
-- 파일 크기 제한 (최대 100MB)
+- 파일 크기 제한 (최대 200MB)
 
 Security:
 - 파일 타입 검증
@@ -39,8 +39,8 @@ ALLOWED_EXTENSIONS = {
     '.md', '.rtf', '.odt'
 }
 
-# 파일 크기 제한 (100MB)
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+# 파일 크기 제한 (200MB)
+MAX_FILE_SIZE = 200 * 1024 * 1024  # 200MB
 
 # EDB 연결 설정
 EDB_HOST = os.getenv("EDB_HOST", "host.docker.internal")
@@ -327,7 +327,7 @@ async def upload_single_document(
         if file_size > MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=400,
-                detail=f"파일 크기가 제한을 초과합니다: {file_size} bytes > 100MB"
+                detail=f"파일 크기가 제한을 초과합니다: {file_size} bytes > 200MB"
             )
 
         # EDB 연결

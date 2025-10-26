@@ -192,10 +192,10 @@ public class SessionFileUploadService {
             throw new IllegalArgumentException("업로드할 파일이 없습니다.");
         }
         
-        // 파일 크기 검증 (100MB 제한)
-        long maxFileSize = 100 * 1024 * 1024; // 100MB
+        // 파일 크기 검증 (200MB 제한)
+        long maxFileSize = 200 * 1024 * 1024; // 200MB
         if (requestDto.getFile().getSize() > maxFileSize) {
-            throw new IllegalArgumentException("파일 크기가 너무 큽니다. 최대 100MB까지 업로드 가능합니다.");
+            throw new IllegalArgumentException("파일 크기가 너무 큽니다. 최대 200MB까지 업로드 가능합니다.");
         }
         
         // 파일 확장자 검증

@@ -3,7 +3,7 @@ server:
   servlet:
     context-path: /exGenBotDS
   tomcat:
-    max-swallow-size: 100MB  # 스트리밍 업로드를 위한 크기 제한
+    max-swallow-size: 200MB  # 스트리밍 업로드를 위한 크기 제한
     use-relative-redirects: true
     additional-tld-skip-patterns: "*.jar"
     remoteip:
@@ -17,7 +17,7 @@ spring:
     active: dev # 기본 프로파일을 dev로 설정 -> prd, dev 이렇게 바꾸면 좋겠다. 혹은 자사 제품처럼 site로 가도 좋을듯..
   servlet:
     multipart:
-      max-file-size: 100MB
+      max-file-size: 200MB
       max-request-size: 500MB
       enabled: true
   # JSP 뷰 리졸버 설정 (기존 옵션 살려둠)

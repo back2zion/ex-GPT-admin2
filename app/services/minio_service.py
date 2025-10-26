@@ -65,10 +65,10 @@ class MinIOService:
         file_content = file_obj.read()
         file_size = len(file_content)
 
-        # Security: File size limit (100MB)
-        max_size = 100 * 1024 * 1024  # 100MB
+        # Security: File size limit (200MB)
+        max_size = 200 * 1024 * 1024  # 200MB
         if file_size > max_size:
-            raise ValueError(f"파일 크기가 제한을 초과했습니다 (최대 100MB)")
+            raise ValueError(f"파일 크기가 제한을 초과했습니다 (최대 200MB)")
 
         # Upload to MinIO
         from io import BytesIO

@@ -7,7 +7,7 @@
 - 카테고리 지정
 - 메타데이터 저장 (EDB)
 - 파일 타입 검증
-- 파일 크기 제한 (최대 100MB)
+- 파일 크기 제한 (최대 200MB)
 """
 import pytest
 import pytest_asyncio
@@ -142,8 +142,8 @@ class TestVectorDocumentUpload:
     @pytest.mark.asyncio
     async def test_upload_document_file_too_large(self, client: AsyncClient, test_category):
         """파일 크기 제한 초과"""
-        # 100MB 초과 파일 시뮬레이션
-        large_content = b"x" * (101 * 1024 * 1024)  # 101MB
+        # 200MB 초과 파일 시뮬레이션
+        large_content = b"x" * (201 * 1024 * 1024)  # 201MB
 
         response = await client.post(
             "/api/v1/admin/vector-documents/upload",
