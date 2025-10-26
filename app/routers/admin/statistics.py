@@ -580,50 +580,80 @@ async def get_questions_by_field(
     total_result = await db.execute(total_query)
     total_questions = total_result.scalar() or 0
 
-    # 분야별 매핑 (실제 데이터에 맞게 조정 필요)
-    # 현재는 예시 데이터 반환
+    # 실제 main_category와 sub_category 기반 통계
+    category_query = select(
+        UsageHistory.main_category,
+        UsageHistory.sub_category,
+        func.count(UsageHistory.id).label('count')
+    )
+    if query_filters:
+        category_query = category_query.filter(and_(*query_filters))
 
-    # TODO: 실제로는 UsageHistory와 Document를 조인하여 category 기반으로 분류
-    # 지금은 균등 분배로 예시 데이터 생성
+    category_query = category_query.group_by(
+        UsageHistory.main_category,
+        UsageHistory.sub_category
+    )
 
-    management_fields = {
-        "management_admin": int(total_questions * 0.15),  # 관리/홍보
-        "management_planning": int(total_questions * 0.15),  # 기획/감사
-        "management_sales": int(total_questions * 0.15),  # 영업/디지털
+    category_result = await db.execute(category_query)
+    category_rows = category_result.all()
+
+    # 카테고리별 데이터 집계
+    stats_by_main = defaultdict(lambda: {"total": 0, "subcategories": defaultdict(int)})
+
+    for main_cat, sub_cat, count in category_rows:
+        # None 처리
+        main_category = main_cat if main_cat else "미분류"
+        sub_category = sub_cat if sub_cat else "기타"
+
+        stats_by_main[main_category]["total"] += count
+        stats_by_main[main_category]["subcategories"][sub_category] += count
+
+    # 결과 구조화 (기존 프론트엔드 호환)
+    # main_category를 영어 키로 매핑
+    category_mapping = {
+        "경영분야": "management",
+        "기술분야": "technical",
+        "미분류": "other"
     }
 
-    technical_fields = {
-        "technical_road": int(total_questions * 0.15),  # 도로/안전
-        "technical_construction": int(total_questions * 0.1),  # 건설
-        "technical_traffic": int(total_questions * 0.1),  # 교통
-        "technical_newbiz": int(total_questions * 0.1),  # 신사업
-    }
-
-    other_count = total_questions - sum(management_fields.values()) - sum(technical_fields.values())
-
-    return {
-        "total": total_questions,
-        "management": {
-            "total": sum(management_fields.values()),
-            "subcategories": {
-                "admin_pr": management_fields["management_admin"],  # 관리/홍보
-                "planning_audit": management_fields["management_planning"],  # 기획/감사
-                "sales_digital": management_fields["management_sales"],  # 영업/디지털
-            }
-        },
-        "technical": {
-            "total": sum(technical_fields.values()),
-            "subcategories": {
-                "road_safety": technical_fields["technical_road"],  # 도로/안전
-                "construction": technical_fields["technical_construction"],  # 건설
-                "traffic": technical_fields["technical_traffic"],  # 교통
-                "new_business": technical_fields["technical_newbiz"],  # 신사업
-            }
-        },
-        "other": {
-            "total": other_count,
-            "subcategories": {
-                "etc": other_count  # 기타
-            }
+    # sub_category를 영어 키로 매핑 (스네이크 케이스)
+    def to_snake_case(text):
+        if not text:
+            return "etc"
+        # 한글을 영어로 간단히 변환 (확장 가능)
+        mapping = {
+            "관리/홍보": "admin_pr",
+            "관리/인사": "admin_hr",
+            "기획/감사": "planning_audit",
+            "디지털/IT": "digital_it",
+            "영업/디지털": "sales_digital",
+            "도로/시설": "road_facilities",
+            "도로/안전": "road_safety",
+            "건설/설계": "construction",
+            "교통/ITS": "traffic",
+            "신사업": "new_business",
+            "기타": "etc"
         }
-    }
+        return mapping.get(text, text.lower().replace("/", "_").replace(" ", "_"))
+
+    result = {"total": total_questions}
+
+    for main_cat, data in stats_by_main.items():
+        eng_main = category_mapping.get(main_cat, main_cat.lower())
+
+        subcats_eng = {}
+        for sub_cat, count in data["subcategories"].items():
+            eng_sub = to_snake_case(sub_cat)
+            subcats_eng[eng_sub] = count
+
+        result[eng_main] = {
+            "total": data["total"],
+            "subcategories": subcats_eng
+        }
+
+    # 기본 구조 보장 (데이터가 없을 경우)
+    for main in ["management", "technical", "other"]:
+        if main not in result:
+            result[main] = {"total": 0, "subcategories": {"etc": 0}}
+
+    return result

@@ -4,7 +4,7 @@
 
 ---
 
-## 🎯 핵심 문서 (8개)
+## 🎯 핵심 문서
 
 ### 1. 필수 읽기 ⭐
 
@@ -21,7 +21,17 @@
 | **[SPRING_BOOT_AUTH_INTEGRATION.md](./SPRING_BOOT_AUTH_INTEGRATION.md)** | Spring Session 인증 통합 |
 | **[SECURITY_IMPROVEMENTS.md](./SECURITY_IMPROVEMENTS.md)** | 시큐어 코딩 및 OWASP 대응 |
 
-### 3. 참고 문서
+### 3. 운영 문서 (2025-10-25 추가)
+
+| 문서 | 설명 |
+|------|------|
+| **[SUCCESS_CHAT_API.md](./SUCCESS_CHAT_API.md)** | ✅ layout.html ↔ admin 연결 성공 사례 |
+| **[AUTO_CATEGORIZATION_IMPLEMENTATION.md](./AUTO_CATEGORIZATION_IMPLEMENTATION.md)** | ✅ 대화 자동 분류 구현 (P0 요구사항 완료) |
+| **[FAILURE_LOG.md](./FAILURE_LOG.md)** | ❌ 실패 사례 및 교훈 정리 |
+| **[FRONT_SERVER_SETUP.md](./FRONT_SERVER_SETUP.md)** | 프론트 서버 설정 가이드 |
+| **[AI_PATH_DEBUG.md](./AI_PATH_DEBUG.md)** | /exGenBotDS/ai 경로 디버깅 로그 |
+
+### 4. 참고 문서
 
 | 문서 | 설명 |
 |------|------|
@@ -86,8 +96,9 @@ docker-compose up -d
 - 테스트 문서
 
 **총 문서 수**:
-- 핵심 문서: **8개**
+- 핵심 문서: **13개** (필수 2 + 기술 3 + 운영 5 + 참고 2 + RFP 1)
 - Archive: **20개**
+- Scripts: **12개** (Apache 설정 스크립트)
 
 ---
 

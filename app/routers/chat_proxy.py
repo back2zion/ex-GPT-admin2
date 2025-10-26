@@ -5,7 +5,8 @@ from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import aliased
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import httpx
@@ -40,7 +41,10 @@ async def save_usage_to_db(
     question: str,
     answer: str,
     conversation_title: Optional[str] = None,
-    thinking_content: Optional[str] = None
+    thinking_content: Optional[str] = None,
+    main_category: Optional[str] = None,
+    sub_category: Optional[str] = None,
+    referenced_documents: Optional[List[str]] = None
 ) -> None:
     """
     대화 내용을 usage_history 테이블에 저장
@@ -53,6 +57,9 @@ async def save_usage_to_db(
         answer: AI 응답 텍스트
         conversation_title: 대화 제목 (None일 경우 자동 생성)
         thinking_content: AI 사고 과정 (<think> 태그 내용)
+        main_category: 대분류 (None일 경우 자동 분류)
+        sub_category: 소분류 (None일 경우 자동 분류)
+        referenced_documents: 참조 문서 목록 (파일명 리스트)
 
     Returns:
         None
@@ -62,9 +69,29 @@ async def save_usage_to_db(
 
     Note:
         - 제목이 없으면 질문의 첫 50자로 자동 생성
+        - 카테고리가 없으면 LLM을 사용하여 자동 분류
         - 에러 발생 시 자동으로 롤백 처리
     """
     try:
+        # 중복 저장 방지: 같은 session_id + question이 이미 있으면 skip (시간 제한 없음)
+        from datetime import datetime, timedelta
+        duplicate_check = select(UsageHistory).filter(
+            UsageHistory.session_id == session_id,
+            UsageHistory.question == question
+        ).limit(1)
+        duplicate_result = await db.execute(duplicate_check)
+        existing_duplicate = duplicate_result.scalar_one_or_none()
+
+        if existing_duplicate:
+            logger.warning(f"Duplicate save prevented: session_id={session_id}, question={question[:50]}...")
+            # 기존 레코드에 카테고리가 없고 새 요청에 카테고리가 있으면 업데이트
+            if not existing_duplicate.main_category and main_category:
+                existing_duplicate.main_category = main_category
+                existing_duplicate.sub_category = sub_category
+                await db.commit()
+                logger.info(f"Updated category for existing record: {main_category} > {sub_category}")
+            return
+
         # 해당 세션의 첫 대화인지 확인
         if not conversation_title:
             query = select(UsageHistory).filter(
@@ -73,10 +100,25 @@ async def save_usage_to_db(
             result = await db.execute(query)
             existing = result.scalar_one_or_none()
 
-            # 첫 대화라면 질문으로 제목 생성
+            # 첫 대화라면 질문으로 제목 생성 (규칙 기반 즉시 생성)
             if not existing:
-                max_len = settings.CHAT_TITLE_MAX_LENGTH
-                conversation_title = question[:max_len] + "..." if len(question) > max_len else question
+                from app.utils.title_generator import generate_conversation_title, sanitize_title
+                title, was_truncated = generate_conversation_title(question)
+                conversation_title = sanitize_title(title)
+                logger.info(f"Auto-generated title (chat_proxy): '{conversation_title}' (truncated={was_truncated})")
+
+        # 자동 카테고리 분류 (P0 요구사항)
+        if not main_category or not sub_category:
+            from app.services.categorization import categorize_conversation_safe
+            try:
+                auto_main, auto_sub = await categorize_conversation_safe(question, answer)
+                main_category = main_category or auto_main
+                sub_category = sub_category or auto_sub
+                logger.info(f"Auto-categorized: {main_category} > {sub_category}")
+            except Exception as e:
+                logger.error(f"Categorization failed: {e}", exc_info=True)
+                main_category = main_category or "미분류"
+                sub_category = sub_category or "없음"
 
         # 새 레코드 생성
         usage_record = UsageHistory(
@@ -86,6 +128,9 @@ async def save_usage_to_db(
             question=question,
             answer=answer,
             thinking_content=thinking_content,
+            referenced_documents=referenced_documents,
+            main_category=main_category,
+            sub_category=sub_category,
             model_name=settings.CHAT_MODEL_NAME,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
@@ -96,6 +141,14 @@ async def save_usage_to_db(
 
         logger.info(f"Usage saved to DB: user_id={user_id}, session_id={session_id}")
 
+    except IntegrityError as e:
+        # Unique constraint violation (중복 저장 시도) - 무시하고 계속 진행
+        await db.rollback()
+        if "idx_unique_session_question" in str(e):
+            logger.warning(f"Duplicate prevented by DB constraint: session_id={session_id}, question={question[:50]}...")
+        else:
+            logger.error(f"IntegrityError while saving usage: {e}", exc_info=True)
+        # 중복은 에러가 아니므로 raise하지 않음
     except SQLAlchemyError as e:
         logger.error(f"Database error while saving usage: {e}", exc_info=True)
         await db.rollback()
@@ -153,10 +206,11 @@ async def chat_stream_proxy(
     # 응답 데이터 누적 (DB 저장용)
     accumulated_response = ""
     accumulated_thinking = ""  # thinking 내용 별도 저장
+    referenced_documents = []  # 참조 문서 목록
     is_thinking = False  # 현재 thinking 처리 중인지 여부
 
     async def stream_and_save():
-        nonlocal accumulated_response, accumulated_thinking, is_thinking
+        nonlocal accumulated_response, accumulated_thinking, referenced_documents, is_thinking
 
         try:
             # ds-api 스트리밍 요청 (RAG 검색 포함)
@@ -214,6 +268,20 @@ async def chat_stream_proxy(
                                             else:
                                                 accumulated_response += token
 
+                                    # 참조 문서(sources) 수집
+                                    elif data.get("type") == "sources":
+                                        sources = data.get("sources", [])
+                                        if sources:
+                                            for source in sources:
+                                                # 각 source에서 파일명 추출
+                                                if isinstance(source, dict):
+                                                    filename = source.get("filename") or source.get("title") or source.get("metadata", {}).get("filename")
+                                                    if filename and filename not in referenced_documents:
+                                                        referenced_documents.append(filename)
+                                                elif isinstance(source, str):
+                                                    if source not in referenced_documents:
+                                                        referenced_documents.append(source)
+
                                     # 응답 그대로 전달 (sources, metadata 포함)
                                     yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
 
@@ -235,9 +303,10 @@ async def chat_stream_proxy(
                     session_id=request.session_id,
                     question=request.message,
                     answer=accumulated_response.strip(),
-                    thinking_content=clean_thinking if clean_thinking else None
+                    thinking_content=clean_thinking if clean_thinking else None,
+                    referenced_documents=referenced_documents if referenced_documents else None
                 )
-                logger.info(f"DB save completed: answer={len(accumulated_response)} chars, thinking={len(clean_thinking)} chars")
+                logger.info(f"DB save completed: answer={len(accumulated_response)} chars, thinking={len(clean_thinking)} chars, docs={len(referenced_documents)}")
 
         except httpx.HTTPError as e:
             error_msg = f"HTTP 오류: {str(e)}"
@@ -303,23 +372,38 @@ async def get_chat_sessions(
 
     # 각 세션의 첫 메시지(대화 제목)와 최신 시간 조회
     # 제목 생성용 세션 제외, 삭제된 세션 제외
-    query = select(
+    # 가장 최근 conversation_title 사용 (중복 방지)
+    from sqlalchemy.sql import func as sqlfunc
+
+    # 서브쿼리: 각 세션의 최신 레코드 ID와 통계 정보
+    subquery = select(
         UsageHistory.session_id,
-        UsageHistory.conversation_title,
+        func.max(UsageHistory.id).label('latest_id'),
         func.max(UsageHistory.created_at).label('latest_time'),
         func.count(UsageHistory.id).label('message_count')
     ).filter(
-        ~UsageHistory.session_id.like('title_gen_%'),  # title_gen_ 세션 제외
-        UsageHistory.is_deleted == False  # 삭제되지 않은 세션만
+        ~UsageHistory.session_id.like('title_gen_%'),
+        UsageHistory.is_deleted == False
     ).group_by(
-        UsageHistory.session_id,
-        UsageHistory.conversation_title
+        UsageHistory.session_id
+    ).subquery()
+
+    # 메인 쿼리: latest_id에 해당하는 레코드의 conversation_title 가져오기
+    UsageHistoryLatest = aliased(UsageHistory)
+    query = select(
+        subquery.c.session_id,
+        UsageHistoryLatest.conversation_title,
+        subquery.c.latest_time,
+        subquery.c.message_count
+    ).join(
+        UsageHistoryLatest,
+        UsageHistoryLatest.id == subquery.c.latest_id
     ).order_by(
-        func.max(UsageHistory.created_at).desc()
+        subquery.c.latest_time.desc()
     )
 
     if user_id:
-        query = query.filter(UsageHistory.user_id == user_id)
+        query = query.filter(UsageHistoryLatest.user_id == user_id)
 
     result = await db.execute(query)
     sessions = result.all()

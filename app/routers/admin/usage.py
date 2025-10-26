@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List, Optional
 from datetime import datetime, timedelta
+import logging
 
 from app.models import UsageHistory
 from app.schemas.usage import UsageHistoryResponse, UsageHistoryCreate
@@ -19,6 +20,8 @@ from app.core.database import get_db
 from app.dependencies import get_principal, get_cerbos_client, check_resource_permission
 from cerbos.sdk.model import Principal, Resource
 from cerbos.sdk.client import AsyncCerbosClient
+
+logger = logging.getLogger(__name__)
 
 # Constants for data protection
 MAX_QUESTION_LENGTH = 10000
@@ -177,6 +180,7 @@ async def log_usage_history(
 
     - 질문/답변 자동 기록
     - IP 주소 자동 수집
+    - 첫 대화 시 자동 제목 생성
     - 인증 불필요 (공개 엔드포인트 - 사용 로깅 용도)
 
     **주의**:
@@ -184,25 +188,94 @@ async def log_usage_history(
     - Input validation 자동 적용 (Pydantic)
     - 민감 정보 로깅 금지
     """
+    from app.utils.title_generator import generate_conversation_title, sanitize_title
+
     # IP 주소 자동 수집 (Helper 함수 사용)
     client_ip = _extract_client_ip(request)
 
-    # UsageHistory 모델 생성 (상수 사용으로 유지보수성 향상)
-    new_history = UsageHistory(
-        user_id=usage_data.user_id,
-        session_id=usage_data.session_id,
-        question=usage_data.question[:MAX_QUESTION_LENGTH],  # 길이 제한 (DB 보호)
-        answer=usage_data.answer[:MAX_ANSWER_LENGTH] if usage_data.answer else None,
-        thinking_content=usage_data.thinking_content[:MAX_THINKING_LENGTH] if usage_data.thinking_content else None,
-        response_time=usage_data.response_time,
-        referenced_documents=usage_data.referenced_documents,
-        model_name=usage_data.model_name,
-        usage_metadata=usage_data.usage_metadata,
-        ip_address=usage_data.ip_address or client_ip
+    # 기존 레코드 확인 (UPSERT를 위해)
+    existing_query = select(UsageHistory).filter(
+        UsageHistory.session_id == usage_data.session_id,
+        UsageHistory.question == usage_data.question[:MAX_QUESTION_LENGTH]
     )
+    result = await db.execute(existing_query)
+    existing_history = result.scalar_one_or_none()
 
-    db.add(new_history)
-    await db.commit()
-    await db.refresh(new_history)
+    if existing_history:
+        # UPDATE: 기존 레코드가 있으면 중요 필드만 업데이트
+        # (chat_proxy가 먼저 저장한 경우, layout.html이 더 정확한 데이터로 업데이트)
+        logger.info(f"Updating existing usage history ID={existing_history.id}")
 
-    return new_history
+        # 답변이 더 완전한 경우만 업데이트
+        if usage_data.answer and (not existing_history.answer or len(usage_data.answer) > len(existing_history.answer or '')):
+            existing_history.answer = usage_data.answer[:MAX_ANSWER_LENGTH]
+
+        # thinking_content 업데이트
+        if usage_data.thinking_content:
+            existing_history.thinking_content = usage_data.thinking_content[:MAX_THINKING_LENGTH]
+
+        # referenced_documents 업데이트 (layout.html이 더 정확한 데이터를 가지고 있음)
+        if usage_data.referenced_documents:
+            existing_history.referenced_documents = usage_data.referenced_documents
+
+        # response_time 업데이트
+        if usage_data.response_time is not None:
+            existing_history.response_time = usage_data.response_time
+
+        # model_name 업데이트
+        if usage_data.model_name:
+            existing_history.model_name = usage_data.model_name
+
+        # usage_metadata 업데이트
+        if usage_data.usage_metadata:
+            existing_history.usage_metadata = usage_data.usage_metadata
+
+        # IP 주소 업데이트 (없는 경우만)
+        if not existing_history.ip_address:
+            existing_history.ip_address = usage_data.ip_address or client_ip
+
+        await db.commit()
+        await db.refresh(existing_history)
+
+        return existing_history
+
+    else:
+        # INSERT: 새 레코드 생성
+        logger.info(f"Creating new usage history for session {usage_data.session_id}")
+
+        # 대화 제목 자동 생성 (같은 session_id의 첫 메시지인 경우)
+        conversation_title = None
+        if usage_data.session_id:
+            # 해당 세션의 다른 메시지 확인
+            session_query = select(UsageHistory).filter(
+                UsageHistory.session_id == usage_data.session_id
+            ).limit(1)
+            session_result = await db.execute(session_query)
+            existing_message = session_result.scalar_one_or_none()
+
+            # 첫 메시지라면 제목 자동 생성
+            if not existing_message:
+                title, was_truncated = generate_conversation_title(usage_data.question)
+                conversation_title = sanitize_title(title)
+                logger.info(f"Auto-generated title for session {usage_data.session_id}: '{conversation_title}' (truncated={was_truncated})")
+
+        # UsageHistory 모델 생성 (상수 사용으로 유지보수성 향상)
+        new_history = UsageHistory(
+            user_id=usage_data.user_id,
+            session_id=usage_data.session_id,
+            conversation_title=conversation_title,  # 자동 생성된 제목
+            question=usage_data.question[:MAX_QUESTION_LENGTH],  # 길이 제한 (DB 보호)
+            answer=usage_data.answer[:MAX_ANSWER_LENGTH] if usage_data.answer else None,
+            thinking_content=usage_data.thinking_content[:MAX_THINKING_LENGTH] if usage_data.thinking_content else None,
+            response_time=usage_data.response_time,
+            referenced_documents=usage_data.referenced_documents,
+            model_name=usage_data.model_name,
+            usage_metadata=usage_data.usage_metadata,
+            ip_address=usage_data.ip_address or client_ip
+        )
+
+        db.add(new_history)
+        await db.commit()
+        await db.refresh(new_history)
+
+        return new_history

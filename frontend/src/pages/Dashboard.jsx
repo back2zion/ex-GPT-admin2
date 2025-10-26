@@ -140,9 +140,9 @@ const Dashboard = () => {
                 fetch(`/api/v1/admin/stats/monthly-trend?start=${monthStart}&end=${end}`, { headers }),
                 fetch(`/api/v1/admin/stats/hourly-pattern?date=${today}`, { headers }),
                 fetch(`/api/v1/admin/stats/system`, { headers }),
-                fetch(`/api/v1/admin/deployment/gpu/status`, { headers }),
-                fetch(`/api/v1/admin/deployment/bentos`, { headers }),
-                fetch(`/api/v1/admin/deployment/docker/containers`, { headers }),
+                fetch(`/api/v1/admin/deployment/gpu/status`, { headers }).catch(() => ({ ok: false })),
+                fetch(`/api/v1/admin/deployment/bentos`, { headers }).catch(() => ({ ok: false })),
+                fetch(`/api/v1/admin/deployment/docker/containers`, { headers }).catch(() => ({ ok: false })),
                 fetch(`/api/v1/admin/statistics/by-department?start_date=${start}&end_date=${end}`, { headers }),
                 fetch(`/api/v1/admin/statistics/questions-by-field?start_date=${start}&end_date=${end}`, { headers })
             ]);
@@ -215,58 +215,42 @@ const Dashboard = () => {
 
     return (
         <Box sx={{
-            py: 0,
-            px: 0,
-            m: 0,
-            maxWidth: 'none !important',
-            width: '100% !important',
-            boxSizing: 'border-box',
-            '& *': {
-                boxSizing: 'border-box',
-            },
-            '& .MuiContainer-root, & .MuiContainer-maxWidthLg, & .MuiContainer-maxWidthMd, & .MuiContainer-maxWidthSm': {
-                maxWidth: 'none !important',
-                width: '100% !important',
-                padding: '0 !important',
-                margin: '0 !important',
-            }
+            minHeight: '100vh',
+            backgroundColor: '#f5f7fa',
+            py: 4,
+            px: { xs: 2, sm: 3, md: 4 },
         }}>
             <Title title="통계 대시보드" />
 
-            {/* 상단 타이틀 */}
-            <Box sx={{ mb: 4 }}>
-                <Typography
-                    variant="h4"
-                    component="h1"
-                    gutterBottom
-                    sx={{
-                        color: colors.primary,
-                        fontWeight: 'bold',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                    }}
-                >
-                    통계 대시보드
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                    최근 7일간의 ex-GPT 사용 통계 및 시스템 현황
-                </Typography>
-            </Box>
+            {/* 중앙 정렬 컨테이너 */}
+            <Box sx={{
+                maxWidth: '1600px',
+                margin: '0 auto',
+                width: '100%',
+            }}>
+                {/* 상단 타이틀 */}
+                <Box sx={{ mb: 4 }}>
+                    <Typography
+                        variant="h4"
+                        component="h1"
+                        gutterBottom
+                        sx={{
+                            color: colors.primary,
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                        }}
+                    >
+                        통계 대시보드
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary">
+                        최근 7일간의 ex-GPT 사용 통계 및 시스템 현황
+                    </Typography>
+                </Box>
 
-            {/* 주요 지표 카드 - 그라데이션 */}
-            <Paper
-                elevation={0}
-                sx={{
-                    p: 2,
-                    mb: 2,
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    maxWidth: 'none !important',
-                    width: '100% !important',
-                }}
-            >
-            <Grid container spacing={2} sx={{ maxWidth: 'none !important', width: '100% !important' }}>
+                {/* 주요 지표 카드 - 그라데이션 */}
+                <Grid container spacing={3} sx={{ mb: 4 }}>
                 <Grid item xs={12} sm={6} md={3}>
                     <GradientStatCard
                         title="총 질문 수"
@@ -312,7 +296,6 @@ const Dashboard = () => {
                     />
                 </Grid>
             </Grid>
-            </Paper>
 
             {/* 배포 현황 통계 */}
             <Paper
@@ -1069,6 +1052,9 @@ const Dashboard = () => {
                     )}
                 </Paper>
             </Box>
+            {/* 차트 시각화 섹션 닫기 */}
+            </Box>
+            {/* 중앙 정렬 컨테이너 닫기 */}
         </Box>
     );
 };

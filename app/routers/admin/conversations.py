@@ -41,6 +41,9 @@ class ConversationListItem(BaseModel):
     main_category: Optional[str] = None  # 대분류
     sub_category: Optional[str] = None   # 소분류
 
+    # 추가 정보
+    referenced_documents: Optional[List[str]] = None  # 참조 문서
+
     # 일시
     created_at: datetime
 
@@ -107,8 +110,8 @@ async def get_conversations_simple(
     sub_category: Optional[str] = Query(None, description="소분류"),
     page: int = Query(1, ge=1, description="페이지 번호"),
     limit: int = Query(50, ge=1, le=10000, description="페이지당 항목 수"),
-    sort_by: Optional[str] = Query("created_at", description="정렬 필드"),
-    order: Optional[str] = Query("desc", description="정렬 방향 (asc/desc)"),
+    sort_by: str = Query(default="created_at", description="정렬 필드"),
+    order: str = Query(default="desc", description="정렬 방향 (asc/desc)"),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -200,6 +203,7 @@ async def get_conversations_simple(
             "response_time": usage_history.response_time,
             "main_category": usage_history.main_category,
             "sub_category": usage_history.sub_category,
+            "referenced_documents": usage_history.referenced_documents,
             "created_at": usage_history.created_at,
         }
         items.append(ConversationListItem(**item_dict))
@@ -265,6 +269,70 @@ async def get_conversation_detail_simple(
     return ConversationDetail(**detail_dict)
 
 
+@router.get("/session/{session_id}", response_model=List[ConversationDetail])
+async def get_session_conversations(
+    session_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    세션 내 모든 대화 조회 (시간순)
+
+    - 한 세션 내의 모든 질문/답변을 시간순으로 반환
+    - 대화 흐름 파악에 유용
+    - 인증 불필요 (관리자 페이지에서 사용)
+    """
+    # User와 LEFT JOIN하여 세션 내 모든 대화 조회
+    query = select(
+        UsageHistory,
+        User.position,
+        User.rank,
+        User.team,
+        User.join_year,
+        User.full_name
+    ).outerjoin(
+        User, UsageHistory.user_id == User.username
+    ).filter(
+        UsageHistory.session_id == session_id
+    ).order_by(UsageHistory.created_at.asc())  # 시간순 정렬
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="해당 세션의 대화를 찾을 수 없습니다.")
+
+    conversations = []
+    for row in rows:
+        usage_history, position, rank, team, join_year, full_name = row
+
+        detail_dict = {
+            "id": usage_history.id,
+            "user_id": usage_history.user_id,
+            "position": position,
+            "rank": rank,
+            "team": team,
+            "join_year": join_year,
+            "department": None,  # User 모델에 department 필드가 있다면 추가
+            "session_id": usage_history.session_id,
+            "question": usage_history.question,
+            "answer": usage_history.answer,
+            "thinking_content": usage_history.thinking_content,
+            "response_time": usage_history.response_time,
+            "main_category": usage_history.main_category,
+            "sub_category": usage_history.sub_category,
+            "model_name": usage_history.model_name,
+            "referenced_documents": usage_history.referenced_documents,
+            "usage_metadata": usage_history.usage_metadata,
+            "ip_address": usage_history.ip_address,
+            "created_at": usage_history.created_at,
+            "updated_at": usage_history.updated_at if hasattr(usage_history, 'updated_at') else None,
+        }
+
+        conversations.append(ConversationDetail(**detail_dict))
+
+    return conversations
+
+
 @router.get("/", response_model=ConversationListResponse)
 async def get_conversations(
     start: Optional[date] = Query(None, description="시작일 (YYYY-MM-DD)"),
@@ -273,6 +341,8 @@ async def get_conversations(
     sub_category: Optional[str] = Query(None, description="소분류"),
     page: int = Query(1, ge=1, description="페이지 번호"),
     limit: int = Query(50, ge=1, le=10000, description="페이지당 항목 수 (최대 10000)"),
+    sort_by: str = Query(default="created_at", description="정렬 필드"),
+    order: str = Query(default="desc", description="정렬 방향 (asc/desc)"),
     db: AsyncSession = Depends(get_db),
     principal: Principal = Depends(get_principal)
 ):
@@ -292,6 +362,8 @@ async def get_conversations(
         sub_category=sub_category,
         page=page,
         limit=limit,
+        sort_by=sort_by,
+        order=order,
         db=db
     )
 

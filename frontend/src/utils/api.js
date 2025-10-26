@@ -333,6 +333,23 @@ export async function getConversationDetail(id) {
 }
 
 /**
+ * 세션 내 모든 대화 조회
+ * @param {string} sessionId - 세션 ID
+ * @returns {Promise<Array>} - 세션 내 모든 대화 (시간순)
+ */
+export async function getSessionConversations(sessionId) {
+  console.log('[API] getSessionConversations 호출:', sessionId);
+  try {
+    const response = await apiClient.get(`/admin/conversations/session/${sessionId}`);
+    console.log('[API] getSessionConversations 응답:', response.data.length, '개 대화');
+    return response.data;
+  } catch (error) {
+    console.error('[API] getSessionConversations 실패:', error);
+    throw error;
+  }
+}
+
+/**
  * 일별 오류 신고 수 조회
  * @param {string} start_date - 시작 날짜 (YYYY-MM-DD)
  * @param {string} end_date - 종료 날짜 (YYYY-MM-DD)

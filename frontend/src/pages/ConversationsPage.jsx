@@ -12,8 +12,10 @@ import {
   Box,
   TextField,
   Button,
-  ToggleButton,
-  ToggleButtonGroup,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
   Table,
   TableBody,
   TableCell,
@@ -48,16 +50,16 @@ const CATEGORY_MAP = {
     subcategories: ['전체']
   },
   '경영분야': {
-    subcategories: ['전체', '기획/감사', '관리/홍보', '영업/디지털', '복리후생', '기타']
+    subcategories: ['전체', '기획/전략', '관리/인사', '고객/통행료', '디지털/IT', '홍보/감사']
   },
   '기술분야': {
-    subcategories: ['전체', '도로/안전', '교통', '건설', '신사업', '기타']
+    subcategories: ['전체', '도로/시설', '교통/ITS', '건설/설계', '신사업/연구', '안전/재난']
   },
-  '경영/기술 외': {
-    subcategories: ['전체', '기타']
+  '기타': {
+    subcategories: ['전체', '지역본부', '경영/기술 외']
   },
   '미분류': {
-    subcategories: ['전체']
+    subcategories: ['없음']
   }
 };
 
@@ -114,7 +116,7 @@ export default function ConversationsPage() {
 
   // 페이지네이션
   const [page, setPage] = useState(1);
-  const limit = 50;
+  const [limit, setLimit] = useState(50);
 
   // 데이터 상태
   const [conversations, setConversations] = useState([]);
@@ -165,7 +167,7 @@ export default function ConversationsPage() {
   // 데이터 로드
   useEffect(() => {
     loadConversations();
-  }, [dateRange, mainCategory, subCategory, page]);
+  }, [dateRange, mainCategory, subCategory, page, limit]);
 
   /**
    * 검색 버튼 클릭
@@ -194,22 +196,29 @@ export default function ConversationsPage() {
   /**
    * 대분류 변경
    */
-  const handleMainCategoryChange = (event, newValue) => {
-    if (newValue) {
-      setMainCategory(newValue);
-      setSubCategory('전체'); // 대분류 변경시 소분류 초기화
-      setPage(1);
-    }
+  const handleMainCategoryChange = (event) => {
+    const newValue = event.target.value;
+    setMainCategory(newValue);
+    setSubCategory('전체'); // 대분류 변경시 소분류 초기화
+    setPage(1);
   };
 
   /**
    * 소분류 변경
    */
-  const handleSubCategoryChange = (event, newValue) => {
-    if (newValue) {
-      setSubCategory(newValue);
-      setPage(1);
-    }
+  const handleSubCategoryChange = (event) => {
+    const newValue = event.target.value;
+    setSubCategory(newValue);
+    setPage(1);
+  };
+
+  /**
+   * 페이지당 표시 건수 변경
+   */
+  const handleLimitChange = (event) => {
+    const newLimit = parseInt(event.target.value, 10);
+    setLimit(newLimit);
+    setPage(1); // 건수 변경 시 첫 페이지로
   };
 
   /**
@@ -242,7 +251,9 @@ export default function ConversationsPage() {
         팀명: item.team || '-',
         입사년도: item.join_year || '-',
         질문: item.question || '-',
-        답변: item.answer ? (item.answer.length > 100 ? item.answer.substring(0, 100) + '...' : item.answer) : '-',
+        답변: item.answer || '-',
+        추론과정: item.thinking_content || '-',
+        참조문서: item.referenced_documents ? item.referenced_documents.join(', ') : '-',
         대분류: item.main_category || '미분류',
         소분류: item.sub_category || '-',
         일자: formatDateTime(item.created_at),
@@ -309,36 +320,38 @@ export default function ConversationsPage() {
             />
           </LocalizationProvider>
 
-          {/* 대분류 토글 버튼 */}
-          <ToggleButtonGroup
-            value={mainCategory}
-            exclusive
-            onChange={handleMainCategoryChange}
-            size="small"
-            sx={{ flexGrow: 1 }}
-          >
-            {Object.keys(CATEGORY_MAP).map((cat) => (
-              <ToggleButton key={cat} value={cat}>
-                {cat}
-              </ToggleButton>
-            ))}
-          </ToggleButtonGroup>
-
-          {/* 소분류 토글 버튼 */}
-          {mainCategory && CATEGORY_MAP[mainCategory] && (
-            <ToggleButtonGroup
-              value={subCategory}
-              exclusive
-              onChange={handleSubCategoryChange}
-              size="small"
-              sx={{ flexGrow: 1 }}
+          {/* 대분류 선택 */}
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>대분류</InputLabel>
+            <Select
+              value={mainCategory}
+              label="대분류"
+              onChange={handleMainCategoryChange}
             >
-              {CATEGORY_MAP[mainCategory].subcategories.map((sub) => (
-                <ToggleButton key={sub} value={sub}>
-                  {sub}
-                </ToggleButton>
+              {Object.keys(CATEGORY_MAP).map((cat) => (
+                <MenuItem key={cat} value={cat}>
+                  {cat}
+                </MenuItem>
               ))}
-            </ToggleButtonGroup>
+            </Select>
+          </FormControl>
+
+          {/* 소분류 선택 */}
+          {mainCategory && CATEGORY_MAP[mainCategory] && (
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>소분류</InputLabel>
+              <Select
+                value={subCategory}
+                label="소분류"
+                onChange={handleSubCategoryChange}
+              >
+                {CATEGORY_MAP[mainCategory].subcategories.map((sub) => (
+                  <MenuItem key={sub} value={sub}>
+                    {sub}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           )}
 
           {/* 검색/초기화 버튼 */}
@@ -359,15 +372,32 @@ export default function ConversationsPage() {
             초기화
           </Button>
         </Box>
-
-        {/* 총 개수 */}
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          총 <strong>{total.toLocaleString()}</strong>건
-        </Typography>
       </Paper>
 
-      {/* 테이블 헤더 (엑셀 다운로드 버튼) */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+      {/* 테이블 상단 (총 개수, 표시 건수, 엑셀 다운로드) */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        {/* 왼쪽: 총 개수 및 페이지당 표시 건수 */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            총 <strong>{total.toLocaleString()}</strong>건
+          </Typography>
+          <FormControl size="small" sx={{ minWidth: 100 }}>
+            <InputLabel>표시 건수</InputLabel>
+            <Select
+              value={limit}
+              label="표시 건수"
+              onChange={handleLimitChange}
+            >
+              <MenuItem value={10}>10개</MenuItem>
+              <MenuItem value={20}>20개</MenuItem>
+              <MenuItem value={30}>30개</MenuItem>
+              <MenuItem value={50}>50개</MenuItem>
+              <MenuItem value={100}>100개</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+
+        {/* 오른쪽: 엑셀 다운로드 버튼 */}
         <IconButton
           onClick={handleDownloadExcel}
           sx={{
