@@ -508,9 +508,13 @@ export default function VectorDataManagementPageSimple() {
                   transition: 'all 0.2s',
                   border: isSelected ? `3px solid ${colorSet.border}` : '2px solid transparent',
                   background: isSelected ? colorSet.bg : 'linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)',
+                  position: 'relative',
                   '&:hover': {
                     transform: 'translateY(-4px)',
                     boxShadow: 6,
+                    '& .delete-icon-btn': {
+                      opacity: 1,
+                    },
                   },
                 }}
                 onClick={(e) => {
@@ -519,33 +523,46 @@ export default function VectorDataManagementPageSimple() {
                   setPage(1);
                 }}
               >
-                <CardContent sx={{ textAlign: 'center', py: 2, position: 'relative' }}>
-                  <Box sx={{ pointerEvents: 'none' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, color: isSelected ? colorSet.text : '#333' }}>
-                      {data.name || `카테고리 ${doctype}`}
-                    </Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: isSelected ? colorSet.text : colorSet.border }}>
-                      {data.count.toLocaleString()}건
-                    </Typography>
-                  </Box>
-                  <Button
-                    size="small"
-                    startIcon={<DeleteIcon />}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCategoryDelete(doctype, data.name, data.count);
-                    }}
-                    sx={{
-                      mt: 1,
-                      pointerEvents: 'auto',
-                      color: isSelected ? colorSet.text : '#666',
-                      '&:hover': {
-                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                {/* 호버 시 표시되는 삭제 아이콘 (우측 상단) */}
+                <Box
+                  className="delete-icon-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCategoryDelete(doctype, data.name, data.count);
+                  }}
+                  sx={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    opacity: 0,
+                    transition: 'opacity 0.2s',
+                    zIndex: 10,
+                    cursor: 'pointer',
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderRadius: '50%',
+                    width: 32,
+                    height: 32,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    '&:hover': {
+                      backgroundColor: '#ef4444',
+                      '& svg': {
+                        color: 'white',
                       },
-                    }}
-                  >
-                    삭제
-                  </Button>
+                    },
+                  }}
+                >
+                  <DeleteIcon sx={{ fontSize: 18, color: '#666' }} />
+                </Box>
+
+                <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, color: isSelected ? colorSet.text : '#333' }}>
+                    {data.name || `카테고리 ${doctype}`}
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: isSelected ? colorSet.text : colorSet.border }}>
+                    {data.count.toLocaleString()}건
+                  </Typography>
                 </CardContent>
               </Card>
             </Grid>
