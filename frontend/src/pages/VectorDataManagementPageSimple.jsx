@@ -29,6 +29,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  IconButton,
+  Menu,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -37,6 +39,7 @@ import {
   Download as DownloadIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
+  MoreVert as MoreVertIcon,
 } from '@mui/icons-material';
 import axios from '../axiosConfig';
 
@@ -60,6 +63,10 @@ export default function VectorDataManagementPageSimple() {
   const [newCategoryCode, setNewCategoryCode] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryDesc, setNewCategoryDesc] = useState('');
+
+  // 카테고리 카드 3점 메뉴
+  const [menuAnchorEl, setMenuAnchorEl] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   useEffect(() => {
     loadCategories();
@@ -512,7 +519,7 @@ export default function VectorDataManagementPageSimple() {
                   '&:hover': {
                     transform: 'translateY(-4px)',
                     boxShadow: 6,
-                    '& .delete-icon-btn': {
+                    '& .menu-icon-btn': {
                       opacity: 1,
                     },
                   },
@@ -532,43 +539,75 @@ export default function VectorDataManagementPageSimple() {
                   </Typography>
                 </CardContent>
 
-                {/* 호버 시 우측 하단 작은 휴지통 아이콘 */}
-                <Box
-                  className="delete-icon-btn"
+                {/* 호버 시 우측 상단 3점 메뉴 */}
+                <IconButton
+                  className="menu-icon-btn"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleCategoryDelete(doctype, data.name, data.count);
+                    setMenuAnchorEl(e.currentTarget);
+                    setSelectedCategory({ doctype, name: data.name, count: data.count });
                   }}
                   sx={{
                     position: 'absolute',
-                    bottom: 8,
-                    right: 8,
+                    top: 4,
+                    right: 4,
                     opacity: 0,
                     transition: 'opacity 0.2s',
                     zIndex: 10,
-                    cursor: 'pointer',
                     backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                    borderRadius: '50%',
-                    width: 28,
-                    height: 28,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
                     '&:hover': {
-                      backgroundColor: '#ef4444',
-                      '& svg': {
-                        color: 'white',
-                      },
+                      backgroundColor: 'rgba(255, 255, 255, 1)',
                     },
                   }}
                 >
-                  <DeleteIcon sx={{ fontSize: 16, color: '#666' }} />
-                </Box>
+                  <MoreVertIcon sx={{ fontSize: 20, color: isSelected ? colorSet.text : '#666' }} />
+                </IconButton>
               </Card>
             </Grid>
           );
         })}
       </Grid>
+
+      {/* 카테고리 3점 메뉴 */}
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl)}
+        onClose={() => {
+          setMenuAnchorEl(null);
+          setSelectedCategory(null);
+        }}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            if (selectedCategory) {
+              handleCategoryDelete(
+                selectedCategory.doctype,
+                selectedCategory.name,
+                selectedCategory.count
+              );
+            }
+            setMenuAnchorEl(null);
+            setSelectedCategory(null);
+          }}
+          sx={{
+            color: '#ef4444',
+            '&:hover': {
+              backgroundColor: '#fee2e2',
+            },
+          }}
+        >
+          <DeleteIcon sx={{ fontSize: 18, mr: 1 }} />
+          삭제
+        </MenuItem>
+      </Menu>
 
       {/* 통계 및 액션 영역 */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, mt: 8 }}>
