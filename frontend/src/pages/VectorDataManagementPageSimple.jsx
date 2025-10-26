@@ -509,12 +509,10 @@ export default function VectorDataManagementPageSimple() {
                   border: isSelected ? `3px solid ${colorSet.border}` : '2px solid transparent',
                   background: isSelected ? colorSet.bg : 'linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)',
                   position: 'relative',
-                  overflow: 'hidden',
                   '&:hover': {
                     transform: 'translateY(-4px)',
                     boxShadow: 6,
-                    '& .action-bar': {
-                      transform: 'translateY(0)',
+                    '& .delete-icon-btn': {
                       opacity: 1,
                     },
                   },
@@ -525,7 +523,7 @@ export default function VectorDataManagementPageSimple() {
                   setPage(1);
                 }}
               >
-                <CardContent sx={{ textAlign: 'center', py: 2, pb: 1 }}>
+                <CardContent sx={{ textAlign: 'center', py: 2 }}>
                   <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, color: isSelected ? colorSet.text : '#333' }}>
                     {data.name || `카테고리 ${doctype}`}
                   </Typography>
@@ -534,48 +532,37 @@ export default function VectorDataManagementPageSimple() {
                   </Typography>
                 </CardContent>
 
-                {/* 호버 시 하단에서 슬라이드업되는 액션 바 */}
+                {/* 호버 시 우측 하단 작은 휴지통 아이콘 */}
                 <Box
-                  className="action-bar"
+                  className="delete-icon-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCategoryDelete(doctype, data.name, data.count);
+                  }}
                   sx={{
                     position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                    backdropFilter: 'blur(8px)',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    padding: '8px',
-                    transform: 'translateY(100%)',
+                    bottom: 8,
+                    right: 8,
                     opacity: 0,
-                    transition: 'all 0.3s ease-in-out',
+                    transition: 'opacity 0.2s',
                     zIndex: 10,
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Button
-                    size="small"
-                    variant="contained"
-                    startIcon={<DeleteIcon />}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCategoryDelete(doctype, data.name, data.count);
-                    }}
-                    sx={{
+                    cursor: 'pointer',
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderRadius: '50%',
+                    width: 28,
+                    height: 28,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    '&:hover': {
                       backgroundColor: '#ef4444',
-                      color: 'white',
-                      fontSize: '0.75rem',
-                      py: 0.5,
-                      px: 2,
-                      '&:hover': {
-                        backgroundColor: '#dc2626',
+                      '& svg': {
+                        color: 'white',
                       },
-                    }}
-                  >
-                    삭제
-                  </Button>
+                    },
+                  }}
+                >
+                  <DeleteIcon sx={{ fontSize: 16, color: '#666' }} />
                 </Box>
               </Card>
             </Grid>
