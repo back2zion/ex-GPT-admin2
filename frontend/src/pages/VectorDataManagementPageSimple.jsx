@@ -509,10 +509,12 @@ export default function VectorDataManagementPageSimple() {
                   border: isSelected ? `3px solid ${colorSet.border}` : '2px solid transparent',
                   background: isSelected ? colorSet.bg : 'linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)',
                   position: 'relative',
+                  overflow: 'hidden',
                   '&:hover': {
                     transform: 'translateY(-4px)',
                     boxShadow: 6,
-                    '& .delete-icon-btn': {
+                    '& .action-bar': {
+                      transform: 'translateY(0)',
                       opacity: 1,
                     },
                   },
@@ -523,40 +525,7 @@ export default function VectorDataManagementPageSimple() {
                   setPage(1);
                 }}
               >
-                {/* 호버 시 표시되는 삭제 아이콘 (우측 상단) */}
-                <Box
-                  className="delete-icon-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCategoryDelete(doctype, data.name, data.count);
-                  }}
-                  sx={{
-                    position: 'absolute',
-                    top: 8,
-                    right: 8,
-                    opacity: 0,
-                    transition: 'opacity 0.2s',
-                    zIndex: 10,
-                    cursor: 'pointer',
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                    borderRadius: '50%',
-                    width: 32,
-                    height: 32,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    '&:hover': {
-                      backgroundColor: '#ef4444',
-                      '& svg': {
-                        color: 'white',
-                      },
-                    },
-                  }}
-                >
-                  <DeleteIcon sx={{ fontSize: 18, color: '#666' }} />
-                </Box>
-
-                <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                <CardContent sx={{ textAlign: 'center', py: 2, pb: 1 }}>
                   <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, color: isSelected ? colorSet.text : '#333' }}>
                     {data.name || `카테고리 ${doctype}`}
                   </Typography>
@@ -564,6 +533,50 @@ export default function VectorDataManagementPageSimple() {
                     {data.count.toLocaleString()}건
                   </Typography>
                 </CardContent>
+
+                {/* 호버 시 하단에서 슬라이드업되는 액션 바 */}
+                <Box
+                  className="action-bar"
+                  sx={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    backdropFilter: 'blur(8px)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    padding: '8px',
+                    transform: 'translateY(100%)',
+                    opacity: 0,
+                    transition: 'all 0.3s ease-in-out',
+                    zIndex: 10,
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Button
+                    size="small"
+                    variant="contained"
+                    startIcon={<DeleteIcon />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCategoryDelete(doctype, data.name, data.count);
+                    }}
+                    sx={{
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      fontSize: '0.75rem',
+                      py: 0.5,
+                      px: 2,
+                      '&:hover': {
+                        backgroundColor: '#dc2626',
+                      },
+                    }}
+                  >
+                    삭제
+                  </Button>
+                </Box>
               </Card>
             </Grid>
           );
