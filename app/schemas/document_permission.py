@@ -46,11 +46,24 @@ class ApprovalLineInfo(BaseModel):
         from_attributes = True
 
 
+class DocumentInfo(BaseModel):
+    """문서 정보 (문서 권한 응답 시 사용)"""
+    id: int
+    title: str
+    document_id: str
+    document_type: str
+    status: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class DocumentPermissionResponse(DocumentPermissionBase):
     """문서 권한 응답 스키마"""
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
+    document: Optional[DocumentInfo] = None
     department: Optional[DepartmentInfo] = None
     approval_line: Optional[ApprovalLineInfo] = None
 

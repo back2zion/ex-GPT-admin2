@@ -9,6 +9,7 @@ from app.models.document_permission import ApprovalLine, DocumentPermission, Use
 from app.models.access import AccessRequest
 from app.models.approval import DocumentChangeRequest, ApprovalStep
 from app.models.notice import Notice
+from app.models.notification import Notification
 from app.models.satisfaction import SatisfactionSurvey
 from app.models.pii_detection import PIIDetectionResult, PIIStatus
 from app.models.ip_whitelist import IPWhitelist
@@ -43,6 +44,7 @@ __all__ = [
     "DocumentChangeRequest",
     "ApprovalStep",
     "Notice",
+    "Notification",
     "SatisfactionSurvey",
     "PIIDetectionResult",
     "PIIStatus",

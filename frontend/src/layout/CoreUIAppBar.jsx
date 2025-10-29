@@ -21,44 +21,27 @@ import {
 import {
     Menu as MenuIcon,
     Notifications as NotificationsIcon,
-    Settings as SettingsIcon,
-    Person as PersonIcon,
     Logout as LogoutIcon,
     CheckCircle as CheckCircleIcon,
     Error as ErrorIcon,
     Info as InfoIcon,
-    Brightness4 as DarkModeIcon,
-    Language as LanguageIcon,
-    Refresh as RefreshIcon,
-    Email as EmailIcon,
-    Assessment as ActivityIcon,
     Schedule as ScheduleIcon,
 } from '@mui/icons-material';
-import { useState, useEffect, useContext } from 'react';
-import { useSidebarState, useLocaleState } from 'react-admin';
+import { useState, useEffect } from 'react';
+import { useSidebarState } from 'react-admin';
 import { useNavigate } from 'react-router-dom';
-import { ThemeContext } from '../App';
 
 const CoreUIAppBar = () => {
     const [open, setOpen] = useSidebarState();
     const navigate = useNavigate();
-    const { darkMode, toggleDarkMode } = useContext(ThemeContext);
-    const [locale, setLocale] = useLocaleState();
 
     // Menu states
     const [notificationAnchor, setNotificationAnchor] = useState(null);
-    const [settingsAnchor, setSettingsAnchor] = useState(null);
     const [userAnchor, setUserAnchor] = useState(null);
 
     // Notifications
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
-
-    // Settings
-    const [emailNotifications, setEmailNotifications] = useState(() => {
-        const saved = localStorage.getItem('emailNotifications');
-        return saved === null ? true : saved === 'true';
-    });
 
     // User info
     const [userInfo, setUserInfo] = useState(() => {
@@ -113,55 +96,67 @@ const CoreUIAppBar = () => {
 
     const fetchNotifications = async () => {
         try {
-            // Mock notifications - 실제로는 API에서 가져옴
-            const mockNotifications = [
-                {
-                    id: 1,
-                    type: 'success',
-                    title: 'vLLM 모델 서버 배포 완료',
-                    message: 'GPU:0에 성공적으로 배포되었습니다',
-                    time: '5분 전',
-                    read: false,
-                },
-                {
-                    id: 2,
-                    type: 'error',
-                    title: 'STT 배치 처리 실패',
-                    message: '배치 #1234 처리 중 오류 발생',
-                    time: '1시간 전',
-                    read: false,
-                },
-                {
-                    id: 3,
-                    type: 'info',
-                    title: '문서 벡터화 완료',
-                    message: '500개 문서 벡터화 완료',
-                    time: '2시간 전',
-                    read: true,
-                },
-                {
-                    id: 4,
-                    type: 'info',
-                    title: '신규 사용자 등록',
-                    message: '10명의 신규 사용자가 등록되었습니다',
-                    time: '오늘',
-                    read: true,
-                },
-            ];
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
 
-            setNotifications(mockNotifications);
-            setUnreadCount(mockNotifications.filter(n => !n.read).length);
+            // 미읽음 알림 개수 조회
+            const countResponse = await fetch('/api/v1/admin/notifications/unread-count', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            if (countResponse.ok) {
+                const countData = await countResponse.json();
+                setUnreadCount(countData.unread_count);
+            }
+
+            // 최근 알림 5개 조회
+            const response = await fetch('/api/v1/admin/notifications?limit=5', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                // API 데이터를 UI 포맷으로 변환
+                const formattedNotifications = data.items.map(n => ({
+                    id: n.id,
+                    type: n.type,
+                    title: n.title,
+                    message: n.message,
+                    time: formatNotificationTime(n.created_at),
+                    read: n.is_read,
+                    link: n.link,
+                }));
+                setNotifications(formattedNotifications);
+            }
         } catch (error) {
             console.error('알림 가져오기 실패:', error);
         }
     };
 
-    const handleNotificationOpen = (event) => {
-        setNotificationAnchor(event.currentTarget);
+    // 알림 시간 포맷팅
+    const formatNotificationTime = (isoString) => {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+
+        if (diffMins < 60) {
+            return `${diffMins}분 전`;
+        } else if (diffMins < 1440) {
+            return `${Math.floor(diffMins / 60)}시간 전`;
+        } else if (diffMins < 10080) {
+            return `${Math.floor(diffMins / 1440)}일 전`;
+        } else {
+            return '오늘';
+        }
     };
 
-    const handleSettingsOpen = (event) => {
-        setSettingsAnchor(event.currentTarget);
+    const handleNotificationOpen = (event) => {
+        setNotificationAnchor(event.currentTarget);
     };
 
     const handleUserMenuOpen = (event) => {
@@ -170,10 +165,6 @@ const CoreUIAppBar = () => {
 
     const handleNotificationClose = () => {
         setNotificationAnchor(null);
-    };
-
-    const handleSettingsClose = () => {
-        setSettingsAnchor(null);
     };
 
     const handleUserMenuClose = () => {
@@ -194,45 +185,9 @@ const CoreUIAppBar = () => {
         setUnreadCount(0);
     };
 
-    const handleLanguageChange = () => {
-        const newLang = locale === 'ko' ? 'en' : 'ko';
-        setLocale(newLang);
-        localStorage.setItem('language', newLang);
-    };
-
-    const handleEmailNotificationToggle = (checked) => {
-        setEmailNotifications(checked);
-        localStorage.setItem('emailNotifications', checked);
-    };
-
-    const handleProfileClick = () => {
-        handleUserMenuClose();
-        // TODO: 프로필 페이지 구현 후 navigate('/profile');
-        alert('프로필 페이지는 구현 예정입니다.');
-    };
-
-    const handleActivityClick = () => {
-        handleUserMenuClose();
-        // TODO: 활동 기록 페이지 구현 후 navigate('/activity');
-        alert('활동 기록 페이지는 구현 예정입니다.');
-    };
-
-    const handleSettingsClick = () => {
-        handleUserMenuClose();
-        // TODO: 설정 페이지 구현 후 navigate('/settings');
-        alert('설정 페이지는 구현 예정입니다.');
-    };
-
     const handleAllNotifications = () => {
         handleNotificationClose();
-        // TODO: 알림 페이지 구현 후 navigate('/notifications');
-        alert('알림 전체 보기 페이지는 구현 예정입니다.');
-    };
-
-    const handleAllSettings = () => {
-        handleSettingsClose();
-        // TODO: 전체 설정 페이지 구현 후 navigate('/settings');
-        alert('전체 설정 페이지는 구현 예정입니다.');
+        navigate('/notifications');
     };
 
     const getNotificationIcon = (type) => {
@@ -307,7 +262,7 @@ const CoreUIAppBar = () => {
                 {/* Right Icons */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     {/* Notifications */}
-                    <IconButton color="inherit" onClick={handleNotificationOpen}>
+                    <IconButton color="inherit" onClick={handleNotificationOpen} title="알림">
                         <Badge badgeContent={unreadCount} color="error">
                             <NotificationsIcon />
                         </Badge>
@@ -390,85 +345,6 @@ const CoreUIAppBar = () => {
                         </MenuItem>
                     </Menu>
 
-                    {/* Settings */}
-                    <IconButton color="inherit" onClick={handleSettingsOpen}>
-                        <SettingsIcon />
-                    </IconButton>
-
-                    {/* Settings Menu */}
-                    <Menu
-                        anchorEl={settingsAnchor}
-                        open={Boolean(settingsAnchor)}
-                        onClose={handleSettingsClose}
-                        PaperProps={{
-                            sx: {
-                                mt: 1.5,
-                                minWidth: 280,
-                                borderRadius: 2,
-                                boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-                            },
-                        }}
-                    >
-                        <Box sx={{ px: 2, py: 1.5 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 600, color: '#0a2986' }}>
-                                빠른 설정
-                            </Typography>
-                        </Box>
-                        <Divider />
-
-                        <MenuItem sx={{ py: 1.5 }}>
-                            <ListItemIcon>
-                                <DarkModeIcon sx={{ color: '#0a2986' }} />
-                            </ListItemIcon>
-                            <ListItemText primary="다크 모드" />
-                            <Switch
-                                checked={darkMode}
-                                onChange={toggleDarkMode}
-                                size="small"
-                            />
-                        </MenuItem>
-
-                        <MenuItem sx={{ py: 1.5 }} onClick={handleLanguageChange}>
-                            <ListItemIcon>
-                                <LanguageIcon sx={{ color: '#0a2986' }} />
-                            </ListItemIcon>
-                            <ListItemText
-                                primary={locale === 'ko' ? '언어' : 'Language'}
-                                secondary={locale === 'ko' ? '한국어' : 'English'}
-                            />
-                        </MenuItem>
-
-                        <MenuItem sx={{ py: 1.5 }}>
-                            <ListItemIcon>
-                                <RefreshIcon sx={{ color: '#0a2986' }} />
-                            </ListItemIcon>
-                            <ListItemText
-                                primary="데이터 갱신"
-                                secondary="30초마다"
-                            />
-                        </MenuItem>
-
-                        <MenuItem sx={{ py: 1.5 }}>
-                            <ListItemIcon>
-                                <EmailIcon sx={{ color: '#0a2986' }} />
-                            </ListItemIcon>
-                            <ListItemText primary="이메일 알림" />
-                            <Switch
-                                checked={emailNotifications}
-                                onChange={(e) => handleEmailNotificationToggle(e.target.checked)}
-                                size="small"
-                            />
-                        </MenuItem>
-
-                        <Divider />
-                        <MenuItem
-                            onClick={handleAllSettings}
-                            sx={{ justifyContent: 'center', color: '#0a2986', fontWeight: 600 }}
-                        >
-                            전체 설정
-                        </MenuItem>
-                    </Menu>
-
                     {/* User Menu */}
                     <IconButton
                         onClick={handleUserMenuOpen}
@@ -512,33 +388,7 @@ const CoreUIAppBar = () => {
                             <Typography variant="caption" color="text.secondary">
                                 {userInfo.email}
                             </Typography>
-                        </Box>
-                        <Divider />
-
-                        <MenuItem onClick={handleProfileClick}>
-                            <ListItemIcon>
-                                <PersonIcon sx={{ color: '#0a2986' }} />
-                            </ListItemIcon>
-                            <ListItemText primary="내 프로필" />
-                        </MenuItem>
-
-                        <MenuItem onClick={handleActivityClick}>
-                            <ListItemIcon>
-                                <ActivityIcon sx={{ color: '#0a2986' }} />
-                            </ListItemIcon>
-                            <ListItemText primary="활동 기록" />
-                        </MenuItem>
-
-                        <MenuItem onClick={handleSettingsClick}>
-                            <ListItemIcon>
-                                <SettingsIcon sx={{ color: '#0a2986' }} />
-                            </ListItemIcon>
-                            <ListItemText primary="설정" />
-                        </MenuItem>
-
-                        <Divider />
-                        <Box sx={{ px: 2, py: 1 }}>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                                 <ScheduleIcon sx={{ fontSize: 12, verticalAlign: 'middle', mr: 0.5 }} />
                                 마지막 로그인: {formatLastLogin(userInfo.lastLogin)}
                             </Typography>

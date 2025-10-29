@@ -34,7 +34,8 @@ from app.routers.admin import (
     vector_document_upload,
     dictionaries,
     error_reports,
-    recommended_questions
+    recommended_questions,
+    notifications
 )
 
 # Deployment router (optional - mlflow dependency)
@@ -74,6 +75,7 @@ app.include_router(chat_proxy.router)
 
 # Admin 라우터 등록 (MVP)
 app.include_router(notices.router)
+app.include_router(notifications.router)
 app.include_router(usage.router)
 app.include_router(satisfaction.router)
 app.include_router(export.router)

@@ -32,6 +32,13 @@ class UserGPTAccessResponse(BaseModel):
     last_login_at: Optional[datetime] = None
     is_active: bool
 
+    # 도로공사 조직 정보
+    employee_number: Optional[str] = None
+    position: Optional[str] = None
+    rank: Optional[str] = None
+    team: Optional[str] = None
+    job_category: Optional[str] = None
+
     class Config:
         from_attributes = True
 
@@ -45,7 +52,7 @@ class UsersListResponse(BaseModel):
 class GrantAccessRequest(BaseModel):
     """GPT 접근 권한 부여 요청"""
     user_ids: List[int] = Field(..., description="권한을 부여할 사용자 ID 목록")
-    model: str = Field(..., description="허용할 모델명")
+    model: str = Field(..., description="할당할 모델명 (Qwen235B, Qwen32B, 70B 등)")
 
 
 class RevokeAccessRequest(BaseModel):
@@ -90,7 +97,7 @@ class AccessRequestsListResponse(BaseModel):
 
 class ApproveRequestRequest(BaseModel):
     """접근 신청 승인 요청"""
-    model: str = Field(..., description="허용할 모델명")
+    model: str = Field(..., description="할당할 모델명")
     processor_id: int = Field(..., description="처리자 ID")
 
 
@@ -105,3 +112,29 @@ class ProcessRequestResponse(BaseModel):
     id: int
     status: str
     message: str
+
+
+class AccessChangeHistoryResponse(BaseModel):
+    """권한 변경 이력 응답"""
+    id: int
+    user_id: int
+    username: Optional[str] = None
+    full_name: Optional[str] = None
+    employee_number: Optional[str] = None
+    department_name: Optional[str] = None
+    action: str  # grant, revoke, model_change, approve, reject
+    changed_by: int
+    admin_name: Optional[str] = None
+    changed_at: datetime
+    old_value: Optional[str] = None
+    new_value: Optional[str] = None
+    reason: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AccessChangeHistoryListResponse(BaseModel):
+    """권한 변경 이력 목록 응답"""
+    history: List[AccessChangeHistoryResponse]
+    total: int

@@ -13,6 +13,8 @@ import logging
 import time
 import psutil
 import subprocess
+import asyncpg
+import os
 from typing import Dict, Any
 
 from app.models import UsageHistory, SatisfactionSurvey, Notice
@@ -22,6 +24,13 @@ from cerbos.sdk.model import Principal
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+# EDB 설정
+EDB_HOST = os.getenv("EDB_HOST", "host.docker.internal")
+EDB_PORT = int(os.getenv("EDB_PORT", "5444"))
+EDB_DATABASE = os.getenv("EDB_DATABASE", "AGENAI")
+EDB_USER = os.getenv("EDB_USER", "wisenut_dev")
+EDB_PASSWORD = os.getenv("EDB_PASSWORD", "express!12")
 
 # Server monitoring cache (30 seconds TTL for real-time data)
 _server_stats_cache = {
@@ -378,6 +387,58 @@ async def get_top_questions(
     return {"items": items}
 
 
+# =============================================================================
+# EDB Helper Functions
+# =============================================================================
+
+async def get_edb_connection():
+    """EDB 데이터베이스 연결 생성"""
+    try:
+        conn = await asyncpg.connect(
+            host=EDB_HOST,
+            port=EDB_PORT,
+            database=EDB_DATABASE,
+            user=EDB_USER,
+            password=EDB_PASSWORD
+        )
+        return conn
+    except Exception as e:
+        logger.error(f"Failed to connect to EDB: {e}")
+        raise
+
+
+async def get_edb_document_count() -> int:
+    """
+    EDB에서 활성 문서 수 조회
+
+    Returns:
+        int: wisenut.doc_bas_info에서 use_yn='Y'인 문서 수
+    """
+    conn = None
+    try:
+        conn = await get_edb_connection()
+
+        # 활성 문서만 조회 (use_yn = 'Y')
+        query = """
+            SELECT COUNT(*)
+            FROM wisenut.doc_bas_info
+            WHERE use_yn = 'Y'
+        """
+        count = await conn.fetchval(query)
+        return count or 0
+
+    except Exception as e:
+        logger.error(f"Failed to get EDB document count: {e}")
+        return 0
+    finally:
+        if conn:
+            await conn.close()
+
+
+# =============================================================================
+# Qdrant Helper Functions
+# =============================================================================
+
 async def get_qdrant_vector_count() -> int:
     """
     Qdrant에서 벡터 포인트 수 조회 (청크 수)
@@ -521,8 +582,8 @@ async def get_system_info(
     **보안**: 인증 필수
 
     **반환값**:
-    - unique_documents: 고유 원본 문서 수 (file_id 기준)
-    - vector_chunks: 벡터화된 청크 수 (전체 포인트 수)
+    - unique_documents: 고유 원본 문서 수 (EDB 기준)
+    - vector_chunks: 벡터화된 청크 수 (PostgreSQL 기준)
     - active_sessions: 활성 세션 수
     - total_notices: 공지사항 수
     """
@@ -531,16 +592,19 @@ async def get_system_info(
     total_notices_result = await db.execute(total_notices_query)
     total_notices = total_notices_result.scalar() or 0
 
-    # Qdrant 고유 문서 수 및 벡터 수 조회 (병렬 실행)
+    # PostgreSQL에서 벡터 청크 수 조회
+    from app.models.document_vector import DocumentVector
+    vector_count_query = select(func.count(DocumentVector.id))
+    vector_count_result = await db.execute(vector_count_query)
+    vector_count = vector_count_result.scalar() or 0
+
+    # EDB에서 실제 문서 수 조회 (병렬 실행)
     import asyncio
-    unique_docs, vector_count = await asyncio.gather(
-        get_qdrant_unique_document_count(),
-        get_qdrant_vector_count()
-    )
+    unique_docs = await get_edb_document_count()
 
     return {
-        "unique_documents": unique_docs,  # ✅ 고유 원본 문서 수
-        "vector_chunks": vector_count,  # ✅ 벡터 청크 수
+        "unique_documents": unique_docs,  # ✅ EDB wisenut.doc_bas_info (use_yn='Y')
+        "vector_chunks": vector_count,  # ✅ PostgreSQL document_vectors
         "active_sessions": 0,  # TODO: Redis session count
         "total_notices": total_notices  # ✅ 실제 DB 연동
     }

@@ -175,6 +175,25 @@ async def chat_stream_proxy(
         import time
         request.session_id = f"{request.user_id}_session_{int(time.time())}"
 
+    # 업로드된 파일 자동 조회 (file_ids 자동 채우기)
+    if len(request.file_ids) == 0 and request.session_id:
+        from sqlalchemy import text
+        try:
+            file_query = await db.execute(
+                text("""
+                SELECT "FILE_UID" FROM "USR_UPLD_DOC_MNG"
+                WHERE "CNVS_IDT_ID" = :session_id
+                ORDER BY "REG_DT" DESC
+                """),
+                {"session_id": request.session_id}
+            )
+            uploaded_files = [row[0] for row in file_query.fetchall()]
+            if uploaded_files:
+                request.file_ids = uploaded_files
+                logger.info(f"Auto-loaded {len(uploaded_files)} files for session {request.session_id}: {uploaded_files}")
+        except Exception as e:
+            logger.warning(f"Failed to load uploaded files for session {request.session_id}: {e}")
+
     # ds-api ExGPTRequest 형식으로 변환
     history_messages = []
 

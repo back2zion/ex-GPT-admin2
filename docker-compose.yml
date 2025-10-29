@@ -12,7 +12,7 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/admin_db
       - USER_UI_URL=http://host.docker.internal:18180/exGenBotDS/testOld
-      - USER_DB_URL=postgresql+asyncpg://wisenut_main:express!12@host.docker.internal:5444/AGENAI
+      - USER_DB_URL=postgresql+asyncpg://wisenut_dev:express!12@host.docker.internal:5444/AGENAI
       - REDIS_URL=redis://redis:6379
       - CERBOS_HOST=cerbos
       - CERBOS_PORT=3592

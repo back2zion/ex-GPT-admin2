@@ -14,10 +14,11 @@ import uuid
 class VectorizationService:
     """문서 벡터화 서비스 - vLLM 임베딩 사용"""
 
-    def __init__(self):
+    def __init__(self, collection_name: str = None):
         self.qdrant_url = f"http://{settings.QDRANT_HOST}:{settings.QDRANT_PORT}"
-        # FORCE v2 collection to match ex-gpt-api search
-        self.collection = "130825-512-v2"  # Hard-coded to ensure consistency with ex-gpt-api
+        # Use collection_name parameter for flexibility
+        # Default to admin collection, but can be overridden for session files
+        self.collection = collection_name or "130825-512-v3"  # Match ex-gpt-api
         self.api_key = settings.QDRANT_API_KEY
         # vLLM 임베딩 엔드포인트 (direct container access via exgpt_net network)
         self.embedding_endpoint = "http://vllm-embeddings:8000/v1/embeddings"
@@ -168,38 +169,48 @@ class VectorizationService:
                 metadata
             )
 
-            # 4. 메타데이터 DB에 저장
-            for idx, (chunk, point_id) in enumerate(zip(chunks, point_ids)):
-                vector_record = DocumentVector(
-                    document_id=document_id,
-                    qdrant_point_id=point_id,
-                    qdrant_collection=self.collection,
-                    chunk_index=idx,
-                    chunk_text=chunk[:10000],  # Truncate if too long
-                    chunk_metadata=metadata,
-                    vector_dimension=len(all_embeddings[0]) if all_embeddings else None,
-                    embedding_model=self.embedding_model,
-                    status=VectorStatus.COMPLETED
-                )
-                db.add(vector_record)
+            # 4. 메타데이터 DB에 저장 (Admin 문서만 - Personal 파일은 Qdrant만 사용)
+            # Personal files (session_collection-v2) don't need document_vectors table
+            # because they don't exist in the documents table (FK constraint issue)
+            if self.collection != "session_collection-v2":
+                for idx, (chunk, point_id) in enumerate(zip(chunks, point_ids)):
+                    vector_record = DocumentVector(
+                        document_id=document_id,
+                        qdrant_point_id=point_id,
+                        qdrant_collection=self.collection,
+                        chunk_index=idx,
+                        chunk_text=chunk[:10000],  # Truncate if too long
+                        chunk_metadata=metadata,
+                        vector_dimension=len(all_embeddings[0]) if all_embeddings else None,
+                        embedding_model=self.embedding_model,
+                        status=VectorStatus.COMPLETED
+                    )
+                    db.add(vector_record)
 
-            await db.commit()
+                await db.commit()
+            else:
+                # Personal files: Qdrant storage only, no DB metadata
+                print(f"[VECTORIZATION] Personal file - skipping document_vectors table (Qdrant only)")
 
         except Exception as e:
             # Mark as failed
             print(f"Vectorization failed for document {document_id}: {e}")
 
-            # Create failed record
-            failed_record = DocumentVector(
-                document_id=document_id,
-                qdrant_point_id="",
-                qdrant_collection=self.collection,
-                chunk_index=0,
-                status=VectorStatus.FAILED,
-                error_message=str(e)[:1000]
-            )
-            db.add(failed_record)
-            await db.commit()
+            # Create failed record (Admin 문서만 - Personal 파일은 생략)
+            if self.collection != "session_collection-v2":
+                failed_record = DocumentVector(
+                    document_id=document_id,
+                    qdrant_point_id="",
+                    qdrant_collection=self.collection,
+                    chunk_index=0,
+                    status=VectorStatus.FAILED,
+                    error_message=str(e)[:1000]
+                )
+                db.add(failed_record)
+                await db.commit()
+            else:
+                # Personal files: Just log error, no DB save
+                print(f"[VECTORIZATION ERROR] Personal file vectorization failed: {e}")
 
             raise
 

@@ -92,12 +92,22 @@ class AIService:
             # 2. RAG 문서 검색 (옵션)
             context = ""
             if search_documents:
-                # 동의어 치환된 쿼리로 검색
+                # department를 user_department_id로 변환 (integer로 파싱 시도)
+                user_dept_id = None
+                if department:
+                    try:
+                        user_dept_id = int(department) if department.isdigit() else None
+                    except (ValueError, AttributeError):
+                        pass
+
+                # 동의어 치환된 쿼리로 검색 (부서별 권한 필터링 포함)
                 search_results = await self._search_documents(
                     query=expanded_message,
-                    department=department,
+                    department=department,  # legacy support
                     search_scope=search_scope,
-                    limit=5
+                    limit=5,
+                    user_department_id=user_dept_id,  # NEW: 부서별 권한 필터링
+                    db=db  # NEW: 권한 조회용
                 )
 
                 if search_results:
@@ -160,16 +170,20 @@ class AIService:
         query: str,
         department: Optional[str] = None,
         search_scope: Optional[List[str]] = None,
-        limit: int = 5
+        limit: int = 5,
+        user_department_id: Optional[int] = None,
+        db: Optional[AsyncSession] = None
     ) -> List[Dict[str, Any]]:
         """
-        Qdrant 벡터 검색 (RAG)
+        Qdrant 벡터 검색 (RAG) with 부서별 권한 필터링
 
         Args:
             query: 검색 쿼리
-            department: 부서 코드 필터
+            department: 부서 코드 필터 (deprecated, use user_department_id)
             search_scope: 검색 범위 필터
             limit: 최대 결과 수
+            user_department_id: 사용자 부서 ID (문서 권한 필터링용)
+            db: 데이터베이스 세션 (문서 권한 조회용)
 
         Returns:
             List[Dict]: 검색 결과
@@ -194,12 +208,40 @@ class AIService:
             # 2. Qdrant 필터 구성
             must_filters = []
 
-            if department:
+            # 2-1. 부서별 문서 권한 필터링 (NEW - 핵심 기능!)
+            if user_department_id is not None and db is not None:
+                from sqlalchemy import select
+                from app.models.document_permission import DocumentPermission
+
+                # 사용자 부서가 접근 가능한 문서 ID 조회
+                perm_query = select(DocumentPermission.document_id).where(
+                    DocumentPermission.department_id == user_department_id,
+                    DocumentPermission.can_read == True
+                ).distinct()
+
+                result = await db.execute(perm_query)
+                accessible_doc_ids = [row[0] for row in result.fetchall()]
+
+                if accessible_doc_ids:
+                    # Qdrant 필터: document_id가 접근 가능한 목록에 있어야 함
+                    must_filters.append({
+                        "key": "document_id",
+                        "match": {"any": accessible_doc_ids}
+                    })
+                    logger.info(f"Department {user_department_id} can access {len(accessible_doc_ids)} documents")
+                else:
+                    # 접근 가능한 문서가 없으면 빈 결과 반환
+                    logger.warning(f"Department {user_department_id} has no accessible documents")
+                    return []
+
+            # 2-2. 레거시 부서 필터 (deprecated)
+            elif department:
                 must_filters.append({
                     "key": "metadata.department",
                     "match": {"value": department}
                 })
 
+            # 2-3. 검색 범위 필터 (문서 타입)
             if search_scope:
                 must_filters.append({
                     "key": "metadata.document_type",
@@ -236,10 +278,11 @@ class AIService:
                 results.append({
                     "chunk_text": payload.get("chunk_text", ""),
                     "score": point.get("score", 0.0),
-                    "metadata": payload.get("metadata", {})
+                    "metadata": payload.get("metadata", {}),
+                    "document_id": payload.get("document_id")  # Include document_id
                 })
 
-            logger.info(f"Qdrant search completed - {len(results)} results")
+            logger.info(f"Qdrant search completed - {len(results)} results (permission filtered)")
             return results
 
         except Exception as e:

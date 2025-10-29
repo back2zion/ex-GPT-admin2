@@ -5,6 +5,7 @@ TDD 방식으로 구현: 테스트가 정의한 인터페이스 준수
 import re
 import asyncio
 from typing import Optional, Dict
+from pathlib import Path
 import httpx
 from app.services.stt_service import STTService
 
@@ -14,7 +15,7 @@ class STTClientService:
 
     def __init__(
         self,
-        api_base_url: str = "http://localhost:8001",
+        api_base_url: str = "http://localhost:9200",  # ex-GPT-STT 실제 포트
         poll_interval: float = 5.0,
         timeout: float = 120.0
     ):
@@ -89,16 +90,49 @@ class STTClientService:
         if recipient_emails:
             payload["recipient_emails"] = recipient_emails
 
-        # HTTP 요청
+        # HTTP 요청 (실제 ex-GPT-STT API 엔드포인트 사용)
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            # Note: 실제 구현시 multipart/form-data로 파일 업로드
-            # 지금은 파일 경로만 전송 (MinIO/S3에서 다운로드 가능하다고 가정)
-            payload["audio_file_path"] = audio_file_path
+            # 실제 파일 업로드 (multipart/form-data)
+            # ex-GPT-STT는 /api/v1/stt/upload 엔드포인트 사용
 
-            response = await client.post(
-                f"{self.api_base_url}/process-audio",
-                json=payload
-            )
+            # 로컬 파일 시스템에 있는 경우만 직접 업로드
+            if audio_file_path.startswith("/") or audio_file_path.startswith("C:"):
+                # 로컬 파일
+                with open(audio_file_path, "rb") as f:
+                    files = {"file": (Path(audio_file_path).name, f, "audio/mpeg")}
+                    data = {
+                        "sender_name": sender_name,
+                        "meeting_title": meeting_title,
+                    }
+
+                    if sender_email:
+                        data["sender_email"] = sender_email
+                    if recipient_emails:
+                        data["recipient_emails"] = ",".join(recipient_emails)
+
+                    response = await client.post(
+                        f"{self.api_base_url}/api/v1/stt/upload",
+                        files=files,
+                        data=data
+                    )
+            else:
+                # MinIO/S3 경로인 경우 - 파일 경로만 전달
+                # (ex-GPT-STT가 MinIO에서 직접 다운로드)
+                data = {
+                    "audio_file_path": audio_file_path,
+                    "sender_name": sender_name,
+                    "meeting_title": meeting_title,
+                }
+
+                if sender_email:
+                    data["sender_email"] = sender_email
+                if recipient_emails:
+                    data["recipient_emails"] = ",".join(recipient_emails)
+
+                response = await client.post(
+                    f"{self.api_base_url}/api/v1/stt/upload",
+                    json=data
+                )
 
             # 에러 처리
             response.raise_for_status()
@@ -117,7 +151,7 @@ class STTClientService:
         """
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.get(
-                f"{self.api_base_url}/status/{task_id}"
+                f"{self.api_base_url}/api/v1/stt/status/{task_id}"
             )
             response.raise_for_status()
             return response.json()
@@ -141,11 +175,52 @@ class STTClientService:
             }
         """
         async with httpx.AsyncClient(timeout=self.timeout) as client:
+            # ex-GPT-STT는 status 엔드포인트에서 결과도 반환
             response = await client.get(
-                f"{self.api_base_url}/result/{task_id}"
+                f"{self.api_base_url}/api/v1/stt/status/{task_id}"
             )
             response.raise_for_status()
             return response.json()
+
+    async def download_transcription_file(self, task_id: str) -> str:
+        """
+        전사 결과 txt 파일 다운로드 (500만건 처리 핵심 기능)
+
+        Args:
+            task_id: 작업 ID
+
+        Returns:
+            str: 전사 결과 텍스트
+
+        Raises:
+            HTTPException: 파일 다운로드 실패
+        """
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.get(
+                f"{self.api_base_url}/api/v1/download/{task_id}/transcription"
+            )
+            response.raise_for_status()
+            return response.text
+
+    async def download_minutes_file(self, task_id: str) -> str:
+        """
+        회의록 txt 파일 다운로드
+
+        Args:
+            task_id: 작업 ID
+
+        Returns:
+            str: 회의록 텍스트
+
+        Raises:
+            HTTPException: 파일 다운로드 실패
+        """
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.get(
+                f"{self.api_base_url}/api/v1/download/{task_id}/minutes"
+            )
+            response.raise_for_status()
+            return response.text
 
     async def wait_for_completion(
         self,

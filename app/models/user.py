@@ -31,8 +31,8 @@ class User(Base, TimestampMixin):
     roles = relationship("Role", secondary=user_roles, back_populates="users")
 
     # GPT 접근 권한 관련
-    gpt_access_granted = Column(Boolean, default=False, comment="GPT 접근 허용 여부")
-    allowed_model = Column(String(100), nullable=True, comment="허용된 모델명")
+    gpt_access_granted = Column(Boolean, default=False, comment="ex-GPT 접근 허용 여부")
+    allowed_model = Column(String(100), nullable=True, comment="할당된 LLM 모델 (Qwen235B, Qwen32B, 70B 등)")
     last_login_at = Column(DateTime(timezone=True), nullable=True, comment="마지막 로그인 시간")
 
     # 조직 및 인사 정보

@@ -10,8 +10,9 @@ from datetime import datetime, timedelta, timezone
 
 from app.core.database import get_db
 from app.models.user import User
-from app.models.access import AccessRequest, AccessRequestStatus
+from app.models.access import AccessRequest, AccessRequestStatus, AccessChangeHistory, AccessChangeAction
 from app.models.permission import Department
+from app.middleware.spring_session_auth import get_current_user_optional
 from app.schemas.gpt_access import (
     UsersListResponse,
     UserGPTAccessResponse,
@@ -23,7 +24,9 @@ from app.schemas.gpt_access import (
     AccessRequestResponse,
     ApproveRequestRequest,
     RejectRequestRequest,
-    ProcessRequestResponse
+    ProcessRequestResponse,
+    AccessChangeHistoryResponse,
+    AccessChangeHistoryListResponse
 )
 from app.schemas.gpt_stats import (
     DepartmentStatsListResponse,
@@ -33,6 +36,39 @@ from app.schemas.gpt_stats import (
 )
 
 router = APIRouter(prefix="/api/v1/admin/gpt-access", tags=["admin-gpt-access"])
+
+
+async def get_admin_user_id(db: AsyncSession, current_user: dict) -> int:
+    """
+    세션 사용자 정보에서 실제 DB user ID 조회
+
+    Args:
+        db: 데이터베이스 세션
+        current_user: Spring Session에서 가져온 사용자 정보 {"user_id": "username", ...}
+
+    Returns:
+        int: 데이터베이스 user ID
+    """
+    username = current_user.get("user_id", "admin")
+
+    # username으로 사용자 조회
+    query = select(User).where(User.username == username)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    if user:
+        return user.id
+
+    # 사용자가 없으면 첫 번째 superuser 사용
+    query = select(User).where(User.is_superuser == True).limit(1)
+    result = await db.execute(query)
+    superuser = result.scalar_one_or_none()
+
+    if superuser:
+        return superuser.id
+
+    # 아무도 없으면 에러
+    raise HTTPException(status_code=500, detail="관리자 사용자를 찾을 수 없습니다")
 
 
 @router.get("/users", response_model=UsersListResponse)
@@ -70,7 +106,13 @@ async def list_users_with_gpt_access(
             gpt_access_granted=user.gpt_access_granted,
             allowed_model=user.allowed_model,
             last_login_at=user.last_login_at,
-            is_active=user.is_active
+            is_active=user.is_active,
+            # 도로공사 조직 정보
+            employee_number=user.employee_number,
+            position=user.position,
+            rank=user.rank,
+            team=user.team,
+            job_category=user.job_category
         ))
 
     return UsersListResponse(users=users_data, total=len(users_data))
@@ -79,12 +121,24 @@ async def list_users_with_gpt_access(
 @router.post("/grant", response_model=GrantAccessResponse)
 async def grant_gpt_access(
     request: GrantAccessRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[dict] = Depends(get_current_user_optional)
 ):
     """
     GPT 접근 권한 부여
     - 단일 또는 여러 사용자에게 일괄 권한 부여
+    - 권한 변경 이력 자동 기록
     """
+    # 현재 로그인한 관리자 ID 조회 (인증 실패 시 기본 superuser 사용)
+    try:
+        admin_id = await get_admin_user_id(db, current_user or {})
+    except HTTPException:
+        # 인증 실패 시 첫 번째 superuser 사용
+        query = select(User).where(User.is_superuser == True).limit(1)
+        result = await db.execute(query)
+        superuser = result.scalar_one_or_none()
+        admin_id = superuser.id if superuser else 1
+
     # 사용자 조회
     query = select(User).where(User.id.in_(request.user_ids))
     result = await db.execute(query)
@@ -93,30 +147,68 @@ async def grant_gpt_access(
     if not users:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
 
-    # 권한 부여
+    # 권한 부여 + 모델 할당 + 이력 기록
     granted_count = 0
+    now = datetime.now(timezone.utc)
+
     for user in users:
+        old_model = user.allowed_model
+        old_access = user.gpt_access_granted
+
+        # NO-OP 체크: 이미 같은 모델이 할당되어 있으면 스킵
+        if old_access and old_model == request.model:
+            continue
+
         user.gpt_access_granted = True
         user.allowed_model = request.model
         granted_count += 1
+
+        # 이력 기록: 신규 권한 부여 vs 모델 변경 구분
+        if not old_access:
+            action_type = AccessChangeAction.GRANT.value
+        else:
+            action_type = AccessChangeAction.MODEL_CHANGE.value
+
+        history = AccessChangeHistory(
+            user_id=user.id,
+            action=action_type,
+            changed_by=admin_id,
+            changed_at=now,
+            old_value=old_model,
+            new_value=request.model,
+            reason=f"관리자가 {request.model} 모델 권한 부여"
+        )
+        db.add(history)
 
     await db.commit()
 
     return GrantAccessResponse(
         granted_count=granted_count,
-        message=f"{granted_count}명의 사용자에게 GPT 접근 권한이 부여되었습니다"
+        message=f"{granted_count}명의 사용자에게 {request.model} 모델이 할당되었습니다"
     )
 
 
 @router.post("/revoke", response_model=RevokeAccessResponse)
 async def revoke_gpt_access(
     request: RevokeAccessRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[dict] = Depends(get_current_user_optional)
 ):
     """
     GPT 접근 권한 회수
     - 단일 또는 여러 사용자의 권한 일괄 회수
+    - 권한 변경 이력 자동 기록
     """
+    # 현재 로그인한 관리자 ID 조회 (인증 실패 시 기본 superuser 사용)
+    try:
+        admin_id = await get_admin_user_id(db, current_user or {})
+    except HTTPException:
+        # 인증 실패 시 첫 번째 superuser 사용
+        query = select(User).where(User.is_superuser == True).limit(1)
+        result = await db.execute(query)
+        superuser = result.scalar_one_or_none()
+        admin_id = superuser.id if superuser else 1
+
     # 사용자 조회
     query = select(User).where(User.id.in_(request.user_ids))
     result = await db.execute(query)
@@ -125,18 +217,38 @@ async def revoke_gpt_access(
     if not users:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
 
-    # 권한 회수
+    # 권한 회수 + 이력 기록
     revoked_count = 0
+    now = datetime.now(timezone.utc)
+
     for user in users:
+        # NO-OP 체크: 이미 권한이 없으면 스킵
+        if not user.gpt_access_granted:
+            continue
+
+        old_model = user.allowed_model
+
         user.gpt_access_granted = False
         user.allowed_model = None
         revoked_count += 1
+
+        # 이력 기록
+        history = AccessChangeHistory(
+            user_id=user.id,
+            action=AccessChangeAction.REVOKE.value,
+            changed_by=admin_id,
+            changed_at=now,
+            old_value=old_model,
+            new_value=None,
+            reason="관리자가 GPT 접근 권한 회수"
+        )
+        db.add(history)
 
     await db.commit()
 
     return RevokeAccessResponse(
         revoked_count=revoked_count,
-        message=f"{revoked_count}명의 사용자로부터 GPT 접근 권한이 회수되었습니다"
+        message=f"{revoked_count}명의 사용자로부터 ex-GPT 접근 권한이 회수되었습니다"
     )
 
 
@@ -354,4 +466,65 @@ async def get_model_distribution(
     return ModelDistributionListResponse(
         models=models_data,
         total_users_with_access=total_users
+    )
+
+
+@router.get("/history", response_model=AccessChangeHistoryListResponse)
+async def get_access_change_history(
+    user_id: Optional[int] = Query(None, description="특정 사용자 필터"),
+    action: Optional[str] = Query(None, description="액션 필터 (grant, revoke, model_change)"),
+    limit: int = Query(100, description="조회 개수"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    GPT 접근 권한 변경 이력 조회 (감사 로그)
+    - user_id: 특정 사용자의 이력만 조회
+    - action: 특정 액션만 조회
+    - limit: 최대 조회 개수
+    """
+    # 이력 조회
+    query = select(AccessChangeHistory).options(
+        selectinload(AccessChangeHistory.user).selectinload(User.department),
+        selectinload(AccessChangeHistory.admin)
+    ).order_by(AccessChangeHistory.changed_at.desc())
+
+    # 필터 적용
+    if user_id:
+        query = query.where(AccessChangeHistory.user_id == user_id)
+
+    if action:
+        try:
+            action_enum = AccessChangeAction(action.lower())
+            query = query.where(AccessChangeHistory.action == action_enum)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"잘못된 액션: {action}")
+
+    # 개수 제한
+    query = query.limit(limit)
+
+    result = await db.execute(query)
+    history_records = result.scalars().all()
+
+    # 응답 생성
+    history_data = []
+    for record in history_records:
+        history_data.append(AccessChangeHistoryResponse(
+            id=record.id,
+            user_id=record.user_id,
+            username=record.user.username if record.user else None,
+            full_name=record.user.full_name if record.user else None,
+            employee_number=record.user.employee_number if record.user else None,
+            department_name=record.user.department.name if record.user and record.user.department else None,
+            action=record.action.value,
+            changed_by=record.changed_by,
+            admin_name=record.admin.full_name if record.admin else None,
+            changed_at=record.changed_at,
+            old_value=record.old_value,
+            new_value=record.new_value,
+            reason=record.reason
+        ))
+
+    return AccessChangeHistoryListResponse(
+        history=history_data,
+        total=len(history_data)
     )

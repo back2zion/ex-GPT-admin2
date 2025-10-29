@@ -3,17 +3,20 @@ Documents API Router
 학습데이터 관리 - 문서 CRUD API (Secure Coding Applied)
 """
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
 import os
+import io
 
 from app.core.database import get_db
 from app.models.document import Document, DocumentType, DocumentStatus
 from app.models.document_vector import DocumentVector, VectorStatus
 from app.models.category import Category
+from app.models.document_permission import DocumentPermission
 from app.schemas.document import (
     DocumentCreate,
     DocumentUpdate,
@@ -531,3 +534,141 @@ async def upload_document(
         print(f"[UPLOAD ERROR] Exception: {str(e)}")
         print(f"[UPLOAD ERROR] Traceback:\n{error_trace}")
         raise HTTPException(status_code=500, detail=f"업로드 실패: {str(e)}")
+
+
+@router.get("/{document_id}/download")
+async def download_document(
+    document_id: int,
+    user_department_id: Optional[int] = Query(None, description="사용자 부서 ID (권한 체크용)"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    문서 파일 다운로드 (권한 체크 포함)
+
+    Secure:
+    - Permission checking based on user's department
+    - Validates document exists
+    - Checks file availability in MinIO
+    - Returns presigned URL or streams file
+
+    Args:
+        document_id: 문서 ID
+        user_department_id: 사용자 부서 ID (권한 체크용)
+
+    Returns:
+        StreamingResponse: 파일 스트림
+    """
+    from app.services.minio_service import minio_service
+
+    # 1. Find document
+    query = select(Document).where(Document.id == document_id)
+    result = await db.execute(query)
+    document = result.scalar_one_or_none()
+
+    if not document:
+        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
+
+    if not document.file_path:
+        raise HTTPException(status_code=400, detail="다운로드할 파일이 없습니다")
+
+    # 2. Check permissions (if user_department_id is provided)
+    if user_department_id is not None:
+        # Check if user's department has read permission
+        perm_query = select(DocumentPermission).where(
+            and_(
+                DocumentPermission.document_id == document_id,
+                DocumentPermission.department_id == user_department_id,
+                DocumentPermission.can_read == True
+            )
+        )
+        perm_result = await db.execute(perm_query)
+        permission = perm_result.scalar_one_or_none()
+
+        if not permission:
+            raise HTTPException(
+                status_code=403,
+                detail=f"해당 부서({user_department_id})는 이 문서에 대한 접근 권한이 없습니다"
+            )
+
+    # 3. Get file from MinIO
+    try:
+        file_data = minio_service.get_file(document.file_path)
+
+        if file_data is None:
+            raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다 (MinIO)")
+
+        # Determine content type
+        content_type = document.mime_type or "application/octet-stream"
+
+        # Encode filename for Content-Disposition (RFC 2231)
+        from urllib.parse import quote
+        encoded_filename = quote(document.file_name)
+
+        # Create streaming response
+        return StreamingResponse(
+            io.BytesIO(file_data),
+            media_type=content_type,
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}",
+                "Content-Length": str(len(file_data))
+            }
+        )
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        print(f"[DOWNLOAD ERROR] {str(e)}")
+        raise HTTPException(status_code=500, detail=f"파일 다운로드 실패: {str(e)}")
+
+
+@router.get("/{document_id}/check-permission")
+async def check_document_permission(
+    document_id: int,
+    user_department_id: int = Query(..., description="사용자 부서 ID"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    문서 접근 권한 확인
+
+    Args:
+        document_id: 문서 ID
+        user_department_id: 사용자 부서 ID
+
+    Returns:
+        dict: 권한 정보 {can_read, can_write, can_delete}
+    """
+    # Check if document exists
+    doc_query = select(Document).where(Document.id == document_id)
+    doc_result = await db.execute(doc_query)
+    document = doc_result.scalar_one_or_none()
+
+    if not document:
+        raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
+
+    # Check permissions
+    perm_query = select(DocumentPermission).where(
+        and_(
+            DocumentPermission.document_id == document_id,
+            DocumentPermission.department_id == user_department_id
+        )
+    )
+    perm_result = await db.execute(perm_query)
+    permission = perm_result.scalar_one_or_none()
+
+    if not permission:
+        return {
+            "has_permission": False,
+            "can_read": False,
+            "can_write": False,
+            "can_delete": False,
+            "message": "이 부서는 해당 문서에 대한 권한이 없습니다"
+        }
+
+    return {
+        "has_permission": True,
+        "can_read": permission.can_read,
+        "can_write": permission.can_write,
+        "can_delete": permission.can_delete,
+        "document_id": document_id,
+        "department_id": user_department_id
+    }

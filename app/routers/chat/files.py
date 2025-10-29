@@ -7,9 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from app.core.database import get_db
 from app.services.minio_service import minio_service
-from app.utils.auth import get_current_user_from_session
+from app.utils.auth import get_optional_current_user_from_session
 from app.services.chat_service import validate_room_id
 from pathlib import Path
+from typing import Optional
 import logging
 
 router = APIRouter(prefix="/api/v1/files", tags=["chat-files"])
@@ -36,7 +37,7 @@ MAX_FILE_SIZE = 200 * 1024 * 1024
 async def upload_chat_file(
     file: UploadFile = File(...),
     room_id: str = Form(...),
-    current_user: dict = Depends(get_current_user_from_session),
+    current_user: Optional[dict] = Depends(get_optional_current_user_from_session),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -45,7 +46,7 @@ async def upload_chat_file(
     Args:
         file: 업로드할 파일
         room_id: 대화방 ID
-        current_user: 인증된 사용자
+        current_user: 인증된 사용자 (Optional - 없으면 room_id에서 추출)
         db: 데이터베이스 세션
 
     Returns:
@@ -57,12 +58,41 @@ async def upload_chat_file(
         - Path Traversal 방지
         - Room ID 소유권 검증
     """
-    user_id = current_user["user_id"]
+    # user_id 추출: 세션에서 또는 room_id에서
+    if current_user:
+        user_id = current_user["user_id"]
+    else:
+        # room_id 형식: {user_id}_{timestamp}
+        if "_" in room_id:
+            user_id = room_id.split("_")[0]
+        else:
+            user_id = "anonymous"
+        logger.info(f"No session - extracted user_id from room_id: {user_id}")
 
-    # 1. 권한 검증: room_id가 사용자 소유인지 확인
+    # 1. Room ID 검증 및 자동 생성
     is_valid = await validate_room_id(room_id, user_id, db)
     if not is_valid:
-        raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
+        # Room이 DB에 없으면 자동 생성 (첫 파일 업로드 시)
+        logger.info(f"Creating new room - room_id: {room_id}, user_id: {user_id}")
+        await db.execute(
+            text("""
+            INSERT INTO "USR_CNVS_SMRY" (
+                "CNVS_IDT_ID", "USR_ID", "CNVS_SMRY_TXT",
+                "USE_YN", "REG_DT"
+            ) VALUES (
+                :room_id, :user_id, :summary,
+                'Y', CURRENT_TIMESTAMP
+            )
+            ON CONFLICT ("CNVS_IDT_ID") DO NOTHING
+            """),
+            {
+                "room_id": room_id,
+                "user_id": user_id,
+                "summary": f"파일 업로드 대화방"
+            }
+        )
+        await db.commit()
+        logger.info(f"Room created successfully - room_id: {room_id}")
 
     # 2. 파일 타입 검증
     file_ext = Path(file.filename).suffix.lower()
@@ -125,9 +155,67 @@ async def upload_chat_file(
 
     logger.info(f"File uploaded - room_id: {room_id}, file: {file.filename}, size: {uploaded_size}")
 
-    # TODO: 벡터화 트리거 (백그라운드 작업)
-    # from app.tasks.vectorization import trigger_vectorization
-    # await trigger_vectorization(file_uid, room_id)
+    # 벡터화 트리거 (백그라운드 작업)
+    from app.services.text_extraction_service import text_extraction_service
+    from app.services.vectorization_service import VectorizationService
+    import asyncio
+
+    async def vectorize_personal_file():
+        """개인 파일 벡터화 (백그라운드) - session_collection-v2에 저장"""
+        try:
+            logger.info(f"Starting vectorization for {file_uid} in session_collection-v2")
+
+            # 1. MinIO에서 파일 다운로드
+            file_bytes = minio_service.get_file(object_name)
+            if not file_bytes:
+                logger.error(f"Failed to download file from MinIO: {object_name}")
+                return
+
+            # 2. 텍스트 추출
+            from io import BytesIO
+            file_obj = BytesIO(file_bytes)
+            text = text_extraction_service.extract_text(file_obj, file.filename, file.content_type or 'application/octet-stream')
+
+            if not text or len(text.strip()) < 10:
+                logger.warning(f"No text extracted from {file.filename}")
+                return
+
+            logger.info(f"Extracted {len(text)} characters from {file.filename}")
+
+            # 3. 벡터화 및 Qdrant 저장 (session_collection-v2 사용)
+            metadata = {
+                "filename": file.filename,
+                "file_uid": file_uid,
+                "session_id": room_id,  # ex-gpt-api expects "session_id" key
+                "room_id": room_id,      # Keep for compatibility
+                "user_id": user_id,
+                "file_type": file_ext[1:],
+                "file_size": uploaded_size,
+                "upload_time": "now",
+                "source": "personal_upload"  # ex-gpt-api uses "source" field
+            }
+
+            # Use session collection for personal files
+            session_vectorization_service = VectorizationService(collection_name="session_collection-v2")
+
+            # Use a temporary document_id (negative to avoid collision with admin docs)
+            # Personal files don't go to doc_bas_lst table
+            temp_doc_id = hash(file_uid) % 1000000  # Pseudo document ID
+
+            await session_vectorization_service.vectorize_document(
+                document_id=temp_doc_id,
+                text=text,
+                db=db,
+                metadata=metadata
+            )
+
+            logger.info(f"✅ Vectorization completed for {file.filename} → session_collection-v2")
+
+        except Exception as e:
+            logger.error(f"Vectorization failed for {file_uid}: {e}", exc_info=True)
+
+    # 백그라운드 실행 (응답 차단하지 않음)
+    asyncio.create_task(vectorize_personal_file())
 
     return {
         "success": True,

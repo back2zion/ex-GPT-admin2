@@ -21,18 +21,24 @@ import {
     ReferenceField,
     ReferenceInput,
     SelectInput,
+    AutocompleteInput,
     BooleanInput,
+    FunctionField,
     required,
     DeleteButton,
     EditButton,
     ShowButton,
     CreateButton,
+    SaveButton,
     TopToolbar,
     FilterButton,
     ExportButton,
-    useRecordContext
+    useRecordContext,
+    Toolbar,
+    Button
 } from 'react-admin';
 import { Chip, Paper, Grid, Typography, Box } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
 // ============================================
 // 문서 권한 목록
@@ -47,11 +53,30 @@ const DocumentPermissionListActions = () => (
 );
 
 const documentPermissionFilters = [
-    <ReferenceInput key="document_id" source="document_id" reference="documents" label="문서">
-        <SelectInput optionText="title" />
+    <ReferenceInput
+        key="document_id"
+        source="document_id"
+        reference="documents"
+        label="문서"
+        alwaysOn
+    >
+        <AutocompleteInput optionText="title" />
     </ReferenceInput>,
-    <ReferenceInput key="department_id" source="department_id" reference="departments" label="부서">
-        <SelectInput optionText="name" />
+    <ReferenceInput
+        key="department_id"
+        source="department_id"
+        reference="departments"
+        label="부서"
+    >
+        <AutocompleteInput optionText="name" />
+    </ReferenceInput>,
+    <ReferenceInput
+        key="approval_line_id"
+        source="approval_line_id"
+        reference="approval-lines"
+        label="결재라인"
+    >
+        <AutocompleteInput optionText="name" />
     </ReferenceInput>,
 ];
 
@@ -82,18 +107,29 @@ const PermissionSummaryField = () => {
     if (!record) return null;
 
     const permissions = [];
-    if (record.can_read) permissions.push('읽기');
-    if (record.can_write) permissions.push('쓰기');
-    if (record.can_delete) permissions.push('삭제');
+    if (record.can_read) permissions.push({ label: '읽기', color: 'success', icon: '✓' });
+    if (record.can_write) permissions.push({ label: '쓰기', color: 'warning', icon: '✓' });
+    if (record.can_delete) permissions.push({ label: '삭제', color: 'error', icon: '✓' });
+
+    if (permissions.length === 0) {
+        return <Chip label="권한 없음" size="small" color="default" />;
+    }
 
     return (
-        <div style={{ display: 'flex', gap: '4px' }}>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {permissions.map(perm => (
                 <Chip
-                    key={perm}
-                    label={perm}
+                    key={perm.label}
+                    label={perm.label}
                     size="small"
-                    color={perm === '읽기' ? 'success' : perm === '쓰기' ? 'warning' : 'error'}
+                    color={perm.color}
+                    sx={{
+                        fontWeight: 500,
+                        '& .MuiChip-label': {
+                            paddingLeft: '8px',
+                            paddingRight: '8px'
+                        }
+                    }}
                 />
             ))}
         </div>
@@ -113,29 +149,35 @@ export const DocumentPermissionList = () => (
             bulkActionButtons={false}
             sx={{
                 '& .RaDatagrid-table': {
-                    tableLayout: 'fixed',
+                    tableLayout: 'auto',
                     width: '100%'
                 },
                 '& .RaDatagrid-headerCell': {
                     backgroundColor: '#0a2986',
                     color: 'white',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    padding: '12px 8px'
+                },
+                '& .RaDatagrid-rowCell': {
+                    padding: '12px 8px'
                 },
                 '& .RaDatagrid-row:hover': {
-                    backgroundColor: '#f8f8f8'
+                    backgroundColor: '#f8f8f8',
+                    cursor: 'pointer'
                 }
             }}
         >
-            <TextField source="id" label="ID" sortable={false} sx={{ width: '70px' }} />
-            <ReferenceField source="document_id" reference="documents" label="문서" link="show" sx={{ width: '250px' }}>
-                <TextField source="title" />
-            </ReferenceField>
-            <PermissionTargetField label="권한 대상" sx={{ width: '200px' }} />
-            <PermissionSummaryField label="권한" sx={{ width: '220px' }} />
-            <DateField source="created_at" label="생성일" showTime sx={{ width: '180px' }} />
-            <ShowButton label="상세" sx={{ width: '80px' }} />
-            <EditButton label="수정" sx={{ width: '80px' }} />
-            <DeleteButton label="삭제" sx={{ width: '80px' }} />
+            <TextField source="id" label="ID" sortable={false} />
+            <FunctionField
+                label="문서"
+                render={record => record.document ? record.document.title : '-'}
+            />
+            <PermissionTargetField label="권한 대상" />
+            <PermissionSummaryField label="권한" />
+            <DateField source="created_at" label="생성일" showTime />
+            <ShowButton label="상세" />
+            <EditButton label="수정" />
+            <DeleteButton label="삭제" />
         </Datagrid>
     </List>
 );
@@ -291,7 +333,7 @@ export const DocumentPermissionEdit = () => (
                         label="문서"
                         validate={[required()]}
                     >
-                        <SelectInput
+                        <AutocompleteInput
                             optionText="title"
                             fullWidth
                             disabled
@@ -311,7 +353,7 @@ export const DocumentPermissionEdit = () => (
                                 reference="departments"
                                 label="부서 (선택)"
                             >
-                                <SelectInput
+                                <AutocompleteInput
                                     optionText="name"
                                     fullWidth
                                     helperText="부서 또는 결재라인 중 하나 선택"
@@ -324,7 +366,7 @@ export const DocumentPermissionEdit = () => (
                                 reference="approval-lines"
                                 label="결재라인 (선택)"
                             >
-                                <SelectInput
+                                <AutocompleteInput
                                     optionText="name"
                                     fullWidth
                                     helperText="부서 또는 결재라인 중 하나 선택"
@@ -374,70 +416,122 @@ export const DocumentPermissionEdit = () => (
 // 문서 권한 생성
 // ============================================
 
+// Custom Toolbar with Save and Cancel buttons
+const CreateEditToolbar = () => {
+    const navigate = useNavigate();
+
+    return (
+        <Toolbar>
+            <SaveButton label="저장" />
+            <Button
+                label="취소"
+                onClick={() => navigate('/document-permissions')}
+                sx={{ marginLeft: 2 }}
+            />
+        </Toolbar>
+    );
+};
+
 export const DocumentPermissionCreate = () => (
     <Create title="문서 권한 생성" redirect="list">
         <SimpleForm
+            toolbar={<CreateEditToolbar />}
             sx={{
+                maxWidth: '800px',
+                margin: '0 auto',
                 '& .MuiFormControl-root': { marginBottom: '16px' }
             }}
         >
-            <ReferenceInput
-                source="document_id"
-                reference="documents"
-                label="문서"
-                validate={[required()]}
-            >
-                <SelectInput
-                    optionText="title"
-                    fullWidth
-                    helperText="권한을 부여할 문서 선택"
-                />
-            </ReferenceInput>
+            <Box sx={{ width: '100%', maxWidth: 800 }}>
+                <Typography variant="h6" gutterBottom sx={{ mt: 2, mb: 2 }}>
+                    📄 문서 선택
+                </Typography>
+                <Paper elevation={2} sx={{ mb: 3, p: 3, backgroundColor: '#f8f9fa' }}>
+                    <ReferenceInput
+                        source="document_id"
+                        reference="documents"
+                        label="문서"
+                        validate={[required()]}
+                    >
+                        <AutocompleteInput
+                            optionText="title"
+                            fullWidth
+                            helperText="권한을 부여할 문서 선택 (검색 가능)"
+                        />
+                    </ReferenceInput>
+                </Paper>
 
-            <ReferenceInput
-                source="department_id"
-                reference="departments"
-                label="부서 (선택)"
-            >
-                <SelectInput
-                    optionText="name"
-                    fullWidth
-                    helperText="부서 또는 결재라인 중 하나 선택"
-                />
-            </ReferenceInput>
+                <Typography variant="h6" gutterBottom sx={{ mt: 3, mb: 2 }}>
+                    👥 권한 대상 (부서 또는 결재라인 중 하나 선택)
+                </Typography>
+                <Paper elevation={2} sx={{ mb: 3, p: 3, backgroundColor: '#fff9e6' }}>
+                    <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                            <ReferenceInput
+                                source="department_id"
+                                reference="departments"
+                                label="부서"
+                            >
+                                <AutocompleteInput
+                                    optionText="name"
+                                    fullWidth
+                                    helperText="부서 선택 시 결재라인은 비워두세요 (검색 가능)"
+                                />
+                            </ReferenceInput>
+                        </Grid>
+                        <Grid item xs={12}>
+                            <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', my: 1, color: 'text.secondary' }}>
+                                또는
+                            </Typography>
+                        </Grid>
+                        <Grid item xs={12}>
+                            <ReferenceInput
+                                source="approval_line_id"
+                                reference="approval-lines"
+                                label="결재라인"
+                            >
+                                <AutocompleteInput
+                                    optionText="name"
+                                    fullWidth
+                                    helperText="결재라인 선택 시 부서는 비워두세요 (검색 가능)"
+                                />
+                            </ReferenceInput>
+                        </Grid>
+                    </Grid>
+                </Paper>
 
-            <ReferenceInput
-                source="approval_line_id"
-                reference="approval-lines"
-                label="결재라인 (선택)"
-            >
-                <SelectInput
-                    optionText="name"
-                    fullWidth
-                    helperText="부서 또는 결재라인 중 하나 선택"
-                />
-            </ReferenceInput>
-
-            <BooleanInput
-                source="can_read"
-                label="읽기 권한"
-                defaultValue={true}
-                helperText="문서 조회 권한"
-            />
-
-            <BooleanInput
-                source="can_write"
-                label="쓰기 권한"
-                defaultValue={false}
-                helperText="문서 수정 권한"
-            />
-
-            <BooleanInput
-                source="can_delete"
-                label="삭제 권한"
-                defaultValue={false}
-                helperText="문서 삭제 권한"
-            />
+                <Typography variant="h6" gutterBottom sx={{ mt: 3, mb: 2 }}>
+                    🔐 권한 설정
+                </Typography>
+                <Paper elevation={2} sx={{ mb: 3, p: 3, backgroundColor: '#f0f7ff' }}>
+                    <Grid container spacing={2}>
+                        <Grid item xs={12} sm={4}>
+                            <BooleanInput
+                                source="can_read"
+                                label="읽기 권한"
+                                defaultValue={true}
+                                helperText="문서 조회 권한"
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                            <BooleanInput
+                                source="can_write"
+                                label="쓰기 권한"
+                                defaultValue={false}
+                                helperText="문서 수정 권한"
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                            <BooleanInput
+                                source="can_delete"
+                                label="삭제 권한"
+                                defaultValue={false}
+                                helperText="문서 삭제 권한"
+                            />
+                        </Grid>
+                    </Grid>
+                </Paper>
+            </Box>
         </SimpleForm>
     </Create>
 );

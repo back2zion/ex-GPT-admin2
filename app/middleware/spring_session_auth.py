@@ -57,6 +57,12 @@ class SpringSessionAuth:
 
             if response.status_code == 200:
                 user_info = response.json()
+
+                # 시큐어 코딩: authenticated 필드 검증
+                if not user_info.get("authenticated", False):
+                    logger.warning(f"세션 인증 실패: {user_info.get('error', 'Unknown error')}")
+                    raise HTTPException(status_code=401, detail="Session expired or invalid")
+
                 logger.info(f"세션 검증 성공: user_id={user_info.get('user_id')}")
                 return user_info
             elif response.status_code == 401:

@@ -33,7 +33,7 @@ spring:
   datasource:
     driver-class-name: com.edb.Driver
     url: jdbc:edb://1.215.235.250:25444/AGENAI
-    username: wisenut_main
+    username: wisenut_dev
     password: express!12
     hikari:
       maximum-pool-size: 20

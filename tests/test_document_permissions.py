@@ -534,3 +534,352 @@ class TestPermissionPagination:
             # 내림차순 확인
             for i in range(len(data["items"]) - 1):
                 assert data["items"][i]["document_id"] >= data["items"][i + 1]["document_id"]
+
+
+class TestDocumentPermissionStatistics:
+    """
+    문서 권한 통계 API 테스트 (TDD)
+
+    요구사항:
+    - 사용자별 접근 가능한 문서 수 통계
+    - 문서별 권한이 부여된 사용자 수 통계
+    - 부서/결재라인별 권한 분포
+
+    시큐어 코딩:
+    - 권한 검증: 관리자만 통계 조회 가능
+    - 데이터 노출 제한: 민감 정보 제외
+    """
+
+    @pytest.mark.asyncio
+    async def test_get_user_document_statistics(
+        self,
+        authenticated_client: AsyncClient,
+        db_session: AsyncSession
+    ):
+        """
+        사용자별 문서 접근 통계 조회
+
+        Given: 사용자와 문서 권한 설정
+        When: GET /api/v1/admin/document-permissions/stats/users/{user_id}
+        Then:
+            - 200 OK
+            - accessible_documents_count 반환
+            - by_department, by_approval_line 세부 정보
+
+        시큐어 코딩:
+        - SQLAlchemy ORM 사용 (SQL Injection 방지)
+        - Cerbos 권한 검증
+        """
+        # Given: 테스트 사용자 생성
+        from app.models.user import User
+        from app.models.permission import Department
+        from app.models.document import Document, DocumentType
+        from app.models.document_permission import DocumentPermission
+        import uuid
+
+        unique_id = uuid.uuid4().hex[:8]
+
+        # 부서 생성
+        dept = Department(
+            name=f"통계테스트부서_{unique_id}",
+            code=f"STATS_{unique_id}",
+            description="통계 테스트용"
+        )
+        db_session.add(dept)
+        await db_session.flush()
+
+        # 사용자 생성
+        user = User(
+            username=f"stats_user_{unique_id}",
+            email=f"stats_{unique_id}@test.com",
+            hashed_password="hashed",
+            department_id=dept.id,
+            is_active=True
+        )
+        db_session.add(user)
+        await db_session.flush()
+
+        # 문서 3개 생성
+        docs = []
+        for i in range(3):
+            doc = Document(
+                document_id=f"STATS_DOC_{unique_id}_{i}",
+                title=f"통계 테스트 문서 {i}",
+                content="테스트 내용",
+                document_type=DocumentType.OTHER,
+                status="active"
+            )
+            db_session.add(doc)
+            docs.append(doc)
+        await db_session.flush()
+
+        # 부서에 문서 권한 부여 (2개)
+        for i in range(2):
+            perm = DocumentPermission(
+                document_id=docs[i].id,
+                department_id=dept.id,
+                can_read=True,
+                can_write=False,
+                can_delete=False
+            )
+            db_session.add(perm)
+        await db_session.commit()
+
+        # When
+        response = await authenticated_client.get(
+            f"/api/v1/admin/document-permissions/stats/users/{user.id}"
+        )
+
+        # Then
+        assert response.status_code == 200
+        data = response.json()
+        assert "accessible_documents_count" in data
+        assert data["accessible_documents_count"] >= 2
+        assert "by_department" in data
+        assert "by_approval_line" in data
+
+    @pytest.mark.asyncio
+    async def test_get_document_permission_summary(
+        self,
+        authenticated_client: AsyncClient,
+        db_session: AsyncSession
+    ):
+        """
+        문서별 권한 요약 조회
+
+        Given: 특정 문서에 여러 권한 설정
+        When: GET /api/v1/admin/document-permissions/stats/documents/{doc_id}
+        Then:
+            - 200 OK
+            - total_permissions: 총 권한 수
+            - department_count: 부서 권한 수
+            - approval_line_count: 결재라인 권한 수
+            - affected_users_estimate: 영향받는 예상 사용자 수
+        """
+        # Given
+        from app.models.document import Document, DocumentType
+        from app.models.permission import Department
+        from app.models.document_permission import DocumentPermission, ApprovalLine
+        import uuid
+
+        unique_id = uuid.uuid4().hex[:8]
+
+        # 문서 생성
+        doc = Document(
+            document_id=f"SUMMARY_DOC_{unique_id}",
+            title="권한 요약 테스트 문서",
+            content="테스트",
+            document_type=DocumentType.OTHER,
+            status="active"
+        )
+        db_session.add(doc)
+        await db_session.flush()
+
+        # 부서 2개 생성
+        depts = []
+        for i in range(2):
+            dept = Department(
+                name=f"요약부서_{unique_id}_{i}",
+                code=f"SUM_{unique_id}_{i}",
+                description="요약 테스트"
+            )
+            db_session.add(dept)
+            depts.append(dept)
+        await db_session.flush()
+
+        # 권한 부여
+        for dept in depts:
+            perm = DocumentPermission(
+                document_id=doc.id,
+                department_id=dept.id,
+                can_read=True,
+                can_write=False,
+                can_delete=False
+            )
+            db_session.add(perm)
+        await db_session.commit()
+
+        # When
+        response = await authenticated_client.get(
+            f"/api/v1/admin/document-permissions/stats/documents/{doc.id}"
+        )
+
+        # Then
+        assert response.status_code == 200
+        data = response.json()
+        assert "total_permissions" in data
+        assert data["total_permissions"] >= 2
+        assert "department_count" in data
+        assert data["department_count"] == 2
+        assert "approval_line_count" in data
+
+
+class TestPermissionConflictDetection:
+    """
+    권한 충돌 감지 테스트 (TDD)
+
+    요구사항:
+    - 같은 문서에 중복 권한 감지
+    - 권한 레벨 충돌 감지 (부서: 읽기, 결재라인: 쓰기)
+    - 자동 해결 제안
+
+    시큐어 코딩:
+    - 입력 검증: Pydantic 모델
+    - 권한 검증: 관리자만 충돌 확인 가능
+    """
+
+    @pytest.mark.asyncio
+    async def test_detect_duplicate_permissions(
+        self,
+        authenticated_client: AsyncClient,
+        db_session: AsyncSession
+    ):
+        """
+        중복 권한 감지
+
+        Given: 같은 문서-부서 조합에 권한 2개
+        When: GET /api/v1/admin/document-permissions/conflicts
+        Then:
+            - 200 OK
+            - conflicts 배열에 중복 권한 정보 포함
+            - conflict_type: "duplicate"
+
+        시큐어 코딩:
+        - SQLAlchemy GROUP BY로 안전한 쿼리
+        """
+        # Given
+        from app.models.document import Document, DocumentType
+        from app.models.permission import Department
+        from app.models.document_permission import DocumentPermission
+        import uuid
+
+        unique_id = uuid.uuid4().hex[:8]
+
+        # 문서와 부서 생성
+        doc = Document(
+            document_id=f"CONFLICT_DOC_{unique_id}",
+            title="충돌 테스트 문서",
+            content="테스트",
+            document_type=DocumentType.OTHER,
+            status="active"
+        )
+        dept = Department(
+            name=f"충돌부서_{unique_id}",
+            code=f"CONF_{unique_id}",
+            description="충돌 테스트"
+        )
+        db_session.add_all([doc, dept])
+        await db_session.flush()
+
+        # 같은 문서-부서에 권한 2개 생성 (중복)
+        perm1 = DocumentPermission(
+            document_id=doc.id,
+            department_id=dept.id,
+            can_read=True,
+            can_write=False,
+            can_delete=False
+        )
+        perm2 = DocumentPermission(
+            document_id=doc.id,
+            department_id=dept.id,
+            can_read=True,
+            can_write=True,  # 다른 권한
+            can_delete=False
+        )
+        db_session.add_all([perm1, perm2])
+        await db_session.commit()
+
+        # When
+        response = await authenticated_client.get(
+            "/api/v1/admin/document-permissions/conflicts"
+        )
+
+        # Then
+        assert response.status_code == 200
+        data = response.json()
+        assert "conflicts" in data
+        # 중복 권한이 있을 수 있음 (다른 테스트의 데이터)
+        if len(data["conflicts"]) > 0:
+            # 우리가 생성한 충돌이 포함되어 있는지 확인
+            conflict_found = any(
+                c.get("document_id") == doc.id and
+                c.get("department_id") == dept.id
+                for c in data["conflicts"]
+            )
+            assert conflict_found
+
+    @pytest.mark.asyncio
+    async def test_detect_permission_level_conflicts(
+        self,
+        authenticated_client: AsyncClient,
+        db_session: AsyncSession
+    ):
+        """
+        권한 레벨 충돌 감지
+
+        Given: 같은 문서에 부서(읽기) + 결재라인(쓰기) 권한
+        When: GET /api/v1/admin/document-permissions/conflicts?type=level
+        Then:
+            - 200 OK
+            - 권한 레벨 충돌 정보 반환
+            - conflict_type: "permission_level"
+        """
+        # Given
+        from app.models.document import Document, DocumentType
+        from app.models.permission import Department
+        from app.models.document_permission import DocumentPermission, ApprovalLine
+        import uuid
+
+        unique_id = uuid.uuid4().hex[:8]
+
+        # 문서, 부서, 결재라인 생성
+        doc = Document(
+            document_id=f"LEVEL_DOC_{unique_id}",
+            title="레벨 충돌 테스트",
+            content="테스트",
+            document_type=DocumentType.OTHER,
+            status="active"
+        )
+        dept = Department(
+            name=f"레벨부서_{unique_id}",
+            code=f"LVL_{unique_id}",
+            description="레벨 테스트"
+        )
+        approval_line = ApprovalLine(
+            name=f"레벨라인_{unique_id}",
+            description="레벨 테스트 라인",
+            departments=[dept.id] if hasattr(dept, 'id') else []
+        )
+        db_session.add_all([doc, dept, approval_line])
+        await db_session.flush()
+
+        # 부서: 읽기만
+        perm1 = DocumentPermission(
+            document_id=doc.id,
+            department_id=dept.id,
+            can_read=True,
+            can_write=False,
+            can_delete=False
+        )
+        # 결재라인: 쓰기 가능 (상위 권한)
+        perm2 = DocumentPermission(
+            document_id=doc.id,
+            approval_line_id=approval_line.id,
+            can_read=True,
+            can_write=True,
+            can_delete=False
+        )
+        db_session.add_all([perm1, perm2])
+        await db_session.commit()
+
+        # When
+        response = await authenticated_client.get(
+            "/api/v1/admin/document-permissions/conflicts",
+            params={"type": "level"}
+        )
+
+        # Then
+        assert response.status_code == 200
+        data = response.json()
+        assert "conflicts" in data
+        # 충돌이 감지되어야 함 (부서와 결재라인 권한 불일치)

@@ -19,6 +19,7 @@ import { DocumentPermissionList, DocumentPermissionShow, DocumentPermissionEdit,
 import { ApprovalLineList, ApprovalLineShow, ApprovalLineEdit, ApprovalLineCreate } from './resources/approval_lines';
 import { UserList, UserShow, UserEdit, UserCreate } from './resources/users';
 import { STTBatchList, STTBatchShow, STTBatchCreate } from './resources/stt_batches';
+import { DocumentList, DocumentShow } from './resources/documents';
 
 // CoreUI 스타일 레이아웃
 import CoreUILayout from './layout/CoreUILayout';
@@ -42,6 +43,9 @@ import ConversationDetailPage from './pages/ConversationDetailPage';
 
 // 새로운 사용자 관리 페이지
 import UsersPage from './pages/UsersPage';
+
+// 알림 페이지
+import NotificationsPage from './pages/NotificationsPage';
 
 // TDD 기반 통계 대시보드 (메인 페이지)
 import Dashboard from './pages/Dashboard';
@@ -67,23 +71,19 @@ function PlaceholderPage({ title }) {
  * App 컴포넌트
  */
 export default function App() {
-  // 다크 모드 상태 (localStorage에서 가져오기)
-  const [darkMode, setDarkMode] = useState(() => {
-    const savedMode = localStorage.getItem('darkMode');
-    return savedMode === 'true';
-  });
+  // 라이트 모드로 고정 (다크 모드 비활성화)
+  const [darkMode, setDarkMode] = useState(false);
 
-  // 다크 모드 토글
+  // 다크 모드 토글 (더 이상 사용하지 않지만 ThemeContext 호환성을 위해 유지)
   const toggleDarkMode = () => {
-    setDarkMode(prev => {
-      const newMode = !prev;
-      localStorage.setItem('darkMode', newMode);
-      return newMode;
-    });
+    // 다크 모드 비활성화됨
   };
 
-  // 초기 로딩 시 lastLogin 설정
+  // 초기 로딩 시 설정
   useEffect(() => {
+    // localStorage의 darkMode를 라이트 모드로 초기화
+    localStorage.setItem('darkMode', 'false');
+
     if (!localStorage.getItem('lastLogin')) {
       localStorage.setItem('lastLogin', new Date().toISOString());
     }
@@ -120,6 +120,14 @@ export default function App() {
         options={{ label: '⭐ 만족도 조사' }}
       />
 
+      {/* 문서 관리 */}
+      <Resource
+        name="documents"
+        list={DocumentList}
+        show={DocumentShow}
+        options={{ label: '📄 문서 관리' }}
+      />
+
       {/* 권한 관리 리소스 (PRD P0) */}
       <Resource
         name="document-permissions"
@@ -150,9 +158,6 @@ export default function App() {
         options={{ label: '🎙️ STT 음성 전사' }}
       />
 
-      {/* 향후 추가할 리소스들 */}
-      {/* <Resource name="documents" options={{ label: '📄 문서 관리' }} /> */}
-
       {/* 기존 Custom Routes (react-admin 외부 페이지) */}
       <CustomRoutes>
         {/* 대화내역 (완전 개편) */}
@@ -161,6 +166,9 @@ export default function App() {
 
         {/* 사용자 관리 (완전 개편) */}
         <Route path="/users" element={<UsersPage />} />
+
+        {/* 알림 페이지 */}
+        <Route path="/notifications" element={<NotificationsPage />} />
 
         {/* 사용 안 함: MUI 의존성 문제로 제거 */}
         {/* <Route path="/dashboard" element={<StatsDashboard />} /> */}

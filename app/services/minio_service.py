@@ -118,6 +118,27 @@ class MinIOService:
         except S3Error as e:
             raise ValueError(f"파일 URL 생성 실패: {e}")
 
+    def get_file(self, object_name: str) -> bytes:
+        """
+        파일 다운로드 (bytes 반환)
+        벡터화를 위한 파일 읽기에 사용
+        """
+        if not self.client:
+            raise RuntimeError("MinIO service is not available")
+
+        try:
+            response = self.client.get_object(self.bucket, object_name)
+            data = response.read()
+            response.close()
+            response.release_conn()
+            return data
+        except S3Error as e:
+            print(f"MinIO get file error: {e}")
+            return None
+        except Exception as e:
+            print(f"MinIO get file error: {e}")
+            return None
+
     def delete_file(self, object_name: str):
         """파일 삭제"""
         if not self.client:
