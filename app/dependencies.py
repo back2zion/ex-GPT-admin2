@@ -80,7 +80,7 @@ async def get_principal(
                 "auth_method": "spring_session"
             }
         )
-    except HTTPException:
+    except HTTPException as http_exc:
         # Spring 인증 실패 시 그대로 전파
         raise
     except Exception as e:

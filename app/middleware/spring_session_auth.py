@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 # 설정
 # Tomcat에 배포된 Spring Boot 애플리케이션 URL
-SPRING_BOOT_URL = "http://localhost:18180/exGenBotDS"
+# Docker 컨테이너에서 호스트 접근: 172.17.0.1 (Docker bridge network gateway)
+SPRING_BOOT_URL = "http://172.17.0.1:18180/exGenBotDS"
 SPRING_BOOT_VALIDATE_API = f"{SPRING_BOOT_URL}/api/auth/validate"
 
 
@@ -170,6 +171,23 @@ async def get_current_user(
         ...
     """
     return await spring_auth.get_current_user(JSESSIONID)
+
+
+# Optional: 인증이 선택적인 경우 (개발 편의용)
+async def get_current_user_optional(
+    JSESSIONID: Optional[str] = Cookie(None)
+) -> Optional[Dict]:
+    """
+    현재 로그인한 사용자 정보 반환 (선택적)
+    인증이 실패해도 None을 반환하고 에러를 발생시키지 않음
+    """
+    if not JSESSIONID:
+        return None
+
+    try:
+        return await spring_auth.get_current_user(JSESSIONID)
+    except HTTPException:
+        return None
 
 
 # Optional: 관리자 권한 체크

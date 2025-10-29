@@ -438,3 +438,336 @@ async def list_email_logs(
     query = query.order_by(desc(STTEmailLog.created_at)).offset(skip).limit(limit)
     result = await db.execute(query)
     return result.scalars().all()
+
+
+# ============================================
+# 배치 결과 파일 다운로드 API (500만건 처리)
+# ============================================
+
+@router.get("/{batch_id}/download-all")
+async def download_batch_results(
+    batch_id: int,
+    include_minutes: bool = Query(False, description="회의록 포함 여부"),
+    db: AsyncSession = Depends(get_db),
+    principal: Principal = Depends(get_principal)
+):
+    """
+    배치 전체 txt 파일을 ZIP으로 다운로드 (500만건 대용량 처리)
+
+    Args:
+        batch_id: 배치 ID
+        include_minutes: True면 회의록(_minutes.txt)도 포함
+
+    Returns:
+        StreamingResponse: ZIP 파일 스트림
+
+    Security:
+        - Path Traversal 방지
+        - 권한 검증
+    """
+    from fastapi.responses import StreamingResponse
+    from pathlib import Path
+    import zipfile
+    import io
+    import os
+
+    # 1. 배치 확인
+    result = await db.execute(
+        select(STTBatch).where(STTBatch.id == batch_id)
+    )
+    batch = result.scalar_one_or_none()
+
+    if not batch:
+        raise HTTPException(status_code=404, detail="배치를 찾을 수 없습니다")
+
+    # 2. 결과 디렉토리 확인
+    results_dir = Path("/data/stt-results") / f"batch_{batch_id}"
+
+    if not results_dir.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="배치 결과 파일이 아직 생성되지 않았습니다. STT 처리가 완료될 때까지 기다려주세요."
+        )
+
+    # 3. Security: Path Traversal 방지
+    resolved_dir = results_dir.resolve()
+    if not str(resolved_dir).startswith("/data/stt-results/"):
+        raise HTTPException(status_code=403, detail="잘못된 경로 접근")
+
+    # 4. txt 파일 수집
+    txt_files = list(results_dir.glob("*.txt"))
+
+    if include_minutes:
+        # 모든 txt 파일 (전사 + 회의록)
+        files_to_zip = txt_files
+    else:
+        # 회의록 제외 (_minutes.txt 파일 제외)
+        files_to_zip = [f for f in txt_files if not f.name.endswith("_minutes.txt")]
+
+    if not files_to_zip:
+        raise HTTPException(status_code=404, detail="다운로드할 파일이 없습니다")
+
+    # 5. ZIP 파일 생성 (메모리 스트림)
+    zip_buffer = io.BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for txt_file in files_to_zip:
+            # ZIP 내부 경로: 파일명만 (디렉토리 구조 없음)
+            arcname = txt_file.name
+            zip_file.write(txt_file, arcname=arcname)
+
+    # 6. 스트리밍 응답
+    zip_buffer.seek(0)
+
+    # 파일명: batch_{id}_results_{timestamp}.zip
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    zip_filename = f"batch_{batch_id}_results_{timestamp}.zip"
+
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f"attachment; filename={zip_filename}",
+            "Content-Length": str(zip_buffer.getbuffer().nbytes)
+        }
+    )
+
+
+@router.get("/{batch_id}/results-info")
+async def get_batch_results_info(
+    batch_id: int,
+    db: AsyncSession = Depends(get_db),
+    principal: Principal = Depends(get_principal)
+):
+    """
+    배치 결과 파일 정보 조회
+
+    Returns:
+        {
+            "batch_id": int,
+            "results_available": bool,
+            "total_files": int,
+            "transcription_files": int,
+            "minutes_files": int,
+            "total_size_mb": float,
+            "results_path": str
+        }
+    """
+    from pathlib import Path
+
+    # 배치 확인
+    result = await db.execute(
+        select(STTBatch).where(STTBatch.id == batch_id)
+    )
+    batch = result.scalar_one_or_none()
+
+    if not batch:
+        raise HTTPException(status_code=404, detail="배치를 찾을 수 없습니다")
+
+    # 결과 디렉토리 확인
+    results_dir = Path("/data/stt-results") / f"batch_{batch_id}"
+
+    if not results_dir.exists():
+        return {
+            "batch_id": batch_id,
+            "results_available": False,
+            "total_files": 0,
+            "transcription_files": 0,
+            "minutes_files": 0,
+            "total_size_mb": 0.0,
+            "results_path": str(results_dir)
+        }
+
+    # 파일 통계
+    txt_files = list(results_dir.glob("*.txt"))
+    transcription_files = [f for f in txt_files if not f.name.endswith("_minutes.txt")]
+    minutes_files = [f for f in txt_files if f.name.endswith("_minutes.txt")]
+
+    # 전체 크기 계산
+    total_size_bytes = sum(f.stat().st_size for f in txt_files)
+    total_size_mb = total_size_bytes / (1024 * 1024)
+
+    return {
+        "batch_id": batch_id,
+        "results_available": True,
+        "total_files": len(txt_files),
+        "transcription_files": len(transcription_files),
+        "minutes_files": len(minutes_files),
+        "total_size_mb": round(total_size_mb, 2),
+        "results_path": str(results_dir)
+    }
+
+
+
+# ============================================
+# RQ 기반 배치 처리 API (H100 2대 병렬 처리)
+# ============================================
+
+@router.post("/{batch_id}/start-rq")
+async def start_batch_processing_rq(
+    batch_id: int,
+    db: AsyncSession = Depends(get_db),
+    principal: Principal = Depends(require_permission("stt_batch", "update"))
+):
+    """
+    RQ 기반 배치 처리 시작 (H100 2대 병렬 처리)
+    
+    Architecture:
+        - GPU 0: Worker 1, 2
+        - GPU 1: Worker 3, 4
+        - 총 4개 Worker 동시 처리
+    
+    Returns:
+        {
+            "message": str,
+            "batch_id": int,
+            "total_files": int,
+            "job_ids": [str],  # RQ Job IDs
+            "estimated_time_hours": float
+        }
+    """
+    from app.workers.rq_stt_worker import enqueue_batch_processing
+    from app.workers.stt_worker import scan_audio_files
+    
+    # 1. 배치 조회
+    result = await db.execute(
+        select(STTBatch).where(STTBatch.id == batch_id)
+    )
+    batch = result.scalar_one_or_none()
+    
+    if not batch:
+        raise HTTPException(status_code=404, detail="배치를 찾을 수 없습니다")
+    
+    if batch.status not in ["pending", "paused"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"배치 상태가 처리 가능한 상태가 아닙니다: {batch.status}"
+        )
+    
+    # 2. 오디오 파일 스캔 (시큐어 코딩 적용)
+    try:
+        audio_files = scan_audio_files(batch.source_path, batch.file_pattern)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    if not audio_files:
+        raise HTTPException(
+            status_code=404,
+            detail=f"파일을 찾을 수 없습니다: {batch.source_path}/{batch.file_pattern}"
+        )
+    
+    # 3. 배치 정보 업데이트
+    batch.total_files = len(audio_files)
+    batch.status = "processing"
+    batch.started_at = datetime.utcnow()
+    await db.commit()
+    
+    # 4. RQ 큐에 작업 등록 (GPU 분산)
+    job_ids = enqueue_batch_processing(batch_id, audio_files)
+    
+    # 5. 예상 처리 시간 계산
+    # 가정: 37분 음성 → 4분 처리 (10x realtime)
+    # 4개 Worker 병렬 처리
+    avg_processing_time_minutes = 4
+    estimated_time_hours = (len(audio_files) * avg_processing_time_minutes) / 60 / 4
+    
+    return {
+        "message": f"배치 처리가 시작되었습니다 (RQ Worker {len(job_ids)}개 작업 등록)",
+        "batch_id": batch_id,
+        "total_files": len(audio_files),
+        "job_ids": job_ids[:10],  # 처음 10개만 표시
+        "total_jobs": len(job_ids),
+        "estimated_time_hours": round(estimated_time_hours, 2),
+        "workers": "4 workers (2 per GPU)"
+    }
+
+
+@router.get("/{batch_id}/rq-progress")
+async def get_rq_batch_progress(
+    batch_id: int,
+    db: AsyncSession = Depends(get_db),
+    principal: Principal = Depends(get_principal)
+):
+    """
+    RQ 기반 배치 진행 상황 조회
+    
+    Returns:
+        {
+            "batch_id": int,
+            "total": int,
+            "queued": int,
+            "started": int,
+            "finished": int,
+            "failed": int,
+            "progress_percentage": float
+        }
+    """
+    from app.workers.rq_stt_worker import get_batch_progress
+    
+    # 배치 확인
+    result = await db.execute(
+        select(STTBatch).where(STTBatch.id == batch_id)
+    )
+    batch = result.scalar_one_or_none()
+    
+    if not batch:
+        raise HTTPException(status_code=404, detail="배치를 찾을 수 없습니다")
+    
+    # RQ 진행 상황 조회
+    rq_progress = get_batch_progress(batch_id)
+    
+    # DB 진행 상황과 병합
+    db_result = await db.execute(
+        select(func.count())
+        .select_from(STTTranscription)
+        .where(STTTranscription.batch_id == batch_id, STTTranscription.status == "success")
+    )
+    db_completed = db_result.scalar() or 0
+    
+    return {
+        **rq_progress,
+        "db_completed_files": db_completed,
+        "batch_status": batch.status
+    }
+
+
+@router.post("/{batch_id}/cancel-rq")
+async def cancel_rq_batch(
+    batch_id: int,
+    db: AsyncSession = Depends(get_db),
+    principal: Principal = Depends(require_permission("stt_batch", "update"))
+):
+    """
+    RQ 배치 작업 취소
+    
+    Returns:
+        {
+            "message": str,
+            "cancelled_jobs": int
+        }
+    """
+    from app.workers.rq_stt_worker import cancel_batch
+    
+    # 배치 조회
+    result = await db.execute(
+        select(STTBatch).where(STTBatch.id == batch_id)
+    )
+    batch = result.scalar_one_or_none()
+    
+    if not batch:
+        raise HTTPException(status_code=404, detail="배치를 찾을 수 없습니다")
+    
+    # RQ 작업 취소
+    cancelled_count = cancel_batch(batch_id)
+    
+    # 배치 상태 업데이트
+    batch.status = "cancelled"
+    await db.commit()
+    
+    return {
+        "message": f"{cancelled_count}개 작업이 취소되었습니다",
+        "cancelled_jobs": cancelled_count,
+        "batch_id": batch_id
+    }
+
