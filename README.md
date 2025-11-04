@@ -101,4 +101,4 @@ cd user-app && ./mvnw spring-boot:stop && ./mvnw spring-boot:start
 
 ## 📝 라이선스
 
-Copyright (c) 2024 한국도로공사
+Copyright (c) 2025 데이터스트림즈
