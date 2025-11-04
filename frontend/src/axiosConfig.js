@@ -14,6 +14,7 @@ axios.interceptors.request.use(
       // 임시: 테스트 환경에서 인증 우회
       config.headers['X-Test-Auth'] = 'admin';
     }
+    config.withCredentials = true; // 세션 쿠키 포함
     return config;
   },
   (error) => {

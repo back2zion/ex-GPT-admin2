@@ -45,6 +45,7 @@ const httpClient = async (url, options = {}) => {
     const response = await fetch(url, {
         ...options,
         headers,
+        credentials: 'include', // 세션 쿠키 포함
     });
 
     const text = await response.text();

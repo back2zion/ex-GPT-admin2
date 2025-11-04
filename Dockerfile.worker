@@ -1,0 +1,65 @@
+# Fine-tuning Worker Dockerfile
+# 책임: GPU 기반 Fine-tuning 작업 처리
+#
+# 시큐어 코딩:
+# - 비루트 사용자 실행
+# - 최소 권한 원칙
+# - 불필요한 패키지 제거
+#
+# 유지보수성:
+# - 멀티스테이지 빌드로 이미지 크기 최적화
+# - 명확한 레이어 구분
+# - 캐시 최적화
+
+FROM python:3.11-slim as base
+
+# 시스템 패키지 업데이트 및 필수 의존성 설치
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    make \
+    postgresql-client \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Poetry 설치
+RUN pip install --no-cache-dir poetry
+
+WORKDIR /app
+
+# 의존성 파일 복사 (캐시 최적화)
+COPY pyproject.toml poetry.lock* README.md ./
+
+# 의존성 설치 (virtualenv 비활성화)
+RUN poetry config virtualenvs.create false \
+    && poetry install --no-interaction --no-ansi --no-root --without dev
+
+# 애플리케이션 코드 복사
+COPY . .
+
+# 시큐어 코딩: 비루트 사용자 생성 및 전환
+# UID/GID 1000으로 celery 사용자 생성
+RUN groupadd -g 1000 celery && \
+    useradd -r -u 1000 -g celery -s /bin/bash -m celery
+
+# 작업 디렉토리 권한 설정
+RUN mkdir -p /data/models/finetuned /data/logs/finetuning /data/datasets && \
+    chown -R celery:celery /app /data
+
+# 비루트 사용자로 전환 (시큐어 코딩)
+USER celery
+
+# 헬스체크 (유지보수성)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD celery -A app.core.celery_app inspect ping || exit 1
+
+# Celery Worker 실행
+# --loglevel=info: 적절한 로깅 레벨
+# --concurrency=1: GPU 작업은 순차 처리 (GPU 메모리 관리)
+# --max-tasks-per-child=1: 메모리 누수 방지
+CMD ["celery", "-A", "app.core.celery_app", "worker", \
+     "--loglevel=info", \
+     "--concurrency=1", \
+     "--max-tasks-per-child=1", \
+     "--pool=solo"]

@@ -20,6 +20,9 @@ import { ApprovalLineList, ApprovalLineShow, ApprovalLineEdit, ApprovalLineCreat
 import { UserList, UserShow, UserEdit, UserCreate } from './resources/users';
 import { STTBatchList, STTBatchShow, STTBatchCreate } from './resources/stt_batches';
 import { DocumentList, DocumentShow } from './resources/documents';
+import { FinetuningJobList, FinetuningJobShow, FinetuningJobCreate } from './resources/finetuning_jobs_simple';
+import { ModelRegistryList, ModelRegistryShow } from './resources/model_registry_simple';
+import { TrainingDatasetList, TrainingDatasetShow, TrainingDatasetCreate } from './resources/training_datasets';
 
 // CoreUI 스타일 레이아웃
 import CoreUILayout from './layout/CoreUILayout';
@@ -156,6 +159,30 @@ export default function App() {
         show={STTBatchShow}
         create={STTBatchCreate}
         options={{ label: '🎙️ STT 음성 전사' }}
+      />
+
+      {/* MLops - Fine-tuning & 모델 관리 */}
+      <Resource
+        name="training-datasets"
+        list={TrainingDatasetList}
+        show={TrainingDatasetShow}
+        create={TrainingDatasetCreate}
+        options={{ label: '📊 학습 데이터셋' }}
+      />
+
+      <Resource
+        name="finetuning-jobs"
+        list={FinetuningJobList}
+        show={FinetuningJobShow}
+        create={FinetuningJobCreate}
+        options={{ label: '🔧 Fine-tuning 작업' }}
+      />
+
+      <Resource
+        name="model-registry"
+        list={ModelRegistryList}
+        show={ModelRegistryShow}
+        options={{ label: '📦 모델 레지스트리' }}
       />
 
       {/* 기존 Custom Routes (react-admin 외부 페이지) */}
