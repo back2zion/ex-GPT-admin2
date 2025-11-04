@@ -1,0 +1,121 @@
+/**
+ * 로그인 페이지 스타일
+ */
+
+.login-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--ex-primary) 0%, var(--ex-accent) 100%);
+}
+
+.login-card {
+  max-width: 420px;
+  width: 100%;
+  margin: var(--spacing-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 2px solid var(--ex-primary);
+}
+
+.login-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: var(--spacing-xs);
+}
+
+.login-header p {
+  color: var(--ex-text);
+  font-size: 14px;
+}
+
+.login-card h2 {
+  text-align: center;
+  margin-bottom: var(--spacing-lg);
+  font-size: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: var(--spacing-lg);
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  font-weight: 600;
+  color: var(--ex-text-dark);
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"] {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 1px solid var(--ex-border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--ex-primary);
+  box-shadow: 0 0 0 3px rgba(10, 41, 134, 0.1);
+}
+
+.form-group input[aria-invalid="true"] {
+  border-color: var(--ex-danger);
+}
+
+.form-group input:disabled {
+  background: var(--ex-background);
+  cursor: not-allowed;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: normal;
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: auto;
+  margin-right: var(--spacing-sm);
+  cursor: pointer;
+}
+
+.error-text {
+  display: block;
+  color: var(--ex-danger);
+  font-size: 12px;
+  margin-top: var(--spacing-xs);
+}
+
+.btn-login {
+  width: 100%;
+  padding: var(--spacing-md);
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: var(--spacing-md);
+}
+
+.btn-login:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ===== 반응형 ===== */
+@media (max-width: 480px) {
+  .login-card {
+    margin: var(--spacing-md);
+  }
+
+  .login-header h1 {
+    font-size: 2rem;
+  }
+}

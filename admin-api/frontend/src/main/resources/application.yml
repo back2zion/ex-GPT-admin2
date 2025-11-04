@@ -1,0 +1,116 @@
+server:
+  port: 20000
+  servlet:
+    context-path: /exGenBotDS
+  tomcat:
+    max-swallow-size: 200MB  # 스트리밍 업로드를 위한 크기 제한
+    use-relative-redirects: true
+    additional-tld-skip-patterns: "*.jar"
+    remoteip:
+      remote-ip-header: x-forwarded-for
+      protocol-header: x-forwarded-proto
+
+spring:
+  application:
+    name: gpt
+  profiles:
+    active: dev # 기본 프로파일을 dev로 설정 -> prd, dev 이렇게 바꾸면 좋겠다. 혹은 자사 제품처럼 site로 가도 좋을듯..
+  servlet:
+    multipart:
+      max-file-size: 200MB
+      max-request-size: 500MB
+      enabled: true
+  # JSP 뷰 리졸버 설정 (기존 옵션 살려둠)
+  mvc:
+    view:
+      prefix: /WEB-INF/views/
+      suffix: .jsp
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+  #  Datasource 설정 -> 20250929 EDB로 설정
+  datasource:
+    driver-class-name: com.edb.Driver
+    url: jdbc:edb://1.215.235.250:25444/AGENAI
+    username: wisenut_dev
+    password: express!12
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+  #  JPA Settings -> JPA 사용 할 일 있으면 사용하세요
+  jpa:
+    hibernate:
+      ddl-auto: validate # 기존 테이블 보존
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  #  Security Settings -> 20250929 이후 사용 안할 예정
+  security:
+    user:
+      name: admin
+      password: admin #
+      roles: ADMIN
+
+# MyBatis 설정
+mybatis:
+  mapper-locations: classpath:mappers/**/*.xml
+  type-aliases-package: com.datastreams.gpt.**.model
+  configuration:
+    map-underscore-to-camel-case: true
+
+# Logging 설정
+logging:
+  level:
+    root: DEBUG # root 레벨은 INFO로 조정
+    com.datastreams.gpt: DEBUG # 새 패키지 경로로 변경
+    org.apache.http.wire: ERROR
+    org.hibernate.SQL: DEBUG # SQL 로깅 추가
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/dsgpt.log
+
+# Swagger/OpenAPI Settings
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    try-it-out-enabled: true
+  packages-to-scan: com.datastreams.gpt.chat.controller,com.datastreams.gpt.login.controller,com.datastreams.gpt.file.controller,com.datastreams.gpt.user.controller,com.datastreams.gpt.survey.controller,com.datastreams.gpt.notice.controller,com.datastreams.gpt.menu.controller
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
+
+# DSGPT 운영 시 연계 세팅
+ds:
+  ai:
+    server:
+      url: ${DS_AI_SERVER_URL:http://localhost:8083}
+    api:
+      key: ${DS_AI_API_KEY:z3JE1M8huXmNux6y}
+  ssoUse: false # sso 옵션 (기존 exGPT에 쓰던 옵션 형태) - 2025-10-16 수정
+  minIO:
+    address: ${MINIO_ADDRESS:http://127.0.0.1:9090/}
+    accessKey: ${MINIO_ACCESS_KEY:minioadmin}
+    secretKey: ${MINIO_SECRET_KEY:minioadmin}
+    bucketName: ${MINIO_BUCKET_NAME:test01}
+
+# File Path
+file:
+  upload:
+    path: ${FILE_UPLOAD_PATH:/tmp/exgpt-uploads/}
+    streaming:
+      enabled: true
+  download:
+    path: ${FILE_DOWNLOAD_PATH:/tmp/exgpt-downloads/}
+
+# 국정감사 파일 업로드 설정
+ga:
+  upload:
+    directory: ${GA_UPLOAD_DIRECTORY:/tmp/exgpt-ga-uploads}

@@ -1,0 +1,461 @@
+/**
+ * 대화내역 조회 페이지 스타일
+ */
+
+.conversations-page {
+  width: 100%;
+  padding: 2rem 3rem;
+  box-sizing: border-box;
+}
+
+/* 헤더 */
+.conversations-header {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  padding: 3rem;
+  border-radius: 20px;
+  margin-bottom: 2.5rem;
+  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.25);
+  color: white;
+  text-align: center;
+}
+
+.conversations-header h2 {
+  color: white;
+  margin: 0 0 0.75rem 0;
+  font-size: 2.5rem;
+  font-weight: 800;
+}
+
+.conversations-header p {
+  color: rgba(255, 255, 255, 0.95);
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 300;
+}
+
+/* 날짜 범위 필터 */
+.date-range-filter {
+  background: white;
+  border: 1px solid var(--ex-border);
+  border-radius: 20px;
+  padding: 2rem 2.5rem;
+  margin-bottom: 2.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.form-row {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.form-row .form-group {
+  flex: 1;
+  min-width: 220px;
+}
+
+.form-row .form-group label {
+  display: block;
+  font-weight: 700;
+  color: #8b5cf6;
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.form-row input[type="date"] {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  border: 2px solid var(--ex-border);
+  border-radius: 12px;
+  font-size: 1.05rem;
+  transition: all 0.3s ease;
+  background: white;
+  color: var(--ex-text-dark);
+  font-weight: 500;
+}
+
+.form-row input[type="date"]:focus {
+  outline: none;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
+  transform: translateY(-1px);
+}
+
+.form-row input[type="date"]:hover {
+  border-color: #8b5cf6;
+}
+
+.total-count {
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%);
+  border-radius: 12px;
+  font-size: 1.05rem;
+  color: #6d28d9;
+  font-weight: 500;
+}
+
+.total-count strong {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #8b5cf6;
+}
+
+/* 테이블 컨테이너 */
+.conversations-table-container {
+  background: white;
+  border: 1px solid var(--ex-border);
+  border-radius: 20px;
+  padding: 2.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  margin-bottom: 2rem;
+  overflow-x: auto;
+}
+
+/* 테이블 */
+.conversations-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+.conversations-table thead {
+  background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.conversations-table th {
+  padding: 1.25rem 1.5rem;
+  text-align: left;
+  font-weight: 800;
+  color: #6d28d9;
+  border-bottom: 3px solid #8b5cf6;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.conversations-table td {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  color: var(--ex-text-dark);
+  transition: all 0.2s ease;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.conversations-table tbody tr {
+  transition: all 0.2s ease;
+}
+
+.conversations-table tbody tr:hover {
+  background: linear-gradient(135deg, #faf5ff 0%, #ffffff 100%);
+  transform: scale(1.002);
+}
+
+.conversations-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.question-cell {
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 버튼 */
+.btn-view {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-view:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.3);
+}
+
+/* 페이지네이션 */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+.pagination-btn {
+  background: white;
+  border: 2px solid #8b5cf6;
+  color: #8b5cf6;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #8b5cf6;
+  color: white;
+  transform: translateY(-2px);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #8b5cf6;
+  padding: 0 1rem;
+}
+
+/* 모달 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 2rem;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 20px;
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  padding: 2rem 2.5rem;
+  border-bottom: 3px solid #f3e8ff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+  border-radius: 20px 20px 0 0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: white;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 2.5rem;
+  color: white;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.2s ease;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(90deg);
+}
+
+.modal-body {
+  padding: 2.5rem;
+}
+
+.detail-row {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #f3e8ff;
+  font-size: 1.05rem;
+}
+
+.detail-row strong {
+  min-width: 120px;
+  color: #8b5cf6;
+  font-weight: 700;
+}
+
+.detail-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #f3e8ff;
+}
+
+.detail-section strong {
+  display: block;
+  color: #8b5cf6;
+  font-weight: 800;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-content {
+  background: #faf5ff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border-left: 4px solid #8b5cf6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ex-text-dark);
+}
+
+.detail-content.thinking {
+  background: #fffbeb;
+  border-left-color: #f59e0b;
+}
+
+.referenced-docs {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.referenced-docs li {
+  background: #f3e8ff;
+  padding: 1rem 1.5rem;
+  border-radius: 10px;
+  margin-bottom: 0.75rem;
+  border-left: 4px solid #8b5cf6;
+  font-weight: 500;
+}
+
+.modal-footer {
+  padding: 1.5rem 2.5rem;
+  border-top: 3px solid #f3e8ff;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-close {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+  border: none;
+  padding: 1rem 2.5rem;
+  border-radius: 12px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.btn-close:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
+}
+
+/* 데이터 없음 */
+.no-data {
+  text-align: center;
+  color: var(--ex-text);
+  padding: 4rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+/* 로딩 상태 */
+.loading {
+  text-align: center;
+  padding: 4rem;
+  color: var(--ex-text);
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+/* 알림 */
+.alert {
+  padding: 1.25rem 2rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.alert-danger {
+  background: #fee;
+  color: #c00;
+  border: 2px solid #fcc;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .conversations-page {
+    padding: 1.5rem;
+  }
+
+  .conversations-header {
+    padding: 2rem;
+  }
+
+  .conversations-header h2 {
+    font-size: 2rem;
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+
+  .form-row .form-group {
+    width: 100%;
+  }
+
+  .conversations-table-container {
+    padding: 1.5rem;
+  }
+
+  .modal-content {
+    max-width: 100%;
+  }
+
+  .modal-header h3 {
+    font-size: 1.4rem;
+  }
+
+  .detail-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .detail-row strong {
+    min-width: auto;
+  }
+}

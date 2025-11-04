@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.datastreams.gpt.user.mapper.UserSettingsMapper">
+
+    <!-- 사용자 설정 조회 -->
+    <select id="getUserSettings" parameterType="string" resultType="com.datastreams.gpt.user.dto.UserSettingsDto">
+        SELECT 
+            USR_ID AS userId,
+            UI_THM_CD AS uiThmCd,
+            FNT_SIZE_CD AS fntSizeCd,
+            SYS_ACCS_YN AS systemAccessYn,
+            MGR_AUTH_YN AS managerAuthYn,
+            VCE_MDL_USE_YN AS voiceModelUseYn,
+            IMG_MDL_USE_YN AS imageModelUseYn
+        FROM USR_PRV_CONF 
+        WHERE USR_ID = #{userId}
+        ORDER BY MOD_DT DESC NULLS LAST
+        FETCH FIRST 1 ROWS ONLY
+    </select>
+
+    <!-- L-010: 사용자별 설정 저장 (기능정의서 오리지널 쿼리) -->
+    <insert id="saveOrUpdateUserSettings">
+        WITH BAS_INFO AS (
+            SELECT #{userId} AS USR_ID,
+                   #{fntSizeCd} AS FNT_SIZE_CD,
+                   #{uiThmCd} AS UI_THM_CD,
+                   CASE WHEN #{sysAccsYn} IS NULL THEN 'Y' ELSE #{sysAccsYn} END AS SYS_ACCS_YN,
+                   CASE WHEN #{mgrAuthYn} IS NULL THEN 'N' ELSE #{mgrAuthYn} END AS MGR_AUTH_YN,
+                   CASE WHEN #{vceMdlUseYn} IS NULL THEN 'Y' ELSE #{vceMdlUseYn} END AS VCE_MDL_USE_YN,
+                   CASE WHEN #{imgMdlUseYn} IS NULL THEN 'Y' ELSE #{imgMdlUseYn} END AS IMG_MDL_USE_YN,
+                   #{userId} AS REG_USR_ID
+            WHERE 1=1
+        ), UPD_USR_PRV_CONF AS (
+            UPDATE USR_PRV_CONF
+            SET USR_PRV_CONF.FNT_SIZE_CD = C.FNT_SIZE_CD,
+                USR_PRV_CONF.UI_THM_CD = C.UI_THM_CD,
+                USR_PRV_CONF.SYS_ACCS_YN = C.SYS_ACCS_YN,
+                USR_PRV_CONF.MGR_AUTH_YN = C.MGR_AUTH_YN,
+                USR_PRV_CONF.VCE_MDL_USE_YN = C.VCE_MDL_USE_YN,
+                USR_PRV_CONF.IMG_MDL_USE_YN = C.IMG_MDL_USE_YN,
+                USR_PRV_CONF.MOD_USR_ID = C.REG_USR_ID,
+                USR_PRV_CONF.MOD_DT = CURRENT_TIMESTAMP
+            FROM BAS_INFO C
+            WHERE 1=1
+            AND USR_PRV_CONF.USR_ID = C.USR_ID
+            RETURNING USR_PRV_CONF.*
+        ), INS_USR_PRV_CONF AS (
+            INSERT INTO USR_PRV_CONF (
+                USR_ID, FNT_SIZE_CD, UI_THM_CD, SYS_ACCS_YN, MGR_AUTH_YN, 
+                VCE_MDL_USE_YN, IMG_MDL_USE_YN, REG_USR_ID
+            )
+            SELECT C.USR_ID, C.FNT_SIZE_CD, C.UI_THM_CD, C.SYS_ACCS_YN, C.MGR_AUTH_YN,
+                   C.VCE_MDL_USE_YN, C.IMG_MDL_USE_YN, C.REG_USR_ID
+            FROM BAS_INFO C
+            WHERE NOT EXISTS (SELECT * FROM UPD_USR_PRV_CONF)
+            RETURNING USR_PRV_CONF.*
+        )
+        SELECT 'UPD_USR_PRV_CONF' AS TXN_NM, COUNT(*) AS CNT FROM UPD_USR_PRV_CONF
+        UNION ALL
+        SELECT 'INS_USR_PRV_CONF' AS TXN_NM, COUNT(*) AS CNT FROM INS_USR_PRV_CONF
+    </insert>
+
+</mapper>

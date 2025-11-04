@@ -1,0 +1,303 @@
+정식명칭,주요약칭,추가약칭1,추가약칭2,추가약칭3,영문명,영문약칭,분류
+기획재정부,기재부,,,Ministry of Economy and Finance,MOEF,중앙행정기관
+교육부,교육부,,,Ministry of Education,MOE,중앙행정기관
+과학기술정보통신부,과기부,과기정통부,,Ministry of Science and ICT,MSIT,중앙행정기관
+외교부,외교부,,,Ministry of Foreign Affairs,MOFA,중앙행정기관
+통일부,통일부,,,Ministry of Unification,MOU,중앙행정기관
+법무부,법무부,,,Ministry of Justice,MOJ,중앙행정기관
+국방부,국방부,,,Ministry of National Defense,MND,중앙행정기관
+행정안전부,행안부,,,Ministry of the Interior and Safety,MOIS,중앙행정기관
+문화체육관광부,문체부,문화부,관광부,Ministry of Culture Sports and Tourism,MCST,중앙행정기관
+농림축산식품부,농식품부,농림부,농축부,Ministry of Agriculture Food and Rural Affairs,MAFRA,중앙행정기관
+산업통상자원부,산자부,산업부,통상부,Ministry of Trade Industry and Energy,MOTIE,중앙행정기관
+보건복지부,복지부,보건부,,Ministry of Health and Welfare,MOHW,중앙행정기관
+환경부,환경부,,,Ministry of Environment,ME,중앙행정기관
+고용노동부,고용부,노동부,,Ministry of Employment and Labor,MOEL,중앙행정기관
+여성가족부,여가부,,,Ministry of Gender Equality and Family,MOGEF,중앙행정기관
+국토교통부,국토부,국교부,,Ministry of Land Infrastructure and Transport,MOLIT,중앙행정기관
+해양수산부,해수부,해양부,수산부,Ministry of Oceans and Fisheries,MOF,중앙행정기관
+중소벤처기업부,중기부,중소기업부,벤처부,Ministry of SMEs and Startups,MSS,중앙행정기관
+국가보훈부,보훈부,,,Ministry of Patriots and Veterans Affairs,MPVA,중앙행정기관
+우주항공청,우주청,항공청,,Korea AeroSpace Administration,KASA,중앙행정기관
+국무조정실,국조실,,,Office of the Prime Minister,OPM,중앙행정기관
+국가정보원,국정원,,,National Intelligence Service,NIS,중앙행정기관
+방송통신위원회,방통위,,,Korea Communications Commission,KCC,중앙행정기관
+대통령비서실,청와대,용산대통령실,대통령실,Presidential Secretariat,PS,대통령직속
+대통령경호처,경호처,,,Presidential Security Service,PSS,대통령직속
+국가안보실,안보실,,,National Security Office,NSO,대통령직속
+국세청,국세청,,,National Tax Service,NTS,중앙행정기관
+관세청,관세청,,,Korea Customs Service,KCS,중앙행정기관
+조달청,조달청,,,Public Procurement Service,PPS,중앙행정기관
+통계청,통계청,,,Statistics Korea,KOSTAT,중앙행정기관
+병무청,병무청,,,Military Manpower Administration,MMA,중앙행정기관
+경찰청,경찰청,,,Korean National Police Agency,KNPA,중앙행정기관
+소방청,소방청,,,National Fire Agency,NFA,중앙행정기관
+문화재청,문화재청,,,Cultural Heritage Administration,CHA,중앙행정기관
+농촌진흥청,농진청,,,Rural Development Administration,RDA,중앙행정기관
+산림청,산림청,,,Korea Forest Service,KFS,중앙행정기관
+특허청,특허청,,,Korean Intellectual Property Office,KIPO,중앙행정기관
+기상청,기상청,,,Korea Meteorological Administration,KMA,중앙행정기관
+해양경찰청,해경,해양경찰,,Korea Coast Guard,KCG,중앙행정기관
+새만금개발청,새만금청,,,Saemangeum Development Authority,SDA,중앙행정기관
+행정중심복합도시건설청,행복청,,,Multifunctional Administrative City Construction Agency,MACCA,중앙행정기관
+질병관리청,질본,질병청,,Korea Disease Control and Prevention Agency,KDCA,중앙행정기관
+식품의약품안전처,식약처,,,Ministry of Food and Drug Safety,MFDS,중앙행정기관
+개인정보보호위원회,개보위,,,Personal Information Protection Commission,PIPC,중앙행정기관
+국회,국회,,,National Assembly,NA,헌법기관
+대법원,대법원,,,Supreme Court,SC,헌법기관
+헌법재판소,헌재,,,Constitutional Court,CC,헌법기관
+중앙선거관리위원회,중앙선관위,선관위,,National Election Commission,NEC,헌법기관
+감사원,감사원,,,Board of Audit and Inspection,BAI,헌법기관
+공정거래위원회,공정위,,,Korea Fair Trade Commission,KFTC,중앙행정기관
+금융위원회,금융위,,,Financial Services Commission,FSC,중앙행정기관
+국민권익위원회,권익위,,,Anti-Corruption and Civil Rights Commission,ACRC,중앙행정기관
+국가인권위원회,인권위,,,National Human Rights Commission,NHRCK,중앙행정기관
+원자력안전위원회,원안위,,,Nuclear Safety and Security Commission,NSSC,중앙행정기관
+민주평화통일자문회의,민주평통,,,National Unification Advisory Council,NUAC,대통령직속
+국가교육위원회,국교위,,,National Education Commission,NEC,중앙행정기관
+서울특별시,서울시,서울,,Seoul Metropolitan Government,SMG,광역자치단체
+부산광역시,부산시,부산,,Busan Metropolitan City,BMC,광역자치단체
+대구광역시,대구시,대구,,Daegu Metropolitan City,DMC,광역자치단체
+인천광역시,인천시,인천,,Incheon Metropolitan City,IMC,광역자치단체
+광주광역시,광주시,광주,,Gwangju Metropolitan City,GMC,광역자치단체
+대전광역시,대전시,대전,,Daejeon Metropolitan City,DJMC,광역자치단체
+울산광역시,울산시,울산,,Ulsan Metropolitan City,UMC,광역자치단체
+세종특별자치시,세종시,세종,,Sejong Special Self-Governing City,SJC,광역자치단체
+경기도,경기도,경기,,Gyeonggi Province,GG,광역자치단체
+충청북도,충북,,,Chungcheongbuk-do,CB,광역자치단체
+충청남도,충남,,,Chungcheongnam-do,CN,광역자치단체
+전북특별자치도,전북,,,Jeonbuk Special Self-Governing Province,JB,광역자치단체
+전라남도,전남,,,Jeollanam-do,JN,광역자치단체
+경상북도,경북,,,Gyeongsangbuk-do,GB,광역자치단체
+경상남도,경남,,,Gyeongsangnam-do,GN,광역자치단체
+강원특별자치도,강원도,강원,,Gangwon Special Self-Governing Province,GW,광역자치단체
+제주특별자치도,제주도,제주,,Jeju Special Self-Governing Province,JJ,광역자치단체
+방위사업청,방사청,,,Defense Acquisition Program Administration,DAPA,중앙행정기관
+국가기록원,기록원,,,National Archives of Korea,NAK,소속기관
+국립중앙도서관,국중도,중앙도서관,,National Library of Korea,NLK,소속기관
+국립국어원,국어원,,,National Institute of Korean Language,NIKL,소속기관
+국사편찬위원회,국편위,,,National Institute of Korean History,NIKH,소속기관
+독립기념관,독립기념관,,,Independence Hall of Korea,IHK,소속기관
+국립중앙박물관,국중박,중앙박물관,,National Museum of Korea,NMK,소속기관
+국립현대미술관,국현미,현대미술관,,National Museum of Modern and Contemporary Art,MMCA,소속기관
+국립극장,국극,,,National Theater of Korea,NTK,소속기관
+세종학당재단,세종학당,,,King Sejong Institute Foundation,KSIF,소속기관
+대한체육회,체육회,,,Korean Sport & Olympic Committee,KSOC,소속기관
+국립특수교육원,특수교육원,,,National Institute of Special Education,NISE,소속기관
+한국교육과정평가원,교과평가원,,,Korea Institute for Curriculum and Evaluation,KICE,소속기관
+한국교육학술정보원,교학정보원,KERIS,,Korea Education and Research Information Service,KERIS,소속기관
+국립국제교육원,국교원,,,National Institute for International Education,NIIED,소속기관
+육군사관학교,육사,,,Korea Military Academy,KMA,소속기관
+해군사관학교,해사,,,Korea Naval Academy,KNA,소속기관
+공군사관학교,공사,,,Korea Air Force Academy,KAFA,소속기관
+국방대학교,국방대,,,Korea National Defense University,KNDU,소속기관
+국방과학연구소,ADD,,,Agency for Defense Development,ADD,소속기관
+한국원자력안전기술원,KINS,,,Korea Institute of Nuclear Safety,KINS,소속기관
+한국원자력통제기술원,KINAC,,,Korea Institute of Nuclear Nonproliferation and Control,KINAC,소속기관
+에너지경제연구원,에경연,KEEI,,Korea Energy Economics Institute,KEEI,소속기관
+한국에너지기술연구원,에기연,KIER,,Korea Institute of Energy Research,KIER,소속기관
+한국석유관리원,석관원,K-PETRO,,Korea Petroleum Quality & Distribution Authority,K-PETRO,소속기관
+국립환경과학원,환경과학원,,,National Institute of Environmental Research,NIER,소속기관
+화학물질안전원,화안원,,,National Institute of Chemical Safety,NICS,소속기관
+한국철도기술연구원,철도기술연,,,Korea Railroad Research Institute,KRRI,소속기관
+한국교통연구원,교통연구원,,,Korea Transport Institute,KOTI,소속기관
+항공안전기술원,항공안전,,,Korea Institute of Aviation Safety Technology,KIAST,소속기관
+한국해양과학기술원,해양과기원,KIOST,,Korea Institute of Ocean Science and Technology,KIOST,소속기관
+선박해양플랜트연구소,선박연구소,,,Korea Research Institute of Ships and Ocean Engineering,KRISO,소속기관
+국립해양조사원,해조원,,,Korea Hydrographic and Oceanographic Agency,KHOA,소속기관
+국립수산과학원,수과원,,,National Institute of Fisheries Science,NIFS,소속기관
+한국해양수산연수원,해수연,,,Korea Institute of Maritime and Fisheries Technology,KIMFT,소속기관
+국립농업과학원,농과원,,,National Institute of Agricultural Sciences,NAS,소속기관
+국립종자원,종자원,,,Korea Seed and Variety Service,KSVS,소속기관
+국립축산과학원,축산과학원,,,National Institute of Animal Science,NIAS,소속기관
+국립원예특작과학원,원예특작,,,National Institute of Horticultural and Herbal Science,NIHHS,소속기관
+국립산림과학원,산림과학원,,,National Institute of Forest Science,NIFS,소속기관
+한국산업기술진흥원,산기진,,,Korea Institute for Advancement of Technology,KIAT,소속기관
+한국산업기술평가관리원,산기평,KEIT,,Korea Evaluation Institute of Industrial Technology,KEIT,소속기관
+한국에너지기술평가원,에기평,KETEP,,Korea Institute of Energy Technology Evaluation and Planning,KETEP,소속기관
+국가기술표준원,기표원,KATS,,Korean Agency for Technology and Standards,KATS,소속기관
+한국의료기기안전정보원,의료기기정보원,,,Korea Institute of Medical Device Safety Information,KIMDSI,소속기관
+국립보건연구원,보건연구원,,,Korea Disease Control and Prevention Agency,KDCA,소속기관
+식품의약품안전평가원,식약평가원,,,National Institute of Food and Drug Safety Evaluation,NIFDS,소속기관
+한국과학기술연구원,KIST,,,Korea Institute of Science and Technology,KIST,출연연
+한국전자통신연구원,ETRI,,,Electronics and Telecommunications Research Institute,ETRI,출연연
+한국생명공학연구원,KRIBB,,,Korea Research Institute of Bioscience and Biotechnology,KRIBB,출연연
+한국기계연구원,KIMM,,,Korea Institute of Machinery and Materials,KIMM,출연연
+한국화학연구원,KRICT,,,Korea Research Institute of Chemical Technology,KRICT,출연연
+한국건설기술연구원,KICT,,,Korea Institute of Civil Engineering and Building Technology,KICT,출연연
+한국식품연구원,KFRI,,,Korea Food Research Institute,KFRI,출연연
+한국표준과학연구원,KRISS,,,Korea Research Institute of Standards and Science,KRISS,출연연
+한국원자력연구원,KAERI,,,Korea Atomic Energy Research Institute,KAERI,출연연
+한국항공우주연구원,KARI,,,Korea Aerospace Research Institute,KARI,출연연
+한국전기연구원,KERI,,,Korea Electrotechnology Research Institute,KERI,출연연
+한국재료연구원,KIMS,,,Korea Institute of Materials Science,KIMS,출연연
+한국지질자원연구원,KIGAM,,,Korea Institute of Geoscience and Mineral Resources,KIGAM,출연연
+한국한의학연구원,KIOM,,,Korea Institute of Oriental Medicine,KIOM,출연연
+한국과학기술기획평가원,KISTEP,,,Korea Institute of S&T Evaluation and Planning,KISTEP,출연연
+한국과학기술정보연구원,KISTI,,,Korea Institute of Science and Technology Information,KISTI,출연연
+한국개발연구원,KDI,,,Korea Development Institute,KDI,출연연
+과학기술정책연구원,STEPI,,,Science and Technology Policy Institute,STEPI,출연연
+한국교육개발원,KEDI,,,Korean Educational Development Institute,KEDI,출연연
+한국보건사회연구원,KIHASA,,,Korea Institute for Health and Social Affairs,KIHASA,출연연
+산업연구원,KIET,,,Korea Institute for Industrial Economics and Trade,KIET,출연연
+대외경제정책연구원,KIEP,,,Korea Institute for International Economic Policy,KIEP,출연연
+한국환경정책평가연구원,KEI,,,Korea Environment Institute,KEI,출연연
+국토연구원,KRIHS,,,Korea Research Institute for Human Settlements,KRIHS,출연연
+한국해양수산개발원,KMI,,,Korea Maritime Institute,KMI,출연연
+한국농촌경제연구원,KREI,,,Korea Rural Economic Institute,KREI,출연연
+한국직업능력개발원,KRIVET,,,Korea Research Institute for Vocational Education and Training,KRIVET,출연연
+한국여성정책연구원,KWDI,,,Korean Women's Development Institute,KWDI,출연연
+한국청소년정책연구원,NYPI,,,National Youth Policy Institute,NYPI,출연연
+한국형사정책연구원,KIC,,,Korean Institute of Criminology,KIC,출연연
+통일연구원,KINU,,,Korea Institute for National Unification,KINU,출연연
+아시아태평양평화협력연구원,NANCEN,,,Northeast Asia Cooperation Center,NANCEN,출연연
+한국전력공사,한전,,,Korea Electric Power Corporation,KEPCO,공기업
+한국가스공사,가스공사,,,Korea Gas Corporation,KOGAS,공기업
+한국석유공사,석유공사,,,Korea National Oil Corporation,KNOC,공기업
+한국광물자원공사,광물공사,,,Korea Resources Corporation,KORES,공기업
+한국수력원자력,한수원,,,Korea Hydro and Nuclear Power,KHNP,공기업
+한국남동발전,남동발전,,,Korea South-East Power,KOEN,공기업
+한국남부발전,남부발전,,,Korea Southern Power,KOSPO,공기업
+한국동서발전,동서발전,,,Korea East-West Power,EWP,공기업
+한국서부발전,서부발전,,,Korea Western Power,WP,공기업
+한국중부발전,중부발전,,,Korea Midland Power,KOMIPO,공기업
+대한석탄공사,석탄공사,,,Korea Coal Corporation,KOCOAL,공기업
+한국지역난방공사,지역난방,,,Korea District Heating Corporation,KDHC,공기업
+한국철도공사,코레일,KORAIL,,Korea Railroad Corporation,KORAIL,공기업
+한국도로공사,도로공사,도공,,Korea Expressway Corporation,KEC,공기업
+인천국제공항공사,인천공항공사,,,Incheon International Airport Corporation,IIAC,공기업
+한국공항공사,공항공사,,,Korea Airports Corporation,KAC,공기업
+부산항만공사,부산항공사,,,Busan Port Authority,BPA,공기업
+인천항만공사,인천항공사,,,Incheon Port Authority,IPA,공기업
+울산항만공사,울산항공사,,,Ulsan Port Authority,UPA,공기업
+여수광양항만공사,여수광양항공사,,,Yeosu Gwangyang Port Authority,YGPA,공기업
+한국토지주택공사,LH공사,LH,,Korea Land and Housing Corporation,LH,공기업
+주택도시보증공사,HUG,,,Housing and Urban Guarantee Corporation,HUG,공기업
+한국수자원공사,K-water,수자원공사,,Korea Water Resources Corporation,K-water,공기업
+한국건설관리공사,건설관리공사,,,Korea Construction Management Corporation,KCMC,공기업
+한국국토정보공사,국토정보공사,LX,,Korea Land and Geospatial Informatix Corporation,LX,공기업
+한국은행,한은,,,Bank of Korea,BOK,중앙은행
+한국산업은행,산은,,,Korea Development Bank,KDB,정책금융기관
+한국수출입은행,수은,,,Export-Import Bank of Korea,KEXIM,정책금융기관
+중소기업은행,기업은행,IBK,,Industrial Bank of Korea,IBK,정책금융기관
+한국주택금융공사,주택금융공사,,,Korea Housing Finance Corporation,HF,정책금융기관
+한국정책금융공사,정책금융공사,,,Korea Policy Finance Corporation,KPFC,정책금융기관
+한국자산관리공사,캠코,KAMCO,,Korea Asset Management Corporation,KAMCO,정책금융기관
+한국예금보험공사,예보,,,Korea Deposit Insurance Corporation,KDIC,정책금융기관
+신용보증기금,신보,,,Korea Credit Guarantee Fund,KODIT,정책금융기관
+기술보증기금,기보,,,Korea Technology Finance Corporation,KIBO,정책금융기관
+한국방송공사,KBS,,,Korean Broadcasting System,KBS,공영방송
+문화방송,MBC,,,Munhwa Broadcasting Corporation,MBC,방송사
+에스비에스,SBS,,,Seoul Broadcasting System,SBS,방송사
+한국교육방송공사,EBS,,,Educational Broadcasting System,EBS,교육방송
+한국전파진흥협회,RAPA,,,Radio Promotion Association,RAPA,공공기관
+한국정보화진흥원,NIA,,,National Information Society Agency,NIA,공공기관
+한국환경공단,환경공단,,,Korea Environment Corporation,KECO,공공기관
+한국환경산업기술원,환경기술원,,,Korea Environmental Industry and Technology Institute,KEITI,공공기관
+한국교통안전공단,교통안전공단,,,Korea Transportation Safety Authority,KOTSA,공공기관
+한국시설안전공단,시설안전공단,,,Korea Infrastructure Safety Corporation,KISC,공공기관
+국민연금공단,국민연금,,,National Pension Service,NPS,공공기관
+국민건강보험공단,건보공단,,,National Health Insurance Service,NHIS,공공기관
+건강보험심사평가원,심평원,,,Health Insurance Review and Assessment Service,HIRA,공공기관
+근로복지공단,근복공단,,,Korea Workers Compensation and Welfare Service,COMWEL,공공기관
+한국고용정보원,KEIS,,,Korea Employment Information Service,KEIS,공공기관
+한국산업안전보건공단,KOSHA,,,Korea Occupational Safety and Health Agency,KOSHA,공공기관
+한국장애인고용공단,장애인고용공단,,,Korea Employment Agency for Persons with Disabilities,KEAD,공공기관
+한국보건의료연구원,보의연,NECA,,National Evidence-based Healthcare Collaborating Agency,NECA,공공기관
+한국보건복지인력개발원,복지인력원,,,Korea Human Resource Development Institute for Health and Welfare,KOHI,공공기관
+한국보건산업진흥원,보산진,KHIDI,,Korea Health Industry Development Institute,KHIDI,공공기관
+한국관광공사,관광공사,,,Korea Tourism Organization,KTO,공공기관
+한국문화예술위원회,예술위,,,Arts Council Korea,ARKO,공공기관
+한국콘텐츠진흥원,KOCCA,,,Korea Creative Content Agency,KOCCA,공공기관
+한국창조경제연구회,KCERN,,,Korea Creative Economy Research Network,KCERN,공공기관
+한국문화정보원,KCIA,,,Korea Culture Information Agency,KCIA,공공기관
+한국저작권위원회,저작권위,,,Korea Copyright Commission,KCC_COPYRIGHT,공공기관
+한국체육산업개발,KSPO,,,Korea Sports Promotion Foundation,KSPO,공공기관
+국민체육진흥공단,체진공,,,Korea Sports Promotion Foundation,KSPO_MAIN,공공기관
+한국농수산식품유통공사,aT,,,Korea Agro-Fisheries and Food Trade Corporation,aT,공기업
+농업기술실용화재단,농기평,,,Foundation of Agri Technology Commercialization and Transfer,FACT,공공기관
+한국농어촌공사,농어촌공사,,,Korea Rural Community Corporation,KRC,공공기관
+한국임업진흥원,임업진흥원,,,Korea Forestry Promotion Institute,KOFPI,공공기관
+한국수산자원공단,수자원공단,,,Korea Fisheries Resources Agency,FIRA,공공기관
+한국어촌어항공단,어촌공단,,,Korea Fishing Village and Harbor Association,KFVA,공공기관
+농림축산검역본부,검역본부,APQS,,Animal and Plant Quarantine Agency,APQA,특별지방행정기관
+국립농산물품질관리원,농관원,,,National Agricultural Products Quality Management Service,NAQS,특별지방행정기관
+중소기업진흥공단,중진공,,,Korea SMEs and Startups Agency,KOSME,공공기관
+한국디자인진흥원,디자인진흥원,,,Korea Institute of Design Promotion,KIDP,공공기관
+한국발명진흥회,발명진흥회,,,Korea Invention Promotion Association,KIPA,공공기관
+한국특허정보원,특허정보원,,,Korea Patent Information Center,KIPIC,공공기관
+한국산업인력공단,산업인력공단,,,Korea Polytechnics,KOPO,공공기관
+한국폴리텍대학,폴리텍,,,Korea Polytechnic Universities,KOPO_EDU,공공기관
+서울교통공사,서울지하철,,,Seoul Metro,SEOUL_METRO,지방공기업
+부산교통공사,부산지하철,,,Busan Transportation Corporation,BMTC,지방공기업
+대구도시철도공사,대구지하철,,,Daegu Metropolitan Transit Corporation,DTRO,지방공기업
+인천교통공사,인천지하철,,,Incheon Transit Corporation,IRTC,지방공기업
+광주광역시도시철도공사,광주지하철,,,Gwangju Metropolitan Rapid Transit Corporation,GRTC,지방공기업
+대전광역시도시철도공사,대전지하철,,,Daejeon Metropolitan Express Transit Corporation,DJETC,지방공기업
+서울특별시상수도사업본부,서울시상수도,,,Seoul Waterworks Authority,SWA,지방공기업
+부산광역시상수도사업본부,부산시상수도,,,Busan Water Authority,BWA,지방공기업
+대구광역시상수도사업본부,대구시상수도,,,Daegu Water Authority,DWA,지방공기업
+한국무역협회,KITA,,,Korea International Trade Association,KITA,특수법인
+대한상공회의소,상공회의소,,,Korea Chamber of Commerce and Industry,KCCI,특수법인
+한국경제인협회,경총,,,Korea Employers Federation,KEF,특수법인
+전국경제인연합회,전경련,,,Federation of Korean Industries,FKI,특수법인
+중소기업중앙회,중기중앙회,,,Korea Federation of Small and Medium Business,KBIZ,특수법인
+농협중앙회,농협,,,National Agricultural Cooperative Federation,NACF,특수법인
+수협중앙회,수협,,,National Federation of Fisheries Cooperatives,NFFC,특수법인
+산림조합중앙회,산림조합,,,National Forestry Cooperative Federation,NFCF,특수법인
+한국표준협회,표준협회,,,Korean Standards Association,KSA,특수법인
+한국인정기구,KAB,,,Korea Accreditation Board,KAB,특수법인
+한국벤처투자,한국벤처투자,,,Korea Venture Investment Corporation,KVIC,공공기관
+한국기업데이터,KED,,,Korea Enterprise Data,KED,민간기업
+신용정보원,KCB,,,Korea Credit Bureau,KCB,민간기업
+한국방송통신대학교,방통대,,,Korea National Open University,KNOU,국립대학
+한국기술교육대학교,기교대,한기대,,Korea University of Technology and Education,KOREATECH,국립대학
+한국교통대학교,교통대,,,Korea National University of Transportation,KUT,국립대학
+한국해양대학교,해양대,,,Korea Maritime and Ocean University,KMOU,국립대학
+목포해양대학교,목포해양대,,,Mokpo National Maritime University,MMU,국립대학
+지방국세청,지방국세청,,,Regional Tax Office,RTO,특별지방행정기관
+지방관세청,지방관세청,,,Regional Customs Office,RCO,특별지방행정기관
+지방경찰청,지방경찰청,,,Provincial Police Agency,PPA,특별지방행정기관
+지방검찰청,지방검찰청,지검,,District Prosecutors Office,DPO,특별지방행정기관
+고등검찰청,고등검찰청,고검,,High Prosecutors Office,HPO,특별지방행정기관
+대검찰청,대검,,,Supreme Prosecutors Office,SPO,중앙행정기관
+출입국관리사무소,출입국,,,Immigration Office,IO,특별지방행정기관
+교도소,교도소,,,Correctional Institution,CI,특별지방행정기관
+우체국,우체국,,,Post Office,PO,특별지방행정기관
+고용센터,고용센터,,,Job Center,JC,특별지방행정기관
+지방환경청,지방환경청,,,Regional Environment Office,REO,특별지방행정기관
+유역환경청,유역환경청,,,Basin Environment Office,BEO,특별지방행정기관
+지방고용노동청,지방고용노동청,지방고용청,,Regional Employment and Labor Office,RELO,특별지방행정기관
+지방산림청,지방산림청,,,Regional Forest Service,RFS,특별지방행정기관
+산림청산림항공본부,산림항공,,,Korea Forest Aviation Headquarters,KFAH,특별지방행정기관
+국립공원공단,국립공원,,,Korea National Park Service,KNPS,특별지방행정기관
+해양경찰서,해경서,,,Coast Guard Station,CGS,특별지방행정기관
+지방해양경찰청,지방해경,,,Regional Coast Guard,RCG,특별지방행정기관
+국세청세무서,세무서,,,Tax Office,TO,특별지방행정기관
+관세청세관,세관,,,Customs House,CH,특별지방행정기관
+국민건강보험공단지사,건보지사,,,NHIS Branch Office,NHIS_BRANCH,특별지방행정기관
+지방법원,지법,,,District Court,DC,법원
+고등법원,고법,,,High Court,HC,법원
+가정법원,가법,,,Family Court,FC,법원
+행정법원,행법,,,Administrative Court,AC,법원
+합동참모본부,합참,,,Joint Chiefs of Staff,JCS,군기관
+육군본부,육본,,,Army Headquarters,AHQ,군기관
+해군본부,해본,,,Navy Headquarters,NHQ,군기관
+공군본부,공본,,,Air Force Headquarters,AFHQ,군기관
+국군기무사령부,기무사,,,Defense Security Command,DSC,군기관
+국군수송사령부,수송사,,,Korea Transportation Command,KTC,군기관
+국군의무사령부,의무사,,,Korea Medical Command,KMC,군기관
+국군간호사관학교,간사학교,,,Korea Armed Forces Nursing Academy,KAFNA,소속기관
+국방정보본부,정보본부,,,Defense Intelligence Agency,DIA,군기관
+국군체육부대,체육부대,,,Korea Armed Forces Athletic Corps,KAFAC,군기관
+한국항공우주산업,KAI,,,Korea Aerospace Industries,KAI,민간기업
+인천국제공항,인천공항,,,Incheon International Airport,IIA,공기업
+김포공항,김포공항,,,Gimpo Airport,GA,공기업
+제주공항,제주공항,,,Jeju Airport,JA,공기업
+부산항,부산항,,,Port of Busan,POB,공기업
+인천항,인천항,,,Port of Incheon,POI,공기업
+평택당진항,평택당진항,,,Port of Pyeongtaek-Dangjin,PPTD,공기업
+울산항,울산항,,,Port of Ulsan,POU,공기업
+여수광양항,여수광양항,,,Port of Yeosu-Gwangyang,POYG,공기업
+포항영일만항,포항항,,,Port of Pohang,POP,공기업
+동해항,동해항,,,Port of Donghae,POD,공기업

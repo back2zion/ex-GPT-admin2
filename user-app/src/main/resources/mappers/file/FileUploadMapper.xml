@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.datastreams.gpt.file.mapper.FileUploadMapper">
+
+    <!-- L-016: 파일 업로드 이력 생성 (Insert) -->
+    <select id="insertFileUploadHistory" parameterType="com.datastreams.gpt.file.dto.FileUploadHistoryRequestDto" 
+            resultType="com.datastreams.gpt.file.dto.FileUploadHistoryResponseDto">
+        WITH DAT_INFO
+        AS
+        (
+            SELECT #{usrId}                    AS USR_ID
+                 , #{cnvsIdtId}                AS CNVS_IDT_ID /* 대화 식별 ID : 첫번째 파일 업로드 이후 반환 받은 대화 식별 ID 를 사용토록 해야 함 */
+                 , #{sesnId}                   AS SESN_ID /* 사용자 접속 세션 ID */
+                 , #{fileNm}                   AS FILE_NM
+                 , #{menuIdtId}                AS MENU_IDT_ID     /* 메뉴 식별 아이디 */
+            WHERE 1=1
+        ), INS_USR_CNVS_SMRY
+        AS
+        (
+            INSERT INTO USR_CNVS_SMRY (
+              CNVS_IDT_ID
+            , CNVS_SMRY_TXT
+            , USR_ID
+            , MENU_IDT_ID
+            )
+            SELECT CD.USR_ID||'_'||TO_CHAR(CURRENT_TIMESTAMP, 'YYYYMMDDHH24MISS')||LPAD(EXTRACT(MICROSECONDS FROM CURRENT_TIMESTAMP)::INTEGER % 1000000, 6, '0') AS CNVS_IDT_ID
+                , '업로드_'||TO_CHAR(CURRENT_TIMESTAMP, 'YYYYMMDDHH24MISS')||'_'||CD.FILE_NM AS CNVS_SMRY_TXT
+                , CD.USR_ID
+                , CD.MENU_IDT_ID AS MENU_IDT_ID
+            FROM DAT_INFO CD
+            WHERE 1=1
+            AND (CD.CNVS_IDT_ID IS NULL OR TRIM(CD.CNVS_IDT_ID)  = '' )  /* CNVS_IDT_ID 값이 없는 경우 첫 대화이므로 CNVS_IDT_ID 를 생성하여 INSERT 함 */
+            RETURNING USR_CNVS_SMRY.*
+        ), INS_USR_UPLD_DOC_MNG
+        AS
+        (
+            INSERT INTO USR_UPLD_DOC_MNG
+            (
+              USR_ID
+            , CNVS_IDT_ID
+            , SESN_ID
+            , FILE_NM
+            , LOG_CONT
+            )
+            SELECT F.USR_ID
+                , CASE WHEN F.CNVS_IDT_ID IS NULL OR TRIM(F.CNVS_IDT_ID) = '' THEN S.CNVS_IDT_ID ELSE F.CNVS_IDT_ID END AS CNVS_IDT_ID
+                , F.SESN_ID
+                , F.FILE_NM
+                , 'INS ( CNVS_IDT_ID : '||CASE WHEN F.CNVS_IDT_ID IS NULL OR TRIM(F.CNVS_IDT_ID) = '' THEN S.CNVS_IDT_ID ELSE F.CNVS_IDT_ID END||', SESN_ID : '||SESN_ID||', FILE_NM : '||FILE_NM||' )' AS LOG_CONT
+            FROM DAT_INFO F
+            LEFT OUTER JOIN INS_USR_CNVS_SMRY S ON 1=1
+            WHERE 1=1
+            RETURNING USR_UPLD_DOC_MNG.FILE_UPLD_SEQ, USR_UPLD_DOC_MNG.CNVS_IDT_ID
+        )
+        SELECT MAX('INS_USR_UPLD_DOC_MNG'||CASE WHEN W.CNVS_IDT_ID IS NULL THEN '' ELSE ',INS_USR_CNVS' END) AS TXN_NM
+        , SUM(CASE WHEN X.CNVS_IDT_ID IS NULL OR TRIM(X.CNVS_IDT_ID) = '' THEN 0 ELSE 1 END) + SUM(CASE WHEN W.CNVS_IDT_ID IS NULL OR TRIM(W.CNVS_IDT_ID) = '' THEN 0 ELSE 1 END) AS CNT
+        , MAX(X.FILE_UPLD_SEQ) AS FILE_UPLD_SEQ
+        , MAX(X.CNVS_IDT_ID) AS CNVS_IDT_ID
+        FROM INS_USR_UPLD_DOC_MNG X
+        LEFT OUTER JOIN INS_USR_CNVS_SMRY W ON 1=1
+        WHERE 1=1
+    </select>
+
+    <!-- 파일 업로드 순번으로 파일 정보 조회 -->
+    <select id="selectFileUploadBySeq" parameterType="Long" 
+            resultType="com.datastreams.gpt.file.dto.FileUploadHistoryRequestDto">
+        SELECT USR_ID as usrId
+             , CNVS_IDT_ID as cnvsIdtId
+             , SESN_ID as sesnId
+             , FILE_NM as fileNm
+             , MENU_IDT_ID as menuIdtId
+        FROM USR_UPLD_DOC_MNG
+        WHERE FILE_UPLD_SEQ = #{fileUpldSeq}
+    </select>
+
+    <!-- 대화 식별 ID로 파일 업로드 목록 조회 -->
+    <select id="selectFileUploadListByConversation" parameterType="String" 
+            resultType="com.datastreams.gpt.file.dto.FileUploadHistoryRequestDto">
+        SELECT USR_ID as usrId
+             , CNVS_IDT_ID as cnvsIdtId
+             , SESN_ID as sesnId
+             , FILE_NM as fileNm
+             , MENU_IDT_ID as menuIdtId
+        FROM USR_UPLD_DOC_MNG
+        WHERE CNVS_IDT_ID = #{cnvsIdtId}
+        ORDER BY FILE_UPLD_SEQ DESC
+    </select>
+
+</mapper>

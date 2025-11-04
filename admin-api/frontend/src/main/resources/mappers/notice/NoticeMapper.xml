@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.datastreams.gpt.notice.mapper.NoticeMapper">
+
+    <!-- L-011: 공지사항 조회 (기능정의서 오리지널 쿼리) -->
+    <select id="getNoticeList" resultType="com.datastreams.gpt.notice.dto.NoticeDto">
+        WITH BRD_LST AS (
+            SELECT A.BRD_ID
+                 , C.LEVEL_N2_NM AS BRD_NM
+                 , TO_CHAR(CURRENT_TIMESTAMP, 'YYYYMMDD') AS ISS_YMD
+                 , 'Y' AS POP_PST_YN
+            FROM INTR_BRD A
+            LEFT OUTER JOIN COM_CD_LV2 C ON C.LEVEL_N1_CD = 'BRD_CLS_CD' AND C.LEVEL_N2_CD = A.BRD_CLS_CD
+            WHERE 1=1
+            AND A.BRD_CLS_CD = 'NTC'
+            AND A.POP_USE_YN = 'Y'
+        )
+        SELECT ROW_NUMBER() OVER (ORDER BY P.PST_ID DESC) AS PST_SEQ
+             , P.PST_ID
+             , B.BRD_ID
+             , B.BRD_NM
+             , P.TITLE_NM
+             , P.PST_CONT AS CONT_TXT
+             , TO_CHAR(P.REG_DT, 'YYYY-MM-DD') AS REG_YMD
+        FROM BRD_LST B
+        INNER JOIN INTR_PST P ON B.BRD_ID = P.BRD_ID AND B.POP_PST_YN = P.POP_PST_YN
+        WHERE 1=1
+        AND B.ISS_YMD BETWEEN P.POP_STRT_YMD AND P.POP_END_YMD
+        ORDER BY P.MOD_DT DESC, P.REG_DT DESC
+    </select>
+
+    <!-- L-011: 공지사항 상세보기 (기능정의서 오리지널 쿼리) -->
+    <select id="getNoticeDetail" parameterType="map" resultType="com.datastreams.gpt.notice.dto.NoticeDetailDto">
+        WITH ETL_DAT AS (
+            SELECT #{brdId} AS BRD_ID
+                 , #{pstId} AS PST_ID
+            WHERE 1=1
+        )
+        SELECT B.PST_ID
+             , B.TITLE_NM
+             , B.PST_CONT
+             , TO_CHAR(B.REG_DT, 'YYYY-MM-DD') AS REG_YMD
+        FROM ETL_DAT P
+        INNER JOIN INTR_PST B ON B.BRD_ID = P.BRD_ID AND B.PST_ID = P.PST_ID
+        WHERE 1=1
+    </select>
+
+    <!-- L-011: 오늘 기준 팝업 게시글 조회 (기능정의서 오리지널 쿼리) -->
+    <select id="getNoticeToday" resultType="com.datastreams.gpt.notice.dto.NoticeTodayDto">
+        WITH BRD_LST AS (
+            SELECT A.BRD_ID
+                 , C.LEVEL_N2_NM AS BRD_NM
+                 , TO_CHAR(CURRENT_TIMESTAMP, 'YYYYMMDD') AS ISS_YMD
+                 , 'Y' AS POP_PST_YN
+            FROM INTR_BRD A
+            LEFT OUTER JOIN COM_CD_LV2 C ON C.LEVEL_N1_CD = 'BRD_CLS_CD' AND C.LEVEL_N2_CD = A.BRD_CLS_CD
+            WHERE 1=1
+            AND A.BRD_CLS_CD = 'NTC'
+            AND A.POP_USE_YN = 'Y'
+        )
+        SELECT ROW_NUMBER() OVER (ORDER BY P.PST_ID DESC) AS PST_SEQ
+             , P.PST_ID
+             , B.BRD_ID
+             , B.BRD_NM
+             , P.TITLE_NM
+             , P.PST_CONT AS CONT_TXT
+             , TO_CHAR(P.REG_DT, 'YYYY-MM-DD') AS REG_YMD
+        FROM BRD_LST B
+        INNER JOIN INTR_PST P ON B.BRD_ID = P.BRD_ID AND B.POP_PST_YN = P.POP_PST_YN
+        WHERE 1=1
+        AND B.ISS_YMD BETWEEN P.POP_STRT_YMD AND P.POP_END_YMD
+        ORDER BY P.MOD_DT DESC, P.REG_DT DESC
+    </select>
+
+</mapper>

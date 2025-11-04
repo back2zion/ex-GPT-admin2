@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.datastreams.gpt.chat.mapper.QuerySaveMapper">
+
+    <select id="insertQuerySave" parameterType="com.datastreams.gpt.chat.dto.QuerySaveRequestDto"
+            resultType="com.datastreams.gpt.chat.dto.QuerySaveResponseDto">
+        WITH USR_CNVS_DATA
+        AS
+        (
+            SELECT
+                  #{cnvsIdtId}             AS CNVS_IDT_ID   /* {CNVS_IDT_ID} 대화 식별 아이디 : 최초 대화 시는 비어 있음 */
+                , #{quesTxt}                AS QUES_TXT   /* 질의 */
+                , #{sesnId}                 AS SESN_ID    /* 세션 아이디 */
+                , #{usrId}                 AS USR_ID      /* 로그인 사용자 아이디 */
+                , #{menuIdtId}             AS MENU_IDT_ID     /* 메뉴 식별 아이디 */
+                , #{rcmQuesYn}             AS RCM_QUES_YN /* {RCM_QUES_YN} 추천 질의 여부 : 만약 추천질의로 질의한 경우 Y 임 */
+            WHERE 1=1
+        ), INS_USR_CNVS_SMRY
+        AS
+        (
+            INSERT INTO USR_CNVS_SMRY (
+              CNVS_IDT_ID
+            , CNVS_SMRY_TXT
+            , USR_ID
+            , MENU_IDT_ID
+            )
+            SELECT CD.USR_ID||'_'||TO_CHAR(CURRENT_TIMESTAMP, 'YYYYMMDDHH24MISS')||LPAD(EXTRACT(MICROSECONDS FROM CURRENT_TIMESTAMP)::INTEGER % 1000000, 6, '0') AS CNVS_IDT_ID
+                , CD.QUES_TXT AS CNVS_SMRY_TXT
+                , CD.USR_ID
+                , CD.MENU_IDT_ID AS MENU_IDT_ID
+            FROM USR_CNVS_DATA CD
+            WHERE 1=1
+            AND (CD.CNVS_IDT_ID IS NULL OR TRIM(CD.CNVS_IDT_ID)  = '' )  /* CNVS_IDT_ID 값이 없는 경우 첫 대화이므로 CNVS_IDT_ID 를 생성하여 INSERT 함 */
+            RETURNING USR_CNVS_SMRY.*
+        ), INS_USR_CNVS
+        AS
+        (
+            INSERT INTO USR_CNVS (
+              CNVS_IDT_ID
+            , QUES_TXT
+            , SESN_ID
+            , RCM_QUES_YN
+            )
+            SELECT CASE WHEN CD.CNVS_IDT_ID IS NULL OR TRIM(CD.CNVS_IDT_ID) = '' THEN S.CNVS_IDT_ID ELSE CD.CNVS_IDT_ID END AS CNVS_IDT_ID
+                , CD.QUES_TXT
+                , CD.SESN_ID
+                , CD.RCM_QUES_YN
+            FROM USR_CNVS_DATA CD
+            LEFT OUTER JOIN INS_USR_CNVS_SMRY S ON 1=1
+            WHERE 1=1
+            RETURNING USR_CNVS.*
+        )
+        SELECT 'INS_USR_CNVS' AS TXN_NM, CNVS_IDT_ID, CNVS_ID FROM INS_USR_CNVS
+        WHERE 1=1
+    </select>
+
+</mapper>

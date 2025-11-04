@@ -1,0 +1,368 @@
+/**
+ * ex-GPT 통계 페이지 스타일
+ */
+
+.stats-page {
+  width: 100%;
+  padding: 2rem 3rem;
+  box-sizing: border-box;
+}
+
+/* 헤더 */
+.stats-header {
+  background: linear-gradient(135deg, var(--ex-primary) 0%, #0d3ab5 100%);
+  padding: 3rem;
+  border-radius: 20px;
+  margin-bottom: 2.5rem;
+  box-shadow: 0 10px 30px rgba(10, 41, 134, 0.25);
+  color: white;
+  text-align: center;
+}
+
+.stats-header h2 {
+  color: white;
+  margin: 0 0 0.75rem 0;
+  font-size: 2.5rem;
+  font-weight: 800;
+}
+
+.stats-header p {
+  color: rgba(255, 255, 255, 0.95);
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 300;
+}
+
+/* 날짜 범위 필터 */
+.date-range-filter {
+  background: white;
+  border: 1px solid var(--ex-border);
+  border-radius: 20px;
+  padding: 2rem 2.5rem;
+  margin-bottom: 2.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.form-row {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.form-row .form-group {
+  flex: 1;
+  min-width: 220px;
+}
+
+.form-row .form-group label {
+  display: block;
+  font-weight: 700;
+  color: var(--ex-primary);
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.form-row input[type="date"] {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  border: 2px solid var(--ex-border);
+  border-radius: 12px;
+  font-size: 1.05rem;
+  transition: all 0.3s ease;
+  background: white;
+  color: var(--ex-text-dark);
+  font-weight: 500;
+}
+
+.form-row input[type="date"]:focus {
+  outline: none;
+  border-color: var(--ex-primary);
+  box-shadow: 0 0 0 4px rgba(10, 41, 134, 0.1);
+  transform: translateY(-1px);
+}
+
+.form-row input[type="date"]:hover {
+  border-color: var(--ex-primary);
+}
+
+/* 요약 카드 그리드 */
+.stats-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+  margin-bottom: 2.5rem;
+}
+
+.stat-card {
+  background: white;
+  border: 1px solid var(--ex-border);
+  border-radius: 20px;
+  padding: 2.5rem;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--ex-primary) 0%, var(--ex-accent) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 35px rgba(10, 41, 134, 0.2);
+}
+
+.stat-card:hover::before {
+  opacity: 1;
+}
+
+.stat-icon {
+  font-size: 3rem;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(10, 41, 134, 0.1) 0%, rgba(10, 41, 134, 0.15) 100%);
+  border-radius: 18px;
+  flex-shrink: 0;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-content h3 {
+  font-size: 0.9rem;
+  color: var(--ex-text);
+  margin: 0 0 0.75rem 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.stat-value {
+  font-size: 2.75rem;
+  font-weight: 800;
+  color: var(--ex-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* 차트 그리드 */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+}
+
+.chart-card {
+  background: white;
+  border: 1px solid var(--ex-border);
+  border-radius: 20px;
+  padding: 2.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  min-height: 450px;
+}
+
+.chart-card:hover {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  transform: translateY(-4px);
+}
+
+.chart-card h3 {
+  color: var(--ex-primary);
+  margin: 0 0 2rem 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  padding-bottom: 1.25rem;
+  border-bottom: 3px solid var(--ex-background);
+}
+
+.chart-container {
+  position: relative;
+  height: 340px;
+  padding: 0.5rem 0;
+}
+
+/* 데이터 테이블 */
+.model-stats-table {
+  max-height: 340px;
+  overflow-y: auto;
+  border-radius: 12px;
+  margin-top: 1rem;
+}
+
+.model-stats-table::-webkit-scrollbar {
+  width: 10px;
+}
+
+.model-stats-table::-webkit-scrollbar-track {
+  background: var(--ex-background);
+  border-radius: 5px;
+}
+
+.model-stats-table::-webkit-scrollbar-thumb {
+  background: var(--ex-border);
+  border-radius: 5px;
+  transition: background 0.2s;
+}
+
+.model-stats-table::-webkit-scrollbar-thumb:hover {
+  background: var(--ex-text);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table thead {
+  background: linear-gradient(135deg, #f0f3ff 0%, #e8eeff 100%);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.data-table th {
+  padding: 1.25rem 1.5rem;
+  text-align: left;
+  font-weight: 800;
+  color: var(--ex-primary);
+  border-bottom: 3px solid var(--ex-primary);
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.data-table td {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  color: var(--ex-text-dark);
+  transition: all 0.2s ease;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.data-table tbody tr {
+  transition: all 0.2s ease;
+}
+
+.data-table tbody tr:hover {
+  background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+  transform: scale(1.005);
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* 데이터 없음 */
+.no-data {
+  text-align: center;
+  color: var(--ex-text);
+  padding: 4rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+/* 로딩 상태 */
+.loading {
+  text-align: center;
+  padding: 4rem;
+  color: var(--ex-text);
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+/* 알림 */
+.alert {
+  padding: 1.25rem 2rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.alert-danger {
+  background: #fee;
+  color: #c00;
+  border: 2px solid #fcc;
+}
+
+/* 반응형 */
+@media (max-width: 1400px) {
+  .stats-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 1024px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-page {
+    padding: 1.5rem;
+  }
+
+  .stats-header {
+    padding: 2rem;
+  }
+
+  .stats-header h2 {
+    font-size: 2rem;
+  }
+
+  .stats-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card {
+    flex-direction: column;
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .stat-icon {
+    margin: 0 auto;
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+
+  .form-row .form-group {
+    width: 100%;
+  }
+
+  .chart-card {
+    padding: 1.5rem;
+  }
+
+  .chart-card h3 {
+    font-size: 1.2rem;
+  }
+}

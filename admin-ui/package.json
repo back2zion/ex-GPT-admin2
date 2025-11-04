@@ -1,0 +1,43 @@
+{
+  "name": "react-project",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@mui/x-date-pickers": "^8.14.1",
+    "axios": "^1.12.2",
+    "chart.js": "^4.5.1",
+    "dayjs": "^1.11.18",
+    "dompurify": "^3.3.0",
+    "js-cookie": "^3.0.5",
+    "ra-data-simple-rest": "^5.12.1",
+    "ra-i18n-polyglot": "^5.12.1",
+    "ra-language-korean": "^1.0.1",
+    "react": "^19.1.0",
+    "react-admin": "^5.12.1",
+    "react-chartjs-2": "^5.3.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.9.4",
+    "recharts": "^3.3.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.30.1",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "eslint": "^9.30.1",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^16.3.0",
+    "terser": "^5.44.0",
+    "vite": "^7.0.4"
+  },
+  "homepage": "/admin"
+}

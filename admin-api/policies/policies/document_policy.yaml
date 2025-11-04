@@ -1,0 +1,32 @@
+---
+apiVersion: api.cerbos.dev/v1
+resourcePolicy:
+  version: "default"
+  resource: "document"
+  rules:
+    # 관리자는 모든 문서 작업 가능
+    - actions: ['*']
+      effect: EFFECT_ALLOW
+      roles:
+        - admin
+
+    # 매니저는 읽기, 수정, 승인 가능
+    - actions: ['read', 'update', 'approve']
+      effect: EFFECT_ALLOW
+      roles:
+        - manager
+
+    # 일반 사용자는 자신의 부서 문서만 읽기 가능
+    - actions: ['read']
+      effect: EFFECT_ALLOW
+      roles:
+        - user
+      condition:
+        match:
+          expr: request.resource.attr.department == request.principal.attr.department
+
+    # 뷰어는 읽기만 가능
+    - actions: ['read']
+      effect: EFFECT_ALLOW
+      roles:
+        - viewer

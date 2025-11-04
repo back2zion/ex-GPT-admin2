@@ -1,0 +1,68 @@
+/* 알림 토스트 */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toast {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999999;
+  transform: translateX(120%);
+  transition: transform 0.3s ease;
+  border: 1px solid transparent;
+  font-size: 14px;
+  min-width: 350px;
+  max-width: 410px;
+  opacity: 1;
+  transition: opacity 2s linear;
+
+  &-content {
+    padding: 14px 20px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+    font-size: 17px;
+  }
+
+  &-icon {
+    flex-shrink: 0;
+    line-height: 0;
+  }
+
+  &-message {
+    word-break: break-word;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 활성화 */
+  &.show {
+    transform: translateX(0);
+  }
+  &.hide {
+    opacity: 0;
+  }
+  &.success {
+    background: var(--ds-status-color-success-bg);
+    border-color: var(--ds-status-color-success-border);
+    color: var(--ds-status-color-success-text-color);
+  }
+  &.fail {
+    background: var(--ds-status-color-failure-bg);
+    border-color: var(--ds-status-color-failure-border);
+    color: var(--ds-status-color-failure-text-color);
+  }
+  &.warning {
+    background: var(--ds-status-color-warning-bg);
+    border-color: var(--ds-status-color-warning-border);
+    color: var(--ds-status-color-warning-text-color);
+  }
+}

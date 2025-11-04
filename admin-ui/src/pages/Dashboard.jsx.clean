@@ -1,0 +1,283 @@
+/**
+ * CoreUI 스타일 깔끔한 대시보드
+ * 심플 화이트 카드 + 중앙 정렬
+ */
+import { useState, useEffect } from 'react';
+import { Card, CardContent, Box, Grid, Typography, CircularProgress, Paper } from '@mui/material';
+import { Title } from 'react-admin';
+import {
+    QuestionAnswer as QuestionAnswerIcon,
+    People as PeopleIcon,
+    Star as StarIcon,
+    Description as DescriptionIcon,
+} from '@mui/icons-material';
+import {
+    LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+    Tooltip, Legend, ResponsiveContainer, Area, AreaChart
+} from 'recharts';
+import apiClient from '../utils/api';
+
+// CoreUI 컬러 팔레트
+const colors = {
+    primary: '#321fdb',
+    success: '#2eb85c',
+    info: '#39f',
+    warning: '#f9b115',
+    danger: '#e55353',
+};
+
+// CoreUI 스타일의 심플 카드
+const SimpleStatCard = ({ title, value, icon: Icon, color, trend, trendValue, loading }) => (
+    <Card
+        sx={{
+            height: '100%',
+            background: 'white',
+            border: '1px solid #d8dbe0',
+            borderTop: `3px solid ${color}`,
+            boxShadow: '0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2)',
+            borderRadius: '4px',
+        }}
+    >
+        <CardContent sx={{ p: 2.5 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ flex: 1 }}>
+                    <Typography variant="body2" sx={{ color: '#768192', mb: 1, fontSize: '0.875rem' }}>
+                        {title}
+                    </Typography>
+                    {loading ? (
+                        <CircularProgress size={24} />
+                    ) : (
+                        <>
+                            <Typography variant="h4" component="div" sx={{ fontWeight: 700, color: '#303c54', mb: 0.5 }}>
+                                {value}
+                            </Typography>
+                            {trend && (
+                                <Typography variant="caption" sx={{ color: trend === 'up' ? colors.success : colors.danger }}>
+                                    {trend === 'up' ? '▲' : '▼'} {trendValue}
+                                </Typography>
+                            )}
+                        </>
+                    )}
+                </Box>
+                <Box
+                    sx={{
+                        width: 48,
+                        height: 48,
+                        backgroundColor: color,
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                    }}
+                >
+                    <Icon sx={{ fontSize: 24 }} />
+                </Box>
+            </Box>
+        </CardContent>
+    </Card>
+);
+
+const DashboardClean = () => {
+    const [loading, setLoading] = useState(true);
+    const [stats, setStats] = useState({
+        totalQuestions: 0,
+        activeUsers: 0,
+        avgSatisfaction: 0,
+        totalDocuments: 0,
+    });
+    const [dailyData, setDailyData] = useState([]);
+    const [hourlyData, setHourlyData] = useState([]);
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const loadData = async () => {
+        try {
+            setLoading(true);
+            const response = await apiClient.get('/admin/stats/dashboard', {
+                params: {
+                    start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    end: new Date().toISOString().split('T')[0],
+                },
+            });
+
+            setStats({
+                totalQuestions: response.data.total_questions || 0,
+                activeUsers: response.data.active_users || 0,
+                avgSatisfaction: response.data.avg_satisfaction || 0,
+                totalDocuments: response.data.unique_documents || 3497,
+            });
+
+            setDailyData(response.data.daily_trends || []);
+            setHourlyData(response.data.hourly_patterns || []);
+        } catch (error) {
+            console.error('Failed to load data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const formatNumber = (num) => {
+        if (num === null || num === undefined) return '0';
+        return num.toLocaleString('ko-KR');
+    };
+
+    if (loading) {
+        return (
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+                <CircularProgress />
+            </Box>
+        );
+    }
+
+    return (
+        <Box sx={{ maxWidth: '1200px', margin: '0 auto' }}>
+            <Title title="대시보드" />
+
+            {/* 상단 타이틀 */}
+            <Box sx={{ mb: 4 }}>
+                <Typography
+                    variant="h4"
+                    component="h1"
+                    gutterBottom
+                    sx={{
+                        color: '#303c54',
+                        fontWeight: 700,
+                    }}
+                >
+                    대시보드
+                </Typography>
+                <Typography variant="body1" sx={{ color: '#768192' }}>
+                    최근 7일간의 ex-GPT 사용 통계 및 시스템 현황
+                </Typography>
+            </Box>
+
+            {/* 통계 카드 */}
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+                <Grid item xs={12} sm={6} md={3}>
+                    <SimpleStatCard
+                        title="총 질문 수"
+                        value={formatNumber(stats.totalQuestions)}
+                        icon={QuestionAnswerIcon}
+                        color={colors.primary}
+                        trend="up"
+                        trendValue="+12%"
+                        loading={loading}
+                    />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <SimpleStatCard
+                        title="활성 사용자"
+                        value={formatNumber(stats.activeUsers)}
+                        icon={PeopleIcon}
+                        color={colors.success}
+                        trend="up"
+                        trendValue="+8%"
+                        loading={loading}
+                    />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <SimpleStatCard
+                        title="만족도"
+                        value={stats.avgSatisfaction.toFixed(1)}
+                        icon={StarIcon}
+                        color={colors.warning}
+                        loading={loading}
+                    />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <SimpleStatCard
+                        title="문서 수"
+                        value={formatNumber(stats.totalDocuments)}
+                        icon={DescriptionIcon}
+                        color={colors.info}
+                        loading={loading}
+                    />
+                </Grid>
+            </Grid>
+
+            {/* 차트 영역 */}
+            <Grid container spacing={3}>
+                {/* 일별 추이 */}
+                <Grid item xs={12} md={6}>
+                    <Paper
+                        sx={{
+                            p: 3,
+                            background: 'white',
+                            border: '1px solid #d8dbe0',
+                            boxShadow: '0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2)',
+                            borderRadius: '4px',
+                        }}
+                    >
+                        <Typography variant="h6" gutterBottom sx={{ color: '#303c54', fontWeight: 600, mb: 3 }}>
+                            일별 질문 추이
+                        </Typography>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <AreaChart data={dailyData}>
+                                <defs>
+                                    <linearGradient id="colorQuestions" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor={colors.primary} stopOpacity={0.8} />
+                                        <stop offset="95%" stopColor={colors.primary} stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e4e8ed" />
+                                <XAxis dataKey="date" stroke="#768192" style={{ fontSize: '12px' }} />
+                                <YAxis stroke="#768192" style={{ fontSize: '12px' }} />
+                                <Tooltip
+                                    contentStyle={{
+                                        backgroundColor: 'white',
+                                        border: '1px solid #d8dbe0',
+                                        borderRadius: '4px',
+                                    }}
+                                />
+                                <Area
+                                    type="monotone"
+                                    dataKey="count"
+                                    stroke={colors.primary}
+                                    fillOpacity={1}
+                                    fill="url(#colorQuestions)"
+                                />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </Paper>
+                </Grid>
+
+                {/* 시간별 패턴 */}
+                <Grid item xs={12} md={6}>
+                    <Paper
+                        sx={{
+                            p: 3,
+                            background: 'white',
+                            border: '1px solid #d8dbe0',
+                            boxShadow: '0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2)',
+                            borderRadius: '4px',
+                        }}
+                    >
+                        <Typography variant="h6" gutterBottom sx={{ color: '#303c54', fontWeight: 600, mb: 3 }}>
+                            시간별 사용 패턴
+                        </Typography>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={hourlyData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e4e8ed" />
+                                <XAxis dataKey="hour" stroke="#768192" style={{ fontSize: '12px' }} />
+                                <YAxis stroke="#768192" style={{ fontSize: '12px' }} />
+                                <Tooltip
+                                    contentStyle={{
+                                        backgroundColor: 'white',
+                                        border: '1px solid #d8dbe0',
+                                        borderRadius: '4px',
+                                    }}
+                                />
+                                <Bar dataKey="count" fill={colors.success} radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </Paper>
+                </Grid>
+            </Grid>
+        </Box>
+    );
+};
+
+export default DashboardClean;

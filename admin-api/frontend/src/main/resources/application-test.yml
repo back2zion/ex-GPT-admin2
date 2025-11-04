@@ -1,0 +1,89 @@
+server:
+  port: 20001
+  servlet:
+    context-path: /exGenBotDS
+  tomcat:
+    max-swallow-size: 200MB
+
+spring:
+  application:
+    name: gpt
+  profiles:
+    active: test
+  servlet:
+    multipart:
+      max-file-size: 200MB
+      max-request-size: 500MB
+      enabled: true
+  mvc:
+    view:
+      prefix: /WEB-INF/views/
+      suffix: .jsp
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+  # 데이터소스 비활성화 (SSO 테스트용)
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+
+# MyBatis 설정 비활성화
+# mybatis:
+#   mapper-locations: classpath:mappers/**/*.xml
+#   type-aliases-package: com.datastreams.gpt.**.model
+#   configuration:
+#     map-underscore-to-camel-case: true
+
+# Logging 설정
+logging:
+  level:
+    root: INFO
+    com.datastreams.gpt: DEBUG
+    org.apache.http.wire: ERROR
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/dsgpt.log
+
+# Swagger/OpenAPI Settings
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    try-it-out-enabled: true
+  packages-to-scan: com.datastreams.gpt
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
+
+# DSGPT 테스트 설정
+ds:
+  ai:
+    server:
+      url: http://localhost:8083
+    api:
+      key: test-key
+  ssoUse: true # SSO 테스트용 활성화
+  minIO:
+    address: http://127.0.0.1:9090/
+    accessKey: minioadmin
+    secretKey: minioadmin
+    bucketName: test01
+
+# File Path (테스트용)
+file:
+  upload:
+    path: file:///tmp/exgpt/upload/
+    streaming:
+      enabled: true
+  download:
+    path: file:///tmp/exgpt/download/
+
+# 국정감사 파일 업로드 설정
+ga:
+  upload:
+    directory: /tmp/exgpt-ga-uploads

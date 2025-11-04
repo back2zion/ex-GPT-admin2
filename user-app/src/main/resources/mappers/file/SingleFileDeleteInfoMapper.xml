@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.datastreams.gpt.file.mapper.SingleFileDeleteInfoMapper">
+
+    <!-- L-039: 단일 파일 삭제 정보 갱신 -->
+    <update id="updateSingleFileDeleteInfo" parameterType="com.datastreams.gpt.file.dto.SingleFileDeleteInfoRequestDto">
+        WITH DAT_INFO AS (
+            SELECT #{cnvsIdtId} AS CNVS_IDT_ID
+                 , #{fileUid} AS FILE_UID
+                 , #{logCont} AS LOG_CONT
+                 , #{sucYn} AS SUC_YN
+            WHERE 1=1
+        ), DEL_LST AS (
+            SELECT F.FILE_UPLD_SEQ
+                 , D.CNVS_IDT_ID
+                 , D.FILE_UID
+                 , D.LOG_CONT
+                 , D.SUC_YN
+            FROM DAT_INFO D
+            INNER JOIN USR_UPLD_DOC_MNG F ON D.CNVS_IDT_ID = F.CNVS_IDT_ID AND D.FILE_UID = F.FILE_UID
+            WHERE 1=1
+        ), UPD_USR_UPLD_DOC_MNG AS (
+            UPDATE USR_UPLD_DOC_MNG
+            SET USR_UPLD_DOC_MNG.DEL_YN = F.SUC_YN
+              , USR_UPLD_DOC_MNG.DEL_DT = CASE WHEN F.SUC_YN = 'N' THEN USR_UPLD_DOC_MNG.DEL_DT ELSE CURRENT_TIMESTAMP END
+              , USR_UPLD_DOC_MNG.LOG_CONT = USR_UPLD_DOC_MNG.LOG_CONT||'| FILE_DELETED : '||F.LOG_CONT
+              , USR_UPLD_DOC_MNG.LOG_SAV_DT = CURRENT_TIMESTAMP
+            FROM DEL_LST F
+            WHERE 1=1
+            AND USR_UPLD_DOC_MNG.FILE_UPLD_SEQ = F.FILE_UPLD_SEQ
+            RETURNING USR_UPLD_DOC_MNG.*
+        )
+        SELECT 'UPD_USR_UPLD_DOC_MNG' AS TXN_NM, COUNT(*) AS CNT FROM UPD_USR_UPLD_DOC_MNG
+        WHERE 1=1
+    </update>
+
+    <!-- L-039: 특정 파일 존재 여부 조회 -->
+    <select id="checkFileExists" resultType="int">
+        SELECT COUNT(*)
+        FROM USR_UPLD_DOC_MNG
+        WHERE CNVS_IDT_ID = #{cnvsIdtId}
+        AND FILE_UID = #{fileUid}
+    </select>
+
+    <!-- L-039: 특정 파일 삭제 상태 조회 -->
+    <select id="getFileDeleteStatus" resultType="string">
+        SELECT COALESCE(DEL_YN, 'N') AS DEL_YN
+        FROM USR_UPLD_DOC_MNG
+        WHERE CNVS_IDT_ID = #{cnvsIdtId}
+        AND FILE_UID = #{fileUid}
+    </select>
+
+</mapper>

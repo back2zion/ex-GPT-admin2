@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.datastreams.gpt.file.mapper.FileUploadHistoryUpdateMapper">
+
+    <select id="updateFileUploadHistory" parameterType="com.datastreams.gpt.file.dto.FileUploadHistoryUpdateRequestDto"
+            resultType="com.datastreams.gpt.file.dto.FileUploadHistoryUpdateResponseDto">
+        WITH DAT_INFO
+        AS
+        (
+            SELECT #{fileUpldSeq} AS FILE_UPLD_SEQ /* BIGINT {FILE_UPLD_SEQ} */
+                 , #{fileUid} AS FILE_UID /* 파일 UPLOAD API 실행 후 리턴 받은 FILE_UID */
+                 , #{logCont} AS LOG_CONT   /* 성공 시 file status, 오류 시 오류 메시지 */
+            WHERE 1=1
+        ), UPD_USR_UPLD_DOC_MNG
+        AS
+        (
+            UPDATE USR_UPLD_DOC_MNG
+            SET  USR_UPLD_DOC_MNG.FILE_UID = F.FILE_UID
+               , USR_UPLD_DOC_MNG.FILE_UPLD_DT = CURRENT_TIMESTAMP
+               , USR_UPLD_DOC_MNG.LOG_CONT = USR_UPLD_DOC_MNG.LOG_CONT||'| FILE_UPLOADED : '||CASE WHEN F.FILE_UID IS NULL THEN F.LOG_CONT ELSE F.FILE_UID||'('||F.LOG_CONT||')' END
+               , USR_UPLD_DOC_MNG.LOG_SAV_DT = CURRENT_TIMESTAMP
+            FROM DAT_INFO F
+            WHERE 1=1
+            AND USR_UPLD_DOC_MNG.FILE_UPLD_SEQ = F.FILE_UPLD_SEQ
+            RETURNING USR_UPLD_DOC_MNG.*
+        )
+        SELECT 'UPD_USR_UPLD_DOC_MNG' AS TXN_NM, COUNT(*) AS CNT FROM UPD_USR_UPLD_DOC_MNG
+        WHERE 1=1;
+    </select>
+
+</mapper>

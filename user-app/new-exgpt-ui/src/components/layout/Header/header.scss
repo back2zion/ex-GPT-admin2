@@ -1,0 +1,207 @@
+// 0905 header__util-button font-size 변경, 미디어 쿼리 수정
+:root {
+  --ds-header-util-button-border-color: #edededfa;
+  --ds-header-util-button-bg: #f9fbff;
+  --ds-header-util-button-text-color: var(--ds-color-black-2);
+
+  --ds-header-util-button-border-color-hover: #444444;
+  --ds-header-util-button-bg-hover: var(--ds-general-color-white);
+  --ds-header-util-button-text-color-hover: var(--ds-color-black-2);
+
+  // 국정감사
+  --ds-gov-header-bg: linear-gradient(
+    90deg,
+    #ffffff 0%,
+    #cbe4ff 35.13%,
+    #c3e0ff 71.94%,
+    #c3d0f2 97.98%
+  );
+  --ds-gov-header-logo-text-color: #062b87;
+  --ds-gov-header-logo-background-image: url(../../../assets/icons/header/gov/logo_light.svg);
+}
+[theme="dark"] {
+  --ds-header-util-button-border-color: #3d4256;
+  --ds-header-util-button-bg: #3d4256;
+  --ds-header-util-button-text-color: var(--ds-general-color-white);
+
+  --ds-header-util-button-border-color-hover: #49535d;
+  --ds-header-util-button-bg-hover: #49535d;
+  --ds-header-util-button-text-color-hover: var(--ds-general-color-white);
+
+  // 국정감사
+  --ds-gov-header-bg: linear-gradient(
+    90deg,
+    rgba(29, 35, 42, 0.8) -4.62%,
+    rgba(36, 75, 121, 0.8) 6.85%,
+    rgba(32, 85, 148, 0.8) 20.08%,
+    rgba(34, 95, 166, 0.8) 40.37%,
+    rgba(32, 95, 168, 0.8) 68.36%,
+    rgba(28, 99, 181, 0.8) 97.89%
+  );
+  --ds-gov-header-logo-text-color: var(--ds-general-color-white);
+  --ds-gov-header-logo-background-image: url(../../../assets/icons/header/gov/logo_dark.svg);
+}
+.header {
+  height: 58px;
+  margin: 0;
+  position: relative;
+  margin-left: 55px;
+
+  &__inner {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 1.5%;
+    // padding-left: 56px;
+  }
+
+  &__util {
+    &-menu {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      justify-content: end;
+    }
+    &-button.ds-button {
+      min-height: 33px;
+      justify-content: center;
+      border: 1px solid var(--ds-header-util-button-border-color);
+      border-radius: 18px;
+      background-color: var(--ds-header-util-button-bg);
+      padding: 4px 13px;
+      color: var(--ds-header-util-button-text-color);
+      font-size: calc(var(--ds-font-size-base) * 0.875);
+
+      &:hover {
+        border-color: var(--ds-header-util-button-border-color-hover);
+        background-color: var(--ds-header-util-button-bg-hover);
+        color: var(--ds-header-util-button-text-color-hover);
+
+        svg path {
+          stroke: var(--ds-header-util-button-text-color-hover);
+        }
+      }
+
+      // 글자크기버튼
+      &.text-size:hover {
+        svg path {
+          stroke: inherit;
+          fill: var(--ds-header-util-button-text-color-hover);
+        }
+      }
+    }
+  }
+}
+// 0905 반응형 구간 변경
+@media (max-width: 950px) {
+  .header__util-button.ds-button {
+    .button-label {
+      display: none;
+    }
+  }
+}
+
+@media (max-width: 550px) {
+  .header__util-button.ds-button {
+    padding: 0 10px;
+
+    svg {
+      width: 18px;
+    }
+  }
+}
+
+// 국정감사 전용 AI
+@mixin gov-mode-header {
+  background: var(--ds-gov-header-bg);
+
+  &-logo {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -40%);
+    font-weight: 500;
+    font-size: calc(var(--ds-font-size-base) * 1.25);
+    color: var(--ds-gov-header-logo-text-color);
+    padding-left: 52px;
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 42%;
+      transform: translateY(-50%);
+      background: var(--ds-gov-header-logo-background-image) center/cover no-repeat;
+      width: 45px;
+      height: 31px;
+    }
+  }
+}
+
+.header__gov {
+  @include gov-mode-header;
+
+  @media (max-width: 1480px) {
+    .header__util-button.ds-button .button-label {
+      display: none;
+    }
+  }
+
+  @media (max-width: 840px) {
+    &-logo {
+      font-size: var(--ds-font-size-base);
+    }
+  }
+
+  @media (max-width: 770px) {
+    &-logo {
+      left: 42%;
+
+      &::before {
+        width: 38px;
+      }
+    }
+  }
+
+  @media (max-width: 700px) {
+    &-logo {
+      padding-left: 0;
+
+      &::before {
+        content: none;
+      }
+    }
+  }
+
+  @media (max-width: 630px) {
+    &-logo {
+      font-size: calc(var(--ds-font-size-base) * 0.85);
+    }
+
+    .header__util-menu {
+      gap: 5px;
+    }
+
+    .header__util-button.ds-button {
+      padding: 0 8px;
+    }
+  }
+
+  @media (max-width: 500px) {
+    .header__util-menu {
+      gap: 4px;
+    }
+
+    .header__util-button.ds-button svg {
+      width: 16px;
+    }
+  }
+
+  @media (max-width: 460px) {
+    &-logo {
+      left: 39%;
+      font-size: calc(var(--ds-font-size-base) * 0.8);
+    }
+  }
+}

@@ -1,0 +1,92 @@
+// 오류사항신고
+:root {
+  --ds-error-submit-modal-option-border-color: #efefef;
+  --ds-error-submit-modal-option-border-color-hover: #067ee1;
+  --ds-error-submit-modal-option-border-color-active: #067ee1;
+  --ds-error-submit-modal-option-bg: var(--ds-general-color-white);
+  --ds-error-submit-modal-option-bg-hover: #c7c7c7;
+
+  --ds-error-submit-modal-textarea-border-color: #c1c1c1;
+  --ds-error-submit-modal-textarea-bg: var(--ds-general-color-white);
+  --ds-error-submit-modal-textarea-border-color-focus: var(--ds-color-black-2);
+}
+[theme="dark"] {
+  --ds-error-submit-modal-option-border-color: #1f2329;
+  --ds-error-submit-modal-option-bg: #1f2329;
+  --ds-error-submit-modal-option-bg-hover: #383839;
+
+  --ds-error-submit-modal-textarea-border-color: #142238;
+  --ds-error-submit-modal-textarea-bg: #141b26;
+  --ds-error-submit-modal-textarea-border-color-focus: #697aa1;
+}
+.error-submit-modal {
+  .modal-box {
+    min-width: 32vw;
+  }
+  &-title {
+    font-size: calc(var(--ds-font-size-base) * 1.0625);
+    text-align: center;
+    line-height: 1.3;
+  }
+  &-info {
+    * {
+      font-size: calc(var(--ds-font-size-base) * 0.875);
+      margin: 0;
+      text-align: center;
+    }
+    &__feedback {
+      margin-top: 15px;
+    }
+    &__choice {
+      margin-top: 5px;
+    }
+  }
+  &-select {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px 11px;
+    margin-top: 33px;
+
+    &__option {
+      font-size: calc(var(--ds-font-size-base) * 0.875);
+      padding: 10px 13px;
+      border: 1px solid var(--ds-error-submit-modal-option-border-color);
+      border-radius: 8px;
+      background-color: var(--ds-error-submit-modal-option-bg);
+      transition: 0.1s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      &:hover {
+        // background-color: var(--ds-error-submit-modal-option-bg-hover);
+        border-color: var(--ds-error-submit-modal-option-border-color-hover);
+      }
+
+      &.active {
+        border-color: var(--ds-error-submit-modal-option-border-color-active);
+      }
+    }
+  }
+  &-question {
+    margin-top: 26px;
+  }
+  &-textarea {
+    resize: none;
+    width: 100%;
+    outline: none;
+
+    margin-top: 6px;
+    border: 1px solid var(--ds-error-submit-modal-textarea-border-color);
+    padding: 15px 20px;
+    border-radius: 12px;
+    background-color: var(--ds-error-submit-modal-textarea-bg);
+    font-size: calc(var(--ds-font-size-base) * 0.9375);
+
+    &:focus-visible {
+      outline: 1px solid var(--ds-error-submit-modal-textarea-border-color-focus);
+    }
+
+    color: var(--ds-content-form-textarea-text-color);
+  }
+}

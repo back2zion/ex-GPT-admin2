@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.datastreams.gpt.chat.mapper.ConversationHistoryMapper">
+
+    <select id="selectConversationHistory" parameterType="com.datastreams.gpt.chat.dto.ConversationHistoryRequestDto"
+            resultType="com.datastreams.gpt.chat.dto.ConversationHistoryResponseDto">
+        WITH USR_CNVS_DATA
+        AS
+        (
+            SELECT
+                  #{cnvsIdtId} AS CNVS_IDT_ID   /* {CNVS_IDT_ID} 대화 식별 아이디 */
+                 , #{cnvsId}   AS CNVS_ID       /* {CNVS_ID} 대화 아이디, 대화 INSERT 후 받아온 값 */
+                 , CASE WHEN MAX(C.LEVEL_N3_CD) IS NULL THEN 10 ELSE TO_NUMBER(MAX(C.LEVEL_N3_CD)) END AS MLTN_USE_HST_CNT /* 멀티턴 사용 이력 개수 */
+            FROM COM_CD_LV3 C 
+            WHERE 1=1
+            AND C.LEVEL_N1_CD = 'MNG_CONF'
+            AND C.LEVEL_N2_CD = 'MLTN_USE_HST_CNT'
+        )
+        SELECT R.ROW_SEQ
+             , R.QUES_TXT
+             , R.ANS_TXT
+        FROM
+        (
+            SELECT ROW_NUMBER() OVER (ORDER BY C.REG_DT, C.CNVS_ID) AS ROW_SEQ, C.QUES_TXT, C.ANS_TXT
+                 , ROW_NUMBER() OVER (ORDER BY C.REG_DT DESC, C.CNVS_ID DESC) AS RN
+                 , T.MLTN_USE_HST_CNT
+            FROM USR_CNVS_DATA T
+            INNER JOIN USR_CNVS C ON T.CNVS_IDT_ID = C.CNVS_IDT_ID
+            WHERE 1=1
+            AND T.CNVS_ID &lt;&gt; C.CNVS_ID
+            AND C.ANS_TXT IS NULL
+        ) R
+        WHERE 1=1
+        AND R.RN &lt;= R.MLTN_USE_HST_CNT
+    </select>
+
+    <!-- L-027: 대화 목록 조회 -->
+    <select id="selectConversationList" parameterType="com.datastreams.gpt.chat.dto.ConversationListRequestDto"
+            resultType="com.datastreams.gpt.chat.dto.ConversationListResponseDto">
+        SELECT
+            CNVS_IDT_ID as cnvsIdtId,
+            NVL(CNVS_SMRY_TXT, '대화 요약 없음') as cnvsSmryTxt,
+            USR_ID as usrId,
+            TO_CHAR(REG_DT, 'YYYY-MM-DD HH24:MI:SS') as regDt
+        FROM USR_CNVS_SMRY
+        WHERE 1=1
+        AND USR_ID = #{usrId}
+        ORDER BY REG_DT DESC
+    </select>
+
+    <!-- L-028: 사용자 대화 조회 -->
+    <select id="selectUserConversation" parameterType="com.datastreams.gpt.chat.dto.ConversationListRequestDto"
+            resultType="com.datastreams.gpt.chat.dto.UserConversationResponseDto">
+        WITH USR_INFO
+        AS
+        (
+            SELECT
+                  #{cnvsIdtId} AS CNVS_IDT_ID   /* {CNVS_IDT_ID}  */
+            WHERE 1=1
+        )
+        SELECT C.CNVS_ID
+             , C.QUES_TXT
+             , C.ANS_TXT
+             , TO_CHAR(C.REG_DT, 'YYYY-MM-DD HH24:MI:SS') AS REG_YMD
+        FROM USR_INFO U
+        INNER JOIN USR_CNVS C ON U.CNVS_IDT_ID = C.CNVS_IDT_ID
+        WHERE 1=1
+        AND C.USE_YN = 'Y'
+        ORDER BY C.REG_DT, C.CNVS_ID
+    </select>
+
+    <!-- L-029: 참조 문서 조회 -->
+    <select id="selectReferenceDocuments" parameterType="com.datastreams.gpt.chat.dto.ConversationListRequestDto"
+            resultType="com.datastreams.gpt.chat.dto.ConversationListResponseDto">
+        SELECT 
+            CNVS_IDT_ID as cnvsIdtId,
+            CNVS_ID as cnvsId,
+            USR_ID as usrId,
+            REF_SEQ as refSeq,
+            DOC_TYP_CD as docTypCd,
+            ATT_DOC_NM as attDocNm,
+            ATT_DOC_ID as attDocId,
+            FILE_UID as fileUid,
+            FILE_DOWN_URL as fileDownUrl,
+            DOC_CHNK_NM as docChnkNm,
+            DOC_CHNK_TXT as docChnkTxt,
+            SMLT_RTE as smltRte,
+            REG_DT as regDt,
+            MOD_DT as modDt
+        FROM USR_CNVS_REF_DOC_LST
+        WHERE 1=1
+        <if test="usrId != null and usrId != ''">
+            AND USR_ID = #{usrId}
+        </if>
+        <if test="cnvsIdtId != null and cnvsIdtId != ''">
+            AND CNVS_IDT_ID = #{cnvsIdtId}
+        </if>
+        <if test="cnvsId != null">
+            AND CNVS_ID = #{cnvsId}
+        </if>
+        ORDER BY REG_DT DESC
+    </select>
+
+    <!-- L-030: 추가 질의 조회 -->
+    <select id="selectAdditionalQuestions" parameterType="com.datastreams.gpt.chat.dto.ConversationListRequestDto"
+            resultType="com.datastreams.gpt.chat.dto.ConversationListResponseDto">
+        SELECT 
+            CNVS_IDT_ID as cnvsIdtId,
+            CNVS_ID as cnvsId,
+            USR_ID as usrId,
+            ADD_QUES_SEQ as addQuesSeq,
+            ADD_QUES_TXT as addQuesTxt,
+            RAG_CLS_CD as ragClsCd,
+            REG_DT as regDt,
+            MOD_DT as modDt
+        FROM USR_CNVS_ADD_QUES_LST
+        WHERE 1=1
+        <if test="usrId != null and usrId != ''">
+            AND USR_ID = #{usrId}
+        </if>
+        <if test="cnvsIdtId != null and cnvsIdtId != ''">
+            AND CNVS_IDT_ID = #{cnvsIdtId}
+        </if>
+        <if test="cnvsId != null">
+            AND CNVS_ID = #{cnvsId}
+        </if>
+        ORDER BY REG_DT DESC
+    </select>
+
+    <!-- L-031: 업로드 파일 조회 -->
+    <select id="selectUploadFiles" parameterType="com.datastreams.gpt.chat.dto.ConversationListRequestDto"
+            resultType="com.datastreams.gpt.chat.dto.ConversationListResponseDto">
+        SELECT 
+            CNVS_IDT_ID as cnvsIdtId,
+            CNVS_ID as cnvsId,
+            USR_ID as usrId,
+            FILE_UPLD_SEQ as fileUpldSeq,
+            FILE_NM as fileNm,
+            FILE_UID as fileUid,
+            FILE_DOWN_URL as fileDownUrl,
+            FILE_SIZE as fileSize,
+            FILE_TYP_CD as fileTypCd,
+            REG_DT as regDt,
+            MOD_DT as modDt
+        FROM USR_UPLD_DOC_MNG
+        WHERE 1=1
+        <if test="usrId != null and usrId != ''">
+            AND USR_ID = #{usrId}
+        </if>
+        <if test="cnvsIdtId != null and cnvsIdtId != ''">
+            AND CNVS_IDT_ID = #{cnvsIdtId}
+        </if>
+        <if test="cnvsId != null">
+            AND CNVS_ID = #{cnvsId}
+        </if>
+        ORDER BY REG_DT DESC
+    </select>
+
+</mapper>

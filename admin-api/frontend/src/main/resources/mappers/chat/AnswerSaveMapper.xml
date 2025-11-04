@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.datastreams.gpt.chat.mapper.AnswerSaveMapper">
+
+    <select id="insertAnswerSave" parameterType="com.datastreams.gpt.chat.dto.AnswerSaveRequestDto"
+            resultType="com.datastreams.gpt.chat.dto.AnswerSaveResponseDto">
+        WITH USR_CNVS_DATA
+        AS
+        (
+            SELECT
+                  #{cnvsIdtId}    AS CNVS_IDT_ID   /* {CNVS_IDT_ID} 대화 식별 아이디 */
+                , #{cnvsId}       AS CNVS_ID       /* 대화 아이디 */
+                , #{quesSmryTxt}  AS QUES_SMRY_TXT   /* 질의 요약 텍스트 */
+                , #{infrTxt}      AS INFR_TXT      /* 추론 */
+                , #{ansTxt}       AS ANS_TXT       /* 답변 */
+                , #{ansSmryTxt}   AS ANS_SMRY_TXT    /* 답변 요약*/
+                , #{quesCatCd}    AS QUES_CAT_CD     /* 질의 분류 코드 */
+                , #{qroutTypCd}   AS QROUT_TYP_CD     /* 쿼리라우팅 유형 코드 */
+                , #{docCatSysCd}  AS DOC_CAT_SYS_CD  /* 문서 분류 체계 코드 */
+                , #{srchTimMs}    AS SRCH_TIM_MS     /*  {SRCH_TIM_MS} SEARCH TIME MS */
+                , #{rspTimMs}     AS RSP_TIM_MS      /*  {RSP_TIM_MS}  RESPONSE TIME MS */
+                , #{tknUseCnt}    AS TKN_USE_CNT     /*  {TKN_USE_CNT}  토큰 사용 수 */
+                , #{usrId}        AS REG_USR_ID      /* 사용자 아이디 */
+                , #{ansAbrtYn}    AS ANS_ABRT_YN     /* 답변 중지 여부 : UI 에서 답변 중지 버튼을 눌렀을 때 Y, 기본값은 N */
+            WHERE 1=1
+        ), USR_CNVS_REF_DOC_LST_DATA
+        AS
+        (
+            /* SQLMAP  XML 에서 리스트를 UNION ALL 문으로 변경 함.  */
+            SELECT
+                  0                 AS REF_SEQ        /* {REF_SEQ} 참조 순번 */
+                , 'N'               AS DOC_TYP_CD     /* {DOC_TYP_CD} 문서 유형 코드 : N 일반, Q 질의, A 답변 등... */
+                , '{ATT_DOC_NM}'    AS ATT_DOC_NM     /* FILENAME */
+                , '{ATT_DOC_ID}'    AS ATT_DOC_ID     /* DOCUMENT_ID */
+                , '{FILE_UID}'      AS FILE_UID       /* DOWNLOAD URL 에서 추출한 FILE_UID */
+                , '{FILE_DOWN_URL}' AS FILE_DOWN_URL  /* DOWNLOAD URL */
+                , '{DOC_CHNK_NM}'   AS DOC_CHNK_NM    /* SECTION NAME */
+                , '{DOC_CHNK_TXT}'  AS DOC_CHNK_TXT   /* 상세 내용 */
+                , 99.25123          AS SMLT_RTE        /* {SMLT_RTE}  RELEVANCE SCORE */
+            WHERE 1=1
+            UNION ALL
+            SELECT
+                  1                   AS REF_SEQ
+                , 'N'                 AS DOC_TYP_CD
+                , '{ATT_DOC_NM}'      AS ATT_DOC_NM
+                , '{ATT_DOC_ID}'      AS ATT_DOC_ID
+                , '{FILE_UID}'        AS FILE_UID
+                , '{FILE_DOWN_URL}'   AS FILE_DOWN_URL
+                , '{DOC_CHNK_NM}'     AS DOC_CHNK_NM
+                , '{DOC_CHNK_TXT}'    AS DOC_CHNK_TXT
+                , 8.24256              AS SMLT_RTE
+            WHERE 1=1
+        ),  USR_CNVS_ADD_QUES_LST_DATA
+        AS
+        (
+            /* SQLMAP  XML 에서 리스트를 UNION ALL 문으로 변경 함.  */
+            SELECT
+                  1            AS ADD_QUES_SEQ         /* {ADD_QUES_SEQ} 추가 질의 순번 */
+                , '{ADD_QUES_TXT}' AS ADD_QUES_TXT         /* 추가 질의 */
+                , 'PUBLIC'          AS RAG_CLS_CD     /* RAG 구분 코드 */
+            WHERE 1=1
+            UNION ALL
+            SELECT
+                  2            AS ADD_QUES_SEQ
+                , '{ADD_QUES_TXT}' AS ADD_QUES_TXT
+                , 'PUBLIC'          AS RAG_CLS_CD     /* RAG 구분 코드 */
+            WHERE 1=1
+        ), UPD_USR_CNVS
+        AS
+        (
+            UPDATE USR_CNVS
+            SET   USR_CNVS.QUES_SMRY_TXT   = C.QUES_SMRY_TXT
+                , USR_CNVS.INFR_TXT        = C.INFR_TXT
+                , USR_CNVS.ANS_TXT         = C.ANS_TXT
+                , USR_CNVS.ANS_SMRY_TXT    = C.ANS_SMRY_TXT
+                , USR_CNVS.QUES_CAT_CD     = C.QUES_CAT_CD
+                , USR_CNVS.QROUT_TYP_CD    = C.QROUT_TYP_CD
+                , USR_CNVS.DOC_CAT_SYS_CD  = C.DOC_CAT_SYS_CD
+                , USR_CNVS.SRCH_TIM_MS     = C.SRCH_TIM_MS
+                , USR_CNVS.RSP_TIM_MS      = C.RSP_TIM_MS
+                , USR_CNVS.TKN_USE_CNT     = C.TKN_USE_CNT
+                , USR_CNVS.ANS_ABRT_YN     = C.ANS_ABRT_YN
+                , USR_CNVS.MOD_DT          = CURRENT_TIMESTAMP
+            FROM USR_CNVS_DATA C
+            WHERE 1=1
+            AND USR_CNVS.CNVS_IDT_ID = C.CNVS_IDT_ID
+            AND USR_CNVS.CNVS_ID = C.CNVS_ID
+            RETURNING USR_CNVS.CNVS_IDT_ID, USR_CNVS.CNVS_ID
+        ), INS_USR_CNVS_ADD_QUES_LST
+        AS
+        (
+            INSERT INTO USR_CNVS_ADD_QUES_LST
+            (
+                  CNVS_ID
+                , RAG_CLS_CD
+                , ADD_QUES_SEQ
+                , ADD_QUES_TXT
+                , REG_USR_ID
+            )
+            SELECT
+                  IC.CNVS_ID
+                , DL.RAG_CLS_CD
+                , DL.ADD_QUES_SEQ
+                , DL.ADD_QUES_TXT
+                , IC.REG_USR_ID
+            FROM USR_CNVS_DATA IC
+            INNER JOIN USR_CNVS_ADD_QUES_LST_DATA DL ON 1=1
+            WHERE 1=1
+            RETURNING USR_CNVS_ADD_QUES_LST.ADD_QUES_ID
+        )
+        , INS_USR_CNVS_REF_DOC_LST
+        AS
+        (
+            INSERT INTO USR_CNVS_REF_DOC_LST
+            (
+                  CNVS_ID
+                , DOC_TYP_CD
+                , REF_SEQ
+                , ATT_DOC_NM
+                , ATT_DOC_ID
+                , FILE_UID
+                , FILE_DOWN_URL
+                , DOC_CHNK_NM
+                , DOC_CHNK_TXT
+                , REG_USR_ID
+            )
+            SELECT
+                  IC.CNVS_ID
+                , DL.DOC_TYP_CD
+                , DL.REF_SEQ
+                , DL.ATT_DOC_NM
+                , DL.ATT_DOC_ID
+                , DL.FILE_UID
+                , DL.FILE_DOWN_URL
+                , DL.DOC_CHNK_NM
+                , DL.DOC_CHNK_TXT
+                , IC.REG_USR_ID
+            FROM USR_CNVS_DATA IC
+            INNER JOIN USR_CNVS_REF_DOC_LST_DATA DL ON 1=1
+            WHERE 1=1
+            RETURNING USR_CNVS_REF_DOC_LST.*
+        )
+        SELECT  'UPD_USR_CNVS' AS TXN_NM, COUNT(*) AS CNT FROM UPD_USR_CNVS
+        UNION ALL
+        SELECT  'INS_USR_CNVS_REF_DOC_LST' AS TXN_NM, COUNT(*) AS CNT FROM INS_USR_CNVS_REF_DOC_LST
+        UNION ALL
+        SELECT  'INS_USR_CNVS_ADD_QUES_LST' AS TXN_NM, COUNT(*) AS CNT FROM INS_USR_CNVS_ADD_QUES_LST
+    </select>
+
+</mapper>

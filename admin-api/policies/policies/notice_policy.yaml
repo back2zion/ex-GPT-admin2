@@ -1,0 +1,18 @@
+---
+apiVersion: api.cerbos.dev/v1
+resourcePolicy:
+  version: "default"
+  resource: "notice"
+  rules:
+    # 관리자와 매니저는 공지사항 생성, 수정, 삭제 가능
+    - actions: ['create', 'update', 'delete']
+      effect: EFFECT_ALLOW
+      roles:
+        - admin
+        - manager
+
+    # 모든 사용자는 공지사항 읽기 가능
+    - actions: ['read']
+      effect: EFFECT_ALLOW
+      roles:
+        - '*'

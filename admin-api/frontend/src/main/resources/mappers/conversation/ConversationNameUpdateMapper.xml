@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.datastreams.gpt.conversation.mapper.ConversationNameUpdateMapper">
+
+    <!-- L-025: 대화 대표 명 변경 -->
+    <select id="updateConversationName" parameterType="com.datastreams.gpt.conversation.dto.ConversationNameUpdateRequestDto" resultType="java.util.Map">
+        WITH ETL_DAT
+        AS
+        (
+            SELECT
+                   #{cnvsIdtId} AS CNVS_IDT_ID   /* {CNVS_IDT_ID} 대화 식별 ID */
+                 , #{repCnvsNm} AS REP_CNVS_NM   /* {REP_CNVS_NM} 대표 대화 명 */
+                 , #{useYn}     AS USE_YN        /* {USE_YN}      사용 여부 */
+            WHERE 1=1
+        ), UPD_USR_CNVS_SMRY
+        AS
+        (
+            UPDATE USR_CNVS_SMRY
+               SET USR_CNVS_SMRY.REP_CNVS_NM  = CASE WHEN T.REP_CNVS_NM IS NULL OR TRIM(T.REP_CNVS_NM) = '' THEN USR_CNVS_SMRY.REP_CNVS_NM ELSE T.REP_CNVS_NM END
+                 , USR_CNVS_SMRY.MOD_DT = CURRENT_TIMESTAMP
+                 , USR_CNVS_SMRY.USE_YN = CASE WHEN T.USE_YN IS NULL OR TRIM(T.USE_YN) = '' THEN USR_CNVS_SMRY.USE_YN ELSE T.USE_YN END
+            FROM ETL_DAT T
+            WHERE 1=1
+            AND T.CNVS_IDT_ID = USR_CNVS_SMRY.CNVS_IDT_ID
+            RETURNING   USR_CNVS_SMRY.CNVS_IDT_ID
+        )
+        SELECT 'UPD_USR_CNVS_SMRY' AS TXN_NM, COUNT(*) AS CNT FROM UPD_USR_CNVS_SMRY
+        WHERE 1=1
+    </select>
+
+    <!-- 업데이트된 대화 정보 조회 -->
+    <select id="selectUpdatedConversationInfo" parameterType="String" resultType="java.util.Map">
+        SELECT 
+            CNVS_IDT_ID,
+            REP_CNVS_NM,
+            USE_YN,
+            MOD_DT
+        FROM USR_CNVS_SMRY
+        WHERE CNVS_IDT_ID = #{cnvsIdtId}
+    </select>
+
+</mapper>

@@ -1,0 +1,27 @@
+---
+apiVersion: api.cerbos.dev/v1
+resourcePolicy:
+  version: "default"
+  resource: "usage_history"
+  rules:
+    # 관리자와 매니저는 모든 사용 이력 조회 가능
+    - actions: ['read', 'export']
+      effect: EFFECT_ALLOW
+      roles:
+        - admin
+        - manager
+
+    # 일반 사용자는 자신의 이력만 조회 가능
+    - actions: ['read']
+      effect: EFFECT_ALLOW
+      roles:
+        - user
+      condition:
+        match:
+          expr: request.resource.attr.user_id == request.principal.id
+
+    # 삭제는 관리자만 가능
+    - actions: ['delete']
+      effect: EFFECT_ALLOW
+      roles:
+        - admin

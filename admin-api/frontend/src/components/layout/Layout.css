@@ -1,0 +1,23 @@
+/**
+ * Layout 스타일
+ */
+
+.layout-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 280px;
+  padding: 0;
+  background: var(--ex-background);
+  overflow-x: hidden;
+}
+
+/* ===== 반응형 ===== */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+  }
+}
