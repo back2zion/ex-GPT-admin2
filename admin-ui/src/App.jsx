@@ -19,7 +19,6 @@ import { DocumentPermissionList, DocumentPermissionShow, DocumentPermissionEdit,
 import { ApprovalLineList, ApprovalLineShow, ApprovalLineEdit, ApprovalLineCreate } from './resources/approval_lines';
 import { UserList, UserShow, UserEdit, UserCreate } from './resources/users';
 import { STTBatchList, STTBatchShow, STTBatchCreate } from './resources/stt_batches';
-import { VectorDocumentList, VectorDocumentShow, VectorDocumentEdit, VectorDocumentCreate } from './resources/vector_documents';
 import { ErrorReportList, ErrorReportShow } from './resources/error_reports';
 import { RecommendedQuestionList, RecommendedQuestionShow, RecommendedQuestionEdit, RecommendedQuestionCreate } from './resources/recommended_questions';
 
@@ -106,17 +105,7 @@ export default function App() {
         layout={CoreUILayout} // CoreUI 스타일 레이아웃
       >
       {/* react-admin Resources */}
-      {/* 대화내역은 CustomRoutes로 처리 */}
-
-      {/* 학습데이터 관리 */}
-      <Resource
-        name="vector_documents"
-        list={VectorDocumentList}
-        show={VectorDocumentShow}
-        edit={VectorDocumentEdit}
-        create={VectorDocumentCreate}
-        options={{ label: '📚 대상문서 관리' }}
-      />
+      {/* 대화내역, 학습데이터는 CustomRoutes로 처리 */}
 
       {/* 부가서비스 관리 */}
       <Resource

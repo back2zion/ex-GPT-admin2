@@ -139,10 +139,10 @@ const CoreUIMenu = () => {
                 <List component="div" disablePadding>
                     <ListItemButton
                         sx={{
-                            ...menuItemStyle(isActive('/vector_documents')),
+                            ...menuItemStyle(isActive('/vector-data/documents')),
                             pl: 6,
                         }}
-                        onClick={() => handleMenuClick('/vector_documents')}
+                        onClick={() => handleMenuClick('/vector-data/documents')}
                     >
                         <ListItemText
                             primary="대상 문서관리"
