@@ -29,6 +29,10 @@ import {
     People as UsersIcon,
     MiscellaneousServices as ServicesIcon,
     Rocket as DeploymentIcon,
+    Psychology as MLOpsIcon,
+    Dataset as DatasetIcon,
+    Build as BuildIcon,
+    Inventory as InventoryIcon,
 } from '@mui/icons-material';
 import { useSidebarState } from 'react-admin';
 
@@ -41,6 +45,7 @@ const CoreUIMenu = () => {
         learningData: false,
         services: false,
         deployment: false,
+        mlops: false,
     });
 
     const handleMenuClick = (path) => {
@@ -350,18 +355,85 @@ const CoreUIMenu = () => {
                 </List>
             </Collapse>
 
-            {/* STT 음성 전사 */}
+            {/* MLOps (Expandable) */}
             <ListItem disablePadding>
                 <ListItemButton
-                    onClick={() => handleMenuClick('/stt-batches')}
-                    sx={menuItemStyle(isActive('/stt-batches'))}
+                    onClick={() => handleExpandClick('mlops')}
+                    sx={{
+                        ...menuItemStyle(false),
+                        borderLeft: '4px solid transparent',
+                    }}
                 >
-                    <ListItemIcon sx={iconStyle(isActive('/stt-batches'))}>
-                        <STTIcon />
+                    <ListItemIcon sx={iconStyle(false)}>
+                        <MLOpsIcon />
                     </ListItemIcon>
-                    {open && <ListItemText primary="STT 음성 전사" />}
+                    {open && (
+                        <>
+                            <ListItemText primary="MLOps" />
+                            {expandedMenus.mlops ? <ExpandLess /> : <ExpandMore />}
+                        </>
+                    )}
                 </ListItemButton>
             </ListItem>
+
+            {/* Nested MLOps Menu */}
+            <Collapse in={expandedMenus.mlops && open} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding>
+                    <ListItemButton
+                        sx={{
+                            ...menuItemStyle(isActive('/training_datasets')),
+                            pl: 6,
+                        }}
+                        onClick={() => handleMenuClick('/training_datasets')}
+                    >
+                        <ListItemIcon sx={{ ...iconStyle(isActive('/training_datasets')), minWidth: 30 }}>
+                            <DatasetIcon sx={{ fontSize: 18 }} />
+                        </ListItemIcon>
+                        <ListItemText
+                            primary="학습 데이터셋"
+                            primaryTypographyProps={{
+                                sx: { fontSize: '0.875rem' },
+                            }}
+                        />
+                    </ListItemButton>
+
+                    <ListItemButton
+                        sx={{
+                            ...menuItemStyle(isActive('/finetuning_jobs')),
+                            pl: 6,
+                        }}
+                        onClick={() => handleMenuClick('/finetuning_jobs')}
+                    >
+                        <ListItemIcon sx={{ ...iconStyle(isActive('/finetuning_jobs')), minWidth: 30 }}>
+                            <BuildIcon sx={{ fontSize: 18 }} />
+                        </ListItemIcon>
+                        <ListItemText
+                            primary="Fine-tuning 작업"
+                            primaryTypographyProps={{
+                                sx: { fontSize: '0.875rem' },
+                            }}
+                        />
+                    </ListItemButton>
+
+                    <ListItemButton
+                        sx={{
+                            ...menuItemStyle(isActive('/model_registry')),
+                            pl: 6,
+                        }}
+                        onClick={() => handleMenuClick('/model_registry')}
+                    >
+                        <ListItemIcon sx={{ ...iconStyle(isActive('/model_registry')), minWidth: 30 }}>
+                            <InventoryIcon sx={{ fontSize: 18 }} />
+                        </ListItemIcon>
+                        <ListItemText
+                            primary="모델 레지스트리"
+                            primaryTypographyProps={{
+                                sx: { fontSize: '0.875rem' },
+                            }}
+                        />
+                    </ListItemButton>
+                </List>
+            </Collapse>
 
             {/* 배포관리 (Expandable) */}
             <ListItem disablePadding>
@@ -433,6 +505,19 @@ const CoreUIMenu = () => {
                     </ListItemButton>
                 </List>
             </Collapse>
+
+            {/* STT 음성 전사 */}
+            <ListItem disablePadding>
+                <ListItemButton
+                    onClick={() => handleMenuClick('/stt-batches')}
+                    sx={menuItemStyle(isActive('/stt-batches'))}
+                >
+                    <ListItemIcon sx={iconStyle(isActive('/stt-batches'))}>
+                        <STTIcon />
+                    </ListItemIcon>
+                    {open && <ListItemText primary="STT 음성 전사" />}
+                </ListItemButton>
+            </ListItem>
 
             {/* System Info */}
             {open && (
