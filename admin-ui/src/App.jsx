@@ -22,11 +22,6 @@ import { STTBatchList, STTBatchShow, STTBatchCreate } from './resources/stt_batc
 import { ErrorReportList, ErrorReportShow } from './resources/error_reports';
 import { RecommendedQuestionList, RecommendedQuestionShow, RecommendedQuestionEdit, RecommendedQuestionCreate } from './resources/recommended_questions';
 
-// MLOps 리소스
-import { TrainingDatasetList, TrainingDatasetShow, TrainingDatasetCreate } from './resources/training_datasets_simple';
-import { FinetuningJobList, FinetuningJobShow, FinetuningJobCreate } from './resources/finetuning_jobs_simple';
-import { ModelRegistryList, ModelRegistryShow } from './resources/model_registry_simple';
-
 // CoreUI 스타일 레이아웃
 import CoreUILayout from './layout/CoreUILayout';
 
@@ -50,6 +45,9 @@ import UsersPage from './pages/UsersPage';
 
 // 사전 관리 페이지
 import DictionaryDetailPage from './pages/DictionaryDetailPage';
+
+// 알림 페이지
+import NotificationsPage from './pages/NotificationsPage';
 
 // TDD 기반 통계 대시보드 (메인 페이지)
 import Dashboard from './pages/Dashboard';
@@ -175,41 +173,14 @@ export default function App() {
         options={{ label: '🎙️ STT 음성 전사' }}
       />
 
-      {/* ========================================
-          MLOps - Fine-tuning 시스템
-          ======================================== */}
-
-      {/* 학습 데이터셋 관리 */}
-      <Resource
-        name="training_datasets"
-        list={TrainingDatasetList}
-        show={TrainingDatasetShow}
-        create={TrainingDatasetCreate}
-        options={{ label: '📊 학습 데이터셋' }}
-      />
-
-      {/* Fine-tuning 작업 */}
-      <Resource
-        name="finetuning_jobs"
-        list={FinetuningJobList}
-        show={FinetuningJobShow}
-        create={FinetuningJobCreate}
-        options={{ label: '🔧 Fine-tuning 작업' }}
-      />
-
-      {/* 모델 레지스트리 */}
-      <Resource
-        name="model_registry"
-        list={ModelRegistryList}
-        show={ModelRegistryShow}
-        options={{ label: '📦 모델 레지스트리' }}
-      />
-
       {/* 향후 추가할 리소스들 */}
       {/* <Resource name="documents" options={{ label: '📄 문서 관리' }} /> */}
 
       {/* 기존 Custom Routes (react-admin 외부 페이지) */}
       <CustomRoutes>
+        {/* 알림 페이지 */}
+        <Route path="/notifications" element={<NotificationsPage />} />
+
         {/* 대화내역 (완전 개편) */}
         <Route path="/conversations" element={<ConversationsPage />} />
         <Route path="/conversations/:id" element={<ConversationDetailPage />} />
