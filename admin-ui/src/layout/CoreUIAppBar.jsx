@@ -50,10 +50,10 @@ const CoreUIAppBar = () => {
             try {
                 return JSON.parse(saved);
             } catch (e) {
-                return { name: '관리자', email: 'admin@example.com', lastLogin: null };
+                return { name: '한국도로공사 감독관', email: 'hyeonbok@ex.co.kr', lastLogin: null };
             }
         }
-        return { name: '관리자', email: 'admin@example.com', lastLogin: null };
+        return { name: '한국도로공사 감독관', email: 'hyeonbok@ex.co.kr', lastLogin: null };
     });
 
     // 마지막 로그인 시간 포맷팅
