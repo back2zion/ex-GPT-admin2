@@ -236,11 +236,30 @@ export async function login(username, password) {
   formData.append('username', username);
   formData.append('password', password);
 
+  // Note: /auth/login uses /api/v1/auth/login endpoint
+  // If 404 occurs, check Apache proxy configuration for /api/v1/auth/* routing
   const response = await apiClient.post('/auth/login', formData, {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
   });
+
+  // Store user info in localStorage
+  if (response.data.access_token) {
+    // Fetch user info after login
+    try {
+      const userResponse = await apiClient.get('/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${response.data.access_token}`
+        }
+      });
+      localStorage.setItem('user', JSON.stringify(userResponse.data));
+      localStorage.setItem('lastLogin', new Date().toISOString());
+    } catch (error) {
+      console.error('Failed to fetch user info:', error);
+    }
+  }
+
   return response.data;
 }
 
