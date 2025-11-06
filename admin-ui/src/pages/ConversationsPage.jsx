@@ -89,11 +89,11 @@ function formatDateTime(isoString) {
 }
 
 /**
- * 기본 날짜 범위 (최근 7일)
+ * 기본 날짜 범위 (최근 30일)
  */
 function getDefaultDateRange() {
   return {
-    start: formatDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)),
+    start: formatDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
     end: formatDate(new Date()),
   };
 }
@@ -364,7 +364,10 @@ export default function ConversationsPage() {
           </Button>
         </Box>
 
-        {/* 총 개수 및 표시 건수 선택 */}
+      </Paper>
+
+      {/* 테이블 상단 - 총 건수, 표시 건수, 엑셀 다운로드 */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             총 <strong>{total.toLocaleString()}</strong>건
@@ -388,20 +391,18 @@ export default function ConversationsPage() {
             </Select>
           </FormControl>
         </Box>
-      </Paper>
-
-      {/* 테이블 헤더 (엑셀 다운로드 버튼) */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-        <IconButton
-          onClick={handleDownloadExcel}
-          sx={{
-            backgroundColor: '#28a745',
-            color: 'white',
-            '&:hover': { backgroundColor: '#218838' },
-          }}
-        >
-          <DownloadIcon />
-        </IconButton>
+        <Box>
+          <IconButton
+            onClick={handleDownloadExcel}
+            sx={{
+              backgroundColor: '#28a745',
+              color: 'white',
+              '&:hover': { backgroundColor: '#218838' },
+            }}
+          >
+            <DownloadIcon />
+          </IconButton>
+        </Box>
       </Box>
 
       {/* 로딩 상태 */}
@@ -476,7 +477,7 @@ export default function ConversationsPage() {
       )}
 
       {/* 페이지네이션 */}
-      {totalPages > 1 && (
+      {!isLoading && !error && total > 0 && (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
           <Pagination
             count={totalPages}
