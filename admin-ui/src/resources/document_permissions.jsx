@@ -32,7 +32,7 @@ import {
     ExportButton,
     useRecordContext
 } from 'react-admin';
-import { Chip, Paper, Grid, Typography, Box } from '@mui/material';
+import { Chip, Paper, Grid, Typography, Box, Button } from '@mui/material';
 
 // ============================================
 // 문서 권한 목록
@@ -54,6 +54,28 @@ const documentPermissionFilters = [
         <SelectInput optionText="name" />
     </ReferenceInput>,
 ];
+
+// Empty state component
+const Empty = () => (
+    <Box
+        sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '400px',
+            textAlign: 'center'
+        }}
+    >
+        <Typography variant="h6" color="text.secondary" gutterBottom>
+            데이터가 없습니다
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            추가하시겠습니까?
+        </Typography>
+        <CreateButton label="권한 추가" />
+    </Box>
+);
 
 // Custom field for permission target (department or approval line)
 const PermissionTargetField = () => {
@@ -107,6 +129,7 @@ export const DocumentPermissionList = () => (
         sort={{ field: 'document_id', order: 'ASC' }}
         perPage={50}
         title="문서 권한 관리"
+        empty={<Empty />}
     >
         <Datagrid
             rowClick="show"
