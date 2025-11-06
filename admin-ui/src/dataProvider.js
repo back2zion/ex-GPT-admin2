@@ -29,6 +29,8 @@ const httpClient = async (url, options = {}) => {
     headers.set('Accept', 'application/json');
 
     // 테스트 환경: 항상 X-Test-Auth 사용 (authToken 체크 제거)
+    // Authorization 헤더 명시적 제거 (localStorage authToken 무시)
+    headers.delete('Authorization');
     headers.set('X-Test-Auth', 'admin');
 
     console.log('[dataProvider] 최종 요청 URL:', url);

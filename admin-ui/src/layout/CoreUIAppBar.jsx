@@ -96,14 +96,15 @@ const CoreUIAppBar = () => {
 
     const fetchNotifications = async () => {
         try {
-            const token = localStorage.getItem('authToken');
-            if (!token) return;
+            // 테스트 환경: X-Test-Auth 사용
+            const headers = {
+                'X-Test-Auth': 'admin',
+                'Accept': 'application/json',
+            };
 
             // 미읽음 알림 개수 조회
             const countResponse = await fetch('/api/v1/admin/notifications/unread-count', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
+                headers,
             });
             if (countResponse.ok) {
                 const countData = await countResponse.json();
@@ -112,9 +113,7 @@ const CoreUIAppBar = () => {
 
             // 최근 알림 5개 조회
             const response = await fetch('/api/v1/admin/notifications?limit=5', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
+                headers,
             });
 
             if (response.ok) {

@@ -108,6 +108,9 @@ export default function FolderUploadDialog({ open, onClose, onUploadComplete }) 
             // 업로드 요청
             const response = await fetch('/api/v1/admin/file-upload/upload-folder', {
                 method: 'POST',
+                headers: {
+                    'X-Test-Auth': 'admin',
+                },
                 body: formData,
             });
 

@@ -30,6 +30,8 @@ import { ABTestingList, ABTestingShow, ABTestingCreate } from './resources/ab_te
 
 // CoreUI 스타일 레이아웃
 import CoreUILayout from './layout/CoreUILayout';
+// Template 디자인 레이아웃
+import TemplateLayout from './layout/TemplateLayout';
 
 // 기존 페이지들 (react-admin 외부)
 import LoginPage from './pages/LoginPage';
@@ -107,7 +109,7 @@ export default function App() {
         loginPage={LoginPage}
         requireAuth
         dashboard={Dashboard} // TDD 기반 통계 대시보드 (메인 페이지)
-        layout={CoreUILayout} // CoreUI 스타일 레이아웃
+        layout={TemplateLayout} // Template 디자인 레이아웃
       >
       {/* react-admin Resources */}
       {/* 대화내역은 CustomRoutes로 처리 */}

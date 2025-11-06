@@ -45,6 +45,13 @@ class Settings(BaseSettings):
     LEGACY_ORACLE_PASSWORD: str = "password"
     LEGACY_ORACLE_SERVICE: str = "ORCL"
 
+    # Internal Mail System Oracle DB (사내메일 연동용)
+    MAIL_ORACLE_HOST: str = "172.16.164.32"
+    MAIL_ORACLE_PORT: int = 1669
+    MAIL_ORACLE_USER: str = "exgpt_user"
+    MAIL_ORACLE_PASSWORD: str = "your_password_here"
+    MAIL_ORACLE_SERVICE: str = "ANKHCG"
+
     # MinIO
     MINIO_ENDPOINT: str = "localhost:10002"
     MINIO_ACCESS_KEY: str = "minioadmin"

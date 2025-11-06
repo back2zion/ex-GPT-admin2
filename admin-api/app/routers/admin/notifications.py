@@ -16,8 +16,8 @@ from app.schemas.notification import (
     NotificationResponse,
     NotificationListResponse,
 )
-from app.api.endpoints.auth import get_current_user
-from app.models.user import User
+from app.dependencies import get_principal
+from cerbos.sdk.model import Principal
 
 router = APIRouter(prefix="/api/v1/admin/notifications", tags=["admin-notifications"])
 
@@ -28,7 +28,7 @@ async def get_notifications(
     limit: int = Query(20, ge=1, le=100),
     is_read: Optional[bool] = Query(None, description="읽음 여부 필터"),
     category: Optional[str] = Query(None, description="카테고리 필터"),
-    current_user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -37,13 +37,20 @@ async def get_notifications(
     - 전체 알림(user_id=NULL) + 본인 알림(user_id=현재 사용자)
     - 최신순 정렬
     """
+    # 사용자 ID 추출 (X-Test-Auth의 경우 모든 알림 표시)
+    user_id = principal.attr.get("user_id") if principal.attr else None
+
     # 필터 조건
-    filters = [
-        or_(
-            Notification.user_id == None,
-            Notification.user_id == current_user.id
+    filters = []
+    if user_id:
+        # JWT 인증: user_id가 있는 경우만 필터링
+        filters.append(
+            or_(
+                Notification.user_id == None,
+                Notification.user_id == user_id
+            )
         )
-    ]
+    # X-Test-Auth의 경우 필터 없음 (모든 알림 표시)
 
     if is_read is not None:
         filters.append(Notification.is_read == is_read)
@@ -52,31 +59,42 @@ async def get_notifications(
         filters.append(Notification.category == category)
 
     # 전체 개수
-    count_query = select(func.count(Notification.id)).where(and_(*filters))
+    if filters:
+        count_query = select(func.count(Notification.id)).where(and_(*filters))
+    else:
+        count_query = select(func.count(Notification.id))
     total_result = await db.execute(count_query)
     total = total_result.scalar_one()
 
     # 미읽음 개수
-    unread_query = select(func.count(Notification.id)).where(
-        and_(
-            Notification.is_read == False,
+    unread_filters = [Notification.is_read == False]
+    if user_id:
+        unread_filters.append(
             or_(
                 Notification.user_id == None,
-                Notification.user_id == current_user.id
+                Notification.user_id == user_id
             )
         )
-    )
+    unread_query = select(func.count(Notification.id)).where(and_(*unread_filters))
     unread_result = await db.execute(unread_query)
     unread_count = unread_result.scalar_one()
 
     # 알림 목록 조회
-    query = (
-        select(Notification)
-        .where(and_(*filters))
-        .order_by(Notification.created_at.desc())
-        .offset(skip)
-        .limit(limit)
-    )
+    if filters:
+        query = (
+            select(Notification)
+            .where(and_(*filters))
+            .order_by(Notification.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+    else:
+        query = (
+            select(Notification)
+            .order_by(Notification.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
 
     result = await db.execute(query)
     notifications = result.scalars().all()
@@ -90,20 +108,22 @@ async def get_notifications(
 
 @router.get("/unread-count")
 async def get_unread_count(
-    current_user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
     db: AsyncSession = Depends(get_db)
 ):
     """미읽음 알림 개수 조회"""
-    query = select(func.count(Notification.id)).where(
-        and_(
-            Notification.is_read == False,
+    user_id = principal.attr.get("user_id") if principal.attr else None
+
+    filters = [Notification.is_read == False]
+    if user_id:
+        filters.append(
             or_(
                 Notification.user_id == None,
-                Notification.user_id == current_user.id
+                Notification.user_id == user_id
             )
         )
-    )
 
+    query = select(func.count(Notification.id)).where(and_(*filters))
     result = await db.execute(query)
     count = result.scalar_one()
 
@@ -113,7 +133,7 @@ async def get_unread_count(
 @router.get("/{notification_id}", response_model=NotificationResponse)
 async def get_notification(
     notification_id: int,
-    current_user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
     db: AsyncSession = Depends(get_db)
 ):
     """알림 상세 조회"""
@@ -139,7 +159,7 @@ async def get_notification(
 @router.patch("/{notification_id}/read", response_model=NotificationResponse)
 async def mark_as_read(
     notification_id: int,
-    current_user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
     db: AsyncSession = Depends(get_db)
 ):
     """알림을 읽음으로 표시"""
@@ -170,7 +190,7 @@ async def mark_as_read(
 
 @router.post("/mark-all-read")
 async def mark_all_as_read(
-    current_user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
     db: AsyncSession = Depends(get_db)
 ):
     """모든 알림을 읽음으로 표시"""
@@ -200,7 +220,7 @@ async def mark_all_as_read(
 @router.post("", response_model=NotificationResponse)
 async def create_notification(
     notification: NotificationCreate,
-    current_user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -233,7 +253,7 @@ async def create_notification(
 @router.delete("/{notification_id}")
 async def delete_notification(
     notification_id: int,
-    current_user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_principal),
     db: AsyncSession = Depends(get_db)
 ):
     """알림 삭제 (슈퍼유저만)"""

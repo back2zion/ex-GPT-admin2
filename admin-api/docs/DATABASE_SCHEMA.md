@@ -128,6 +128,36 @@ ex-GPT 관리 시스템의 데이터베이스 스키마입니다. PostgreSQL을 
 | MOD_USR_ID | 수정 사용자 아이디 | VARCHAR | 50 | N | N | N | - | 수정자 |
 | MOD_DT | 수정 일시 | TIMESTAMP | - | N | N | N | - | 수정일시 |
 
+#### 부서 필터 규칙 (Department Filter Rules)
+
+부서별 학습데이터 참조 범위를 지정하기 위한 필터 규칙입니다.
+
+**현행 부서 필터 목록** (2025-11-06 현행화):
+
+| 순번 | 한글 부서명 | 영문 코드 | 필터 값 | 사용 여부 | 등록일 | 비고 |
+|------|------------|----------|---------|-----------|--------|------|
+| 1 | 전자 조달 내부 | nebid_int | dept_nebid_int | 사용중 | - | CHAT API 문서 사용 |
+| 2 | 전자 조달 외부 | nebid_ext | dept_nebid_ext | 사용중 | - | CHAT API 문서 사용 |
+| 3 | 홈페이지 | exhome | dept_exhome | 사용중 | - | CHAT API 문서 사용 |
+| 4 | 재난관리처 | disaster | dept_disaster | 사용중 | - | - |
+| 5 | 총무처(민원) | general_affairs | dept_general_affairs | 사용중 | - | - |
+| 6 | 기술심사처 | technical_review | dept_technical_review | 사용중 | - | - |
+| 7 | 한국도로공사 (ex-GPT) | default | default | 사용중 | - | 기본값 |
+
+**필터 값 사용 규칙**:
+- Qdrant 벡터 검색 시 `metadata.filter` 필드에 필터 값 적용
+- 문서 업로드 시 대상 부서에 따라 필터 값 자동 설정
+- 사용자 질의 시 사용자 소속 부서에 해당하는 필터 값으로 검색
+- 예시:
+  - 국가계약법 문서: `filter = "default"` (전체 부서 참조 가능)
+  - 야생동물보호법 문서: `filter = "dept_disaster"` (재난관리처만 참조 가능)
+  - 전자조달 내부 문서: `filter = "dept_nebid_int"` (전자조달 내부 부서만 참조)
+
+**구현 참고사항**:
+- 필터 값은 DOC_BAS_INFO.DOC_SHAR_LVL_CD와 연계하여 사용
+- Qdrant 메타데이터에 `dept_filter` 필드로 저장
+- Chat API에서 사용자 부서 정보를 기반으로 필터링 적용
+
 ---
 
 ### 3. 메뉴 및 권한 관리 (Menu & Authorization)

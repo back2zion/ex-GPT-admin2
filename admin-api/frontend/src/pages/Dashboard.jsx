@@ -21,7 +21,7 @@ import {
     Tooltip, Legend, ResponsiveContainer, Area, AreaChart, PieChart, Pie, Cell
 } from 'recharts';
 
-// 한국도로공사 브랜드 컬러 (PRD 기준)
+// 한국도로공사 브랜드 컬러 (PRD 기준 + Figma 디자인)
 const colors = {
     primary: '#0a2986',        // 네이비 블루 (메인)
     primaryLight: '#1e3a8a',   // 그라데이션용
@@ -29,8 +29,10 @@ const colors = {
     accentLight: '#f97316',    // 그라데이션용
     success: '#10b981',        // 성공
     successLight: '#34d399',   // 그라데이션용
-    info: '#3b82f6',          // 정보
+    info: '#3b82f6',          // 정보 (파란색)
     infoLight: '#60a5fa',     // 그라데이션용
+    purple: '#7c3aed',        // 보라색 (응답시간 카드용)
+    purpleLight: '#8b5cf6',   // 보라색 그라데이션
     warning: '#f59e0b',       // 경고
     warningLight: '#fbbf24',  // 그라데이션용
     danger: '#ef4444',        // 위험
@@ -283,7 +285,7 @@ const Dashboard = () => {
                         title="평균 응답 시간"
                         value={formatTime(stats?.average_response_time)}
                         icon={SpeedIcon}
-                        gradient={[colors.info, colors.infoLight]}
+                        gradient={[colors.purple, colors.purpleLight]}
                         trend="down"
                         trendValue="-5%"
                         loading={loading}

@@ -34,11 +34,10 @@ apiClient.interceptors.request.use(
       }
     }
 
-    // Authorization 토큰 추가 (로그인 후)
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
+    // 테스트 환경: 항상 X-Test-Auth 사용 (authToken 무시)
+    // Authorization 헤더 제거 및 X-Test-Auth 사용
+    delete config.headers['Authorization'];
+    config.headers['X-Test-Auth'] = 'admin';
 
     return config;
   },

@@ -53,6 +53,7 @@ except ImportError:
 from app.routers import chat_proxy, health, session_queue
 from app.routers.chat import chat, rooms, history
 from app.routers.chat import files as chat_files
+from app.routers.webhooks import stt_webhook
 import os
 
 app = FastAPI(
@@ -144,6 +145,9 @@ app.include_router(chat.router)
 app.include_router(rooms.router)
 app.include_router(history.router)
 app.include_router(chat_files.router)
+
+# Webhook 라우터 등록 (STT 완료 알림)
+app.include_router(stt_webhook.router, prefix=settings.API_V1_PREFIX)
 
 # 정적 파일 제공 (React 관리자 페이지)
 admin_path = "/app/frontend/dist"

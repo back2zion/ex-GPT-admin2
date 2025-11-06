@@ -386,6 +386,23 @@ public class LegacyIntegrationController {
 - 부서별로 학습데이터 참조 범위 지정
 - 예: 국가계약법 → 전부서 참조, 야생동물보호법 → 품질환경처만 참조
 
+**부서 필터 규칙** (2025-11-06 현행화):
+
+| 순번 | 한글 부서명 | 영문 코드 | 필터 값 | 사용 여부 | 비고 |
+|------|------------|----------|---------|-----------|------|
+| 1 | 전자 조달 내부 | nebid_int | dept_nebid_int | 사용중 | CHAT API 문서 사용 |
+| 2 | 전자 조달 외부 | nebid_ext | dept_nebid_ext | 사용중 | CHAT API 문서 사용 |
+| 3 | 홈페이지 | exhome | dept_exhome | 사용중 | CHAT API 문서 사용 |
+| 4 | 재난관리처 | disaster | dept_disaster | 사용중 | - |
+| 5 | 총무처(민원) | general_affairs | dept_general_affairs | 사용중 | - |
+| 6 | 기술심사처 | technical_review | dept_technical_review | 사용중 | - |
+| 7 | 한국도로공사 (ex-GPT) | default | default | 사용중 | 기본값 |
+
+**필터 값 사용 규칙**:
+- Qdrant 벡터 검색 시 `metadata.filter` 필드에 필터 값 적용
+- 문서 업로드 시 대상 부서에 따라 필터 값 자동 설정
+- 사용자 질의 시 사용자 소속 부서에 해당하는 필터 값으로 검색
+
 **구현**:
 
 **문서 권한 테이블 (document_permissions)**:

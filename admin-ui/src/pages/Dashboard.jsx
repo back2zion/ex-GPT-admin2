@@ -18,7 +18,7 @@ import {
 } from '@mui/icons-material';
 import {
     LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-    Tooltip, Legend, ResponsiveContainer, Area, AreaChart
+    Tooltip, Legend, ResponsiveContainer, Area, AreaChart, PieChart, Pie, Cell
 } from 'recharts';
 
 // 한국도로공사 브랜드 컬러 + 그라데이션
@@ -110,6 +110,9 @@ const Dashboard = () => {
     const [gpuStatus, setGpuStatus] = useState(null);
     const [services, setServices] = useState([]);
     const [containers, setContainers] = useState([]);
+    // 부서별/분야별 통계
+    const [departmentStats, setDepartmentStats] = useState([]);
+    const [categoryStats, setCategoryStats] = useState([]);
 
     useEffect(() => {
         fetchDashboardStats();
@@ -130,7 +133,7 @@ const Dashboard = () => {
                 'X-Test-Auth': 'admin'
             };
 
-            const [dashboardRes, dailyRes, weeklyRes, monthlyRes, hourlyRes, systemRes, gpuRes, servicesRes, containersRes] = await Promise.all([
+            const [dashboardRes, dailyRes, weeklyRes, monthlyRes, hourlyRes, systemRes, gpuRes, servicesRes, containersRes, deptRes, catRes] = await Promise.all([
                 fetch(`/api/v1/admin/stats/dashboard?start=${start}&end=${end}`, { headers }),
                 fetch(`/api/v1/admin/stats/daily-trend?start=${start}&end=${end}`, { headers }),
                 fetch(`/api/v1/admin/stats/weekly-trend?start=${weekStart}&end=${end}`, { headers }),
@@ -139,7 +142,9 @@ const Dashboard = () => {
                 fetch(`/api/v1/admin/stats/system`, { headers }),
                 fetch(`/api/v1/admin/deployment/gpu/status`, { headers }),
                 fetch(`/api/v1/admin/deployment/bentos`, { headers }),
-                fetch(`/api/v1/admin/deployment/docker/containers`, { headers })
+                fetch(`/api/v1/admin/deployment/docker/containers`, { headers }),
+                fetch(`/api/v1/admin/stats/by-department?start=${start}&end=${end}`, { headers }),
+                fetch(`/api/v1/admin/stats/by-category?start=${start}&end=${end}`, { headers })
             ]);
 
             if (!dashboardRes.ok || !dailyRes.ok || !hourlyRes.ok || !systemRes.ok) {
@@ -155,6 +160,8 @@ const Dashboard = () => {
             const gpuData = gpuRes.ok ? await gpuRes.json() : { gpus: [] };
             const servicesData = servicesRes.ok ? await servicesRes.json() : { bentos: [] };
             const containersData = containersRes.ok ? await containersRes.json() : { containers: [] };
+            const deptData = deptRes.ok ? await deptRes.json() : { items: [] };
+            const catData = catRes.ok ? await catRes.json() : { items: [] };
 
             setStats(dashboardData);
             setDailyTrend(dailyData.items || []);
@@ -165,6 +172,8 @@ const Dashboard = () => {
             setGpuStatus(gpuData);
             setServices(servicesData.bentos || []);
             setContainers(containersData.containers || []);
+            setDepartmentStats(deptData.items || []);
+            setCategoryStats(catData.items || []);
         } catch (err) {
             console.error('Failed to fetch dashboard stats:', err);
             setError(err.message);
@@ -826,6 +835,146 @@ const Dashboard = () => {
                                 데이터가 없습니다
                             </Typography>
                         )}
+                </Paper>
+
+                {/* 부서별 이용 통계 (방문자 현황) - Bar Chart */}
+                <Paper
+                    elevation={0}
+                    sx={{
+                        p: 2,
+                        mt: 3,
+                        borderRadius: 2,
+                        boxShadow: '0 2px 10px 0 rgba(0,0,0,0.08)',
+                        width: '100% !important',
+                        maxWidth: 'none !important',
+                    }}
+                >
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                        <PeopleIcon sx={{ fontSize: 28, color: colors.success, mr: 1.5 }} />
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.primary }}>
+                            방문자 현황 (부서별 이용 통계)
+                        </Typography>
+                    </Box>
+                    {loading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                            <CircularProgress />
+                        </Box>
+                    ) : departmentStats.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={450}>
+                            <BarChart data={departmentStats}>
+                                <defs>
+                                    <linearGradient id="colorDept" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor={colors.success} stopOpacity={1} />
+                                        <stop offset="100%" stopColor={colors.successLight} stopOpacity={0.8} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                <XAxis
+                                    dataKey="team"
+                                    tick={{ fontSize: 11, fill: '#64748b' }}
+                                    stroke="#cbd5e1"
+                                    angle={-15}
+                                    textAnchor="end"
+                                    height={80}
+                                />
+                                <YAxis
+                                    tick={{ fontSize: 12, fill: '#64748b' }}
+                                    stroke="#cbd5e1"
+                                />
+                                <Tooltip
+                                    contentStyle={{
+                                        backgroundColor: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                    }}
+                                />
+                                <Legend />
+                                <Bar
+                                    dataKey="question_count"
+                                    fill="url(#colorDept)"
+                                    name="질문 수"
+                                    radius={[8, 8, 0, 0]}
+                                />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', p: 3 }}>
+                            데이터가 없습니다
+                        </Typography>
+                    )}
+                </Paper>
+
+                {/* 분야별 질의 통계 (활용 현황) - Pie Chart */}
+                <Paper
+                    elevation={0}
+                    sx={{
+                        p: 2,
+                        mt: 3,
+                        borderRadius: 2,
+                        boxShadow: '0 2px 10px 0 rgba(0,0,0,0.08)',
+                        width: '100% !important',
+                        maxWidth: 'none !important',
+                    }}
+                >
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                        <QuestionAnswerIcon sx={{ fontSize: 28, color: colors.accent, mr: 1.5 }} />
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.primary }}>
+                            활용 현황 (분야별 질의 통계)
+                        </Typography>
+                    </Box>
+                    {loading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                            <CircularProgress />
+                        </Box>
+                    ) : categoryStats.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={450}>
+                            <PieChart>
+                                <Pie
+                                    data={categoryStats}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={true}
+                                    label={({ main_category, question_count, percent }) =>
+                                        `${main_category}: ${question_count}건 (${(percent * 100).toFixed(1)}%)`
+                                    }
+                                    outerRadius={140}
+                                    fill="#8884d8"
+                                    dataKey="question_count"
+                                    nameKey="main_category"
+                                >
+                                    {categoryStats.map((entry, index) => {
+                                        const colorPalette = [
+                                            colors.primary,
+                                            colors.accent,
+                                            colors.success,
+                                            colors.info,
+                                            colors.warning,
+                                            colors.primaryLight,
+                                            colors.accentLight,
+                                            colors.successLight,
+                                        ];
+                                        return (
+                                            <Cell key={`cell-${index}`} fill={colorPalette[index % colorPalette.length]} />
+                                        );
+                                    })}
+                                </Pie>
+                                <Tooltip
+                                    contentStyle={{
+                                        backgroundColor: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                    }}
+                                />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', p: 3 }}>
+                            데이터가 없습니다
+                        </Typography>
+                    )}
                 </Paper>
             </Box>
         </Box>

@@ -17,7 +17,7 @@ import asyncpg
 import os
 from typing import Dict, Any
 
-from app.models import UsageHistory, SatisfactionSurvey, Notice
+from app.models import UsageHistory, SatisfactionSurvey, Notice, User, Department
 from app.core.database import get_db
 from app.dependencies import get_principal
 from cerbos.sdk.model import Principal
@@ -997,3 +997,99 @@ def parse_memory_size(mem_str: str) -> float:
         return value * 1024 * 1024
     else:
         return value
+
+
+@router.get("/by-department")
+async def get_stats_by_department(
+    start: date = Query(..., description="시작 날짜"),
+    end: date = Query(..., description="종료 날짜"),
+    db: AsyncSession = Depends(get_db),
+    principal: Principal = Depends(get_principal)
+):
+    """
+    부서별 이용 통계 (방문자 현황)
+    
+    **반환값**:
+    - team: 팀명
+    - user_count: 사용자 수
+    - question_count: 질문 수
+    """
+    start_datetime = datetime.combine(start, datetime.min.time())
+    end_datetime = datetime.combine(end, datetime.max.time())
+    
+    query = (
+        select(
+            Department.name.label('team'),
+            func.count(func.distinct(UsageHistory.user_id)).label('user_count'),
+            func.count(UsageHistory.id).label('question_count')
+        )
+        .select_from(UsageHistory)
+        .join(User, UsageHistory.user_id == User.username, isouter=True)
+        .join(Department, User.department_id == Department.id, isouter=True)
+        .filter(
+            UsageHistory.created_at >= start_datetime,
+            UsageHistory.created_at <= end_datetime,
+            Department.name.isnot(None)
+        )
+        .group_by(Department.name)
+        .order_by(func.count(UsageHistory.id).desc())
+        .limit(10)
+    )
+    
+    result = await db.execute(query)
+    rows = result.all()
+    
+    return {
+        "items": [
+            {
+                "team": row.team,
+                "user_count": row.user_count,
+                "question_count": row.question_count
+            }
+            for row in rows
+        ]
+    }
+
+
+@router.get("/by-category")
+async def get_stats_by_category(
+    start: date = Query(..., description="시작 날짜"),
+    end: date = Query(..., description="종료 날짜"),
+    db: AsyncSession = Depends(get_db),
+    principal: Principal = Depends(get_principal)
+):
+    """
+    분야별 질의 통계 (활용 현황)
+    
+    **반환값**:
+    - main_category: 대분류
+    - question_count: 질문 수
+    """
+    start_datetime = datetime.combine(start, datetime.min.time())
+    end_datetime = datetime.combine(end, datetime.max.time())
+    
+    query = (
+        select(
+            UsageHistory.main_category,
+            func.count(UsageHistory.id).label('question_count')
+        )
+        .filter(
+            UsageHistory.created_at >= start_datetime,
+            UsageHistory.created_at <= end_datetime
+        )
+        .group_by(UsageHistory.main_category)
+        .order_by(func.count(UsageHistory.id).desc())
+    )
+    
+    result = await db.execute(query)
+    rows = result.all()
+    
+    return {
+        "items": [
+            {
+                "main_category": row.main_category or '미분류',
+                "question_count": row.question_count
+            }
+            for row in rows
+        ]
+    }

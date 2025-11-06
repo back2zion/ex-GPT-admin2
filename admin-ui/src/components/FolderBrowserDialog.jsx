@@ -52,7 +52,12 @@ export default function FolderBrowserDialog({ open, onClose, onSelect, initialPa
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch('/api/v1/admin/file-browser/roots');
+            const response = await fetch('/api/v1/admin/file-browser/roots', {
+                headers: {
+                    'X-Test-Auth': 'admin',
+                    'Accept': 'application/json',
+                },
+            });
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
@@ -73,7 +78,13 @@ export default function FolderBrowserDialog({ open, onClose, onSelect, initialPa
         setError(null);
         try {
             const response = await fetch(
-                `/api/v1/admin/file-browser/list?path=${encodeURIComponent(path)}`
+                `/api/v1/admin/file-browser/list?path=${encodeURIComponent(path)}`,
+                {
+                    headers: {
+                        'X-Test-Auth': 'admin',
+                        'Accept': 'application/json',
+                    },
+                }
             );
 
             if (!response.ok) {

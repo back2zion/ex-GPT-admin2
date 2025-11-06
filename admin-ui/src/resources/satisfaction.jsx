@@ -232,7 +232,12 @@ const STTSummaryWidget = () => {
     useEffect(() => {
         const fetchSTTStats = async () => {
             try {
-                const response = await fetch('http://localhost:8010/api/v1/admin/stt-batches/?limit=10');
+                const response = await fetch('/api/v1/admin/stt-batches/?limit=10', {
+                    headers: {
+                        'X-Test-Auth': 'admin',
+                        'Accept': 'application/json',
+                    },
+                });
 
                 // 시큐어 코딩: HTTP 상태 및 Content-Type 검증
                 if (!response.ok) {

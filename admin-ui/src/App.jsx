@@ -23,8 +23,11 @@ import { STTBatchList, STTBatchShow, STTBatchCreate } from './resources/stt_batc
 import { ErrorReportList, ErrorReportShow } from './resources/error_reports';
 import { RecommendedQuestionList, RecommendedQuestionShow, RecommendedQuestionEdit, RecommendedQuestionCreate } from './resources/recommended_questions';
 
-// CoreUI 스타일 레이아웃
-import CoreUILayout from './layout/CoreUILayout';
+// CoreUI 스타일 레이아웃 (기존)
+// import CoreUILayout from './layout/CoreUILayout';
+
+// Templates 디자인 시스템 레이아웃 (한국도로공사)
+import MainLayout from './components/Layout/MainLayout';
 
 // 기존 페이지들 (react-admin 외부)
 import LoginPage from './pages/LoginPage';
@@ -107,7 +110,7 @@ export default function App() {
         loginPage={LoginPage}
         requireAuth={true} // 로그인 필수
         dashboard={Dashboard} // TDD 기반 통계 대시보드 (메인 페이지)
-        layout={CoreUILayout} // CoreUI 스타일 레이아웃
+        layout={MainLayout} // Templates 디자인 시스템 레이아웃
       >
       {/* react-admin Resources */}
       {/* 대화내역, 학습데이터는 CustomRoutes로 처리 */}

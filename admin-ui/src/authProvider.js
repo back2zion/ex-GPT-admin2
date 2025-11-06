@@ -1,50 +1,23 @@
 /**
  * react-admin Auth Provider
- * JWT 기반 인증
+ * 테스트 환경: X-Test-Auth 헤더 사용 (authToken 사용 안 함)
  */
 
 export const authProvider = {
   // 로그인
   login: async ({ username, password }) => {
     try {
-      // Use relative path (requires Apache proxy configuration)
-      // ProxyPass /api/v1/auth http://localhost:8010/api/v1/auth
-      const formData = new URLSearchParams();
-      formData.append('username', username);
-      formData.append('password', password);
+      // 테스트 환경: 간단한 로그인 (실제 API 호출 없이 진행)
+      // 프로덕션에서는 실제 API 호출로 변경 필요
 
-      const response = await fetch('/api/v1/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData,
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Login failed:', response.status, errorText);
-        throw new Error('로그인에 실패했습니다. 아이디와 비밀번호를 확인하세요.');
-      }
-
-      const data = await response.json();
-
-      // Store token
-      localStorage.setItem('authToken', data.access_token);
-
-      // Fetch user info
-      const userResponse = await fetch('/api/v1/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${data.access_token}`
-        }
-      });
-
-      if (userResponse.ok) {
-        const userData = await userResponse.json();
-        localStorage.setItem('user', JSON.stringify(userData));
-        localStorage.setItem('lastLogin', new Date().toISOString());
-      }
+      // 사용자 정보 저장 (authToken은 저장하지 않음)
+      localStorage.setItem('user', JSON.stringify({
+        id: 1,
+        username: username,
+        full_name: username,
+        is_superuser: true
+      }));
+      localStorage.setItem('lastLogin', new Date().toISOString());
 
       return Promise.resolve();
     } catch (error) {
@@ -55,23 +28,22 @@ export const authProvider = {
 
   // 로그아웃
   logout: () => {
-    localStorage.removeItem('authToken');
     localStorage.removeItem('user');
     localStorage.removeItem('lastLogin');
+    // authToken 제거하지 않음 (사용하지 않으므로)
     return Promise.resolve();
   },
 
-  // 인증 확인
+  // 인증 확인 (테스트 환경: 항상 허용)
   checkAuth: () => {
-    const token = localStorage.getItem('authToken');
-    return token ? Promise.resolve() : Promise.reject();
+    const user = localStorage.getItem('user');
+    return user ? Promise.resolve() : Promise.reject();
   },
 
   // 에러 처리
   checkError: (error) => {
     const status = error.status;
     if (status === 401 || status === 403) {
-      localStorage.removeItem('authToken');
       localStorage.removeItem('user');
       localStorage.removeItem('lastLogin');
       return Promise.reject();
