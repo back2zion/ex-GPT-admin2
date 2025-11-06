@@ -401,7 +401,9 @@ export const DocumentPermissionCreate = () => (
     <Create title="문서 권한 생성" redirect="list">
         <SimpleForm
             sx={{
-                '& .MuiFormControl-root': { marginBottom: '16px' }
+                '& .MuiFormControl-root': { marginBottom: '16px' },
+                maxWidth: 800,
+                margin: '0 auto'
             }}
         >
             <ReferenceInput
