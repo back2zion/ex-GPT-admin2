@@ -116,7 +116,7 @@ export default function ConversationsPage() {
 
   // 페이지네이션
   const [page, setPage] = useState(1);
-  const limit = 50;
+  const [limit, setLimit] = useState(50);
 
   // 데이터 상태
   const [conversations, setConversations] = useState([]);
@@ -167,7 +167,7 @@ export default function ConversationsPage() {
   // 데이터 로드
   useEffect(() => {
     loadConversations();
-  }, [dateRange, mainCategory, subCategory, page]);
+  }, [dateRange, mainCategory, subCategory, page, limit]);
 
   /**
    * 검색 버튼 클릭
@@ -364,10 +364,30 @@ export default function ConversationsPage() {
           </Button>
         </Box>
 
-        {/* 총 개수 */}
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          총 <strong>{total.toLocaleString()}</strong>건
-        </Typography>
+        {/* 총 개수 및 표시 건수 선택 */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            총 <strong>{total.toLocaleString()}</strong>건
+          </Typography>
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel id="limit-label">표시 건수</InputLabel>
+            <Select
+              labelId="limit-label"
+              value={limit}
+              onChange={(e) => {
+                setLimit(e.target.value);
+                setPage(1);
+              }}
+              label="표시 건수"
+            >
+              <MenuItem value={10}>10개</MenuItem>
+              <MenuItem value={20}>20개</MenuItem>
+              <MenuItem value={30}>30개</MenuItem>
+              <MenuItem value={50}>50개</MenuItem>
+              <MenuItem value={100}>100개</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
       </Paper>
 
       {/* 테이블 헤더 (엑셀 다운로드 버튼) */}
