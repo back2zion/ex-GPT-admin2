@@ -91,8 +91,8 @@ export default function LoginPage() {
           localStorage.removeItem('rememberedUsername');
         }
 
-        // 메인 페이지로 이동
-        navigate('/stats/exgpt');
+        // Dashboard로 이동
+        navigate('/');
       }
     } catch (error) {
       console.error('Login error:', error);
