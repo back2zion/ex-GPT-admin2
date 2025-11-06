@@ -931,17 +931,24 @@ const Dashboard = () => {
                         </Box>
                     ) : categoryStats.length > 0 ? (
                         <Grid container spacing={2}>
-                            {categoryStats.map((category, index) => {
-                                const cardColors = [
-                                    { bg: '#f0f9ff', border: colors.primary, text: colors.primary },
-                                    { bg: '#fff7ed', border: colors.accent, text: colors.accent },
-                                    { bg: '#f0fdf4', border: colors.success, text: colors.success },
-                                    { bg: '#fef2f2', border: '#ef4444', text: '#ef4444' }
-                                ];
-                                const cardColor = cardColors[index % cardColors.length];
+                            {categoryStats
+                                .sort((a, b) => {
+                                    // 미분류를 맨 마지막으로
+                                    if (a.main_category === '미분류') return 1;
+                                    if (b.main_category === '미분류') return -1;
+                                    return b.total_count - a.total_count;
+                                })
+                                .map((category, index) => {
+                                    const cardColors = [
+                                        { bg: '#f0f9ff', border: colors.primary, text: colors.primary },
+                                        { bg: '#fff7ed', border: colors.accent, text: colors.accent },
+                                        { bg: '#f0fdf4', border: colors.success, text: colors.success },
+                                        { bg: '#fef2f2', border: '#ef4444', text: '#ef4444' }
+                                    ];
+                                    const cardColor = cardColors[index % cardColors.length];
 
-                                return (
-                                    <Grid item xs={12} md={6} lg={3} key={index}>
+                                    return (
+                                        <Grid item xs={12} md={4} lg={4} key={index}>
                                         <Paper
                                             elevation={0}
                                             sx={{
