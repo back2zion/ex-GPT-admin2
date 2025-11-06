@@ -97,6 +97,22 @@
   font-size: 15px;
   transition: all 0.2s;
   background: #f8f8f8;
+  color: #333333;
+}
+
+/* Placeholder 스타일 */
+.form-group input::placeholder {
+  color: #999999;
+  opacity: 0.7;
+}
+
+/* Autofill 배경색 방지 */
+.form-group input:-webkit-autofill,
+.form-group input:-webkit-autofill:hover,
+.form-group input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #f8f8f8 inset;
+  -webkit-text-fill-color: #333333;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 .form-group input:focus {
