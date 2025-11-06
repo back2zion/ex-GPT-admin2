@@ -7,12 +7,13 @@ export const authProvider = {
   // 로그인
   login: async ({ username, password }) => {
     try {
-      // Direct backend API call (bypass proxy issues)
+      // Use relative path (requires Apache proxy configuration)
+      // ProxyPass /api/v1/auth http://localhost:8010/api/v1/auth
       const formData = new URLSearchParams();
       formData.append('username', username);
       formData.append('password', password);
 
-      const response = await fetch('http://localhost:8010/api/v1/auth/login', {
+      const response = await fetch('/api/v1/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -22,6 +23,8 @@ export const authProvider = {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Login failed:', response.status, errorText);
         throw new Error('로그인에 실패했습니다. 아이디와 비밀번호를 확인하세요.');
       }
 
@@ -31,7 +34,7 @@ export const authProvider = {
       localStorage.setItem('authToken', data.access_token);
 
       // Fetch user info
-      const userResponse = await fetch('http://localhost:8010/api/v1/auth/me', {
+      const userResponse = await fetch('/api/v1/auth/me', {
         headers: {
           'Authorization': `Bearer ${data.access_token}`
         }
@@ -45,6 +48,7 @@ export const authProvider = {
 
       return Promise.resolve();
     } catch (error) {
+      console.error('Auth error:', error);
       return Promise.reject(error);
     }
   },
