@@ -19,7 +19,7 @@ aside {
         box-shadow: 0px 3.95px 7.9px 0px #0000001A;
 
         .logo {
-            background: url(../../img/menu/logo.svg) center/contain no-repeat;
+            background: url(/admin/templates/img/menu/logo.svg) center/contain no-repeat;
             width: 126px;
             height: 17px;
             margin-top: 8px;
@@ -47,11 +47,11 @@ aside {
             .menu-header-toggle {
                 width: 24px;
                 height: 24px;
-                background: url(../../img/menu/menu_open_icon.svg) center/cover no-repeat;
+                background: url(/admin/templates/img/menu/menu_open_icon.svg) center/cover no-repeat;
                 cursor: ew-resize;
 
                 &:hover {
-                    background-image: url(../../img/menu/menu_open_hover_icon.svg);
+                    background-image: url(/admin/templates/img/menu/menu_open_hover_icon.svg);
                 }
             }
         }
@@ -103,9 +103,9 @@ aside {
             .menu-children {
                 background-color: #022566;
                 border-radius: 8px;
-                height: 0;
+                max-height: 0;
                 overflow: hidden;
-                transition: height 0.35s;
+                transition: max-height 0.35s ease;
                 padding: 0;
                 box-sizing: border-box;
             }
@@ -193,6 +193,8 @@ aside {
                 }
                 .menu-children {
                     margin-top: 10px;
+                    max-height: 1000px;
+                    padding: 0;
                 }
             }
 
@@ -215,7 +217,7 @@ aside {
 
         .logo-area {
             .logo {
-                background-image: url(../../img/menu/logo_folded.svg);
+                background-image: url(/admin/templates/img/menu/logo_folded.svg);
                 width: 48px;
                 height: 15px;
             }
@@ -234,10 +236,10 @@ aside {
                 display: none;
             }
             .menu-header-toggle {
-                background-image: url(../../img/menu/menu_close_icon.svg);
+                background-image: url(/admin/templates/img/menu/menu_close_icon.svg);
 
                 &:hover {
-                    background-image: url(../../img/menu/menu_close_hover_icon.svg);
+                    background-image: url(/admin/templates/img/menu/menu_close_hover_icon.svg);
                 }
             }
         }
@@ -295,13 +297,13 @@ aside {
 #inquiry {
     > .menu-content {
         > .menu-icon {
-            background-image: url(../../img/menu/menu_search_icon.svg);
+            background-image: url(/admin/templates/img/menu/menu_search_icon.svg);
         }
     }
     &:hover, &.active {
         > .menu-content {
             > .menu-icon {
-                background-image: url(../../img/menu/menu_search_hover_icon.svg);
+                background-image: url(/admin/templates/img/menu/menu_search_hover_icon.svg);
             }
         }
     }
@@ -310,13 +312,13 @@ aside {
 #authority {
     > .menu-content {
         > .menu-icon {
-            background-image: url(../../img/menu/menu_docx_icon.svg);
+            background-image: url(/admin/templates/img/menu/menu_docx_icon.svg);
         }
     }
     &:hover, &.active {
         > .menu-content {
             > .menu-icon {
-                background-image: url(../../img/menu/menu_docx_hover_icon.svg);
+                background-image: url(/admin/templates/img/menu/menu_docx_hover_icon.svg);
             }
         }
     }
@@ -325,13 +327,13 @@ aside {
 #system {
     > .menu-content {
         > .menu-icon {
-            background-image: url(../../img/menu/menu_system_icon.svg);
+            background-image: url(/admin/templates/img/menu/menu_system_icon.svg);
         }
     }
     &:hover, &.active {
         > .menu-content {
             > .menu-icon {
-                background-image: url(../../img/menu/menu_system_hover_icon.svg);
+                background-image: url(/admin/templates/img/menu/menu_system_hover_icon.svg);
             }
         }
     }
