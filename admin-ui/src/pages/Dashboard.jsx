@@ -127,6 +127,8 @@ const Dashboard = () => {
             const weekStart = new Date(Date.now() - 8 * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
             const monthStart = new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
             const today = new Date().toISOString().split('T')[0];
+            // 부서별/분야별 통계는 30일 데이터 사용
+            const statsStart = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
             const headers = {
                 'Accept': 'application/json',
@@ -143,8 +145,8 @@ const Dashboard = () => {
                 fetch(`/api/v1/admin/deployment/gpu/status`, { headers }),
                 fetch(`/api/v1/admin/deployment/bentos`, { headers }),
                 fetch(`/api/v1/admin/deployment/docker/containers`, { headers }),
-                fetch(`/api/v1/admin/stats/by-department?start=${start}&end=${end}`, { headers }),
-                fetch(`/api/v1/admin/stats/by-category?start=${start}&end=${end}`, { headers })
+                fetch(`/api/v1/admin/stats/by-department?start=${statsStart}&end=${end}`, { headers }),
+                fetch(`/api/v1/admin/stats/by-category?start=${statsStart}&end=${end}`, { headers })
             ]);
 
             if (!dashboardRes.ok || !dailyRes.ok || !hourlyRes.ok || !systemRes.ok) {
@@ -852,7 +854,7 @@ const Dashboard = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                         <PeopleIcon sx={{ fontSize: 28, color: colors.success, mr: 1.5 }} />
                         <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.primary }}>
-                            방문자 현황 (부서별 이용 통계)
+                            방문자 현황 (부서별 이용 통계 - 최근 30일)
                         </Typography>
                     </Box>
                     {loading ? (
@@ -920,7 +922,7 @@ const Dashboard = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                         <QuestionAnswerIcon sx={{ fontSize: 28, color: colors.accent, mr: 1.5 }} />
                         <Typography variant="h6" sx={{ fontWeight: 'bold', color: colors.primary }}>
-                            활용 현황 (분야별 질의 통계)
+                            활용 현황 (분야별 질의 통계 - 최근 30일)
                         </Typography>
                     </Box>
                     {loading ? (

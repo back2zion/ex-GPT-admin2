@@ -5,7 +5,7 @@ TDD GREEN 단계: 테스트를 통과하는 최소 코드 작성
 """
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, extract, literal_column
+from sqlalchemy import select, func, extract, literal_column, case
 from typing import List, Optional
 from datetime import date, datetime, timedelta
 import httpx
@@ -1062,24 +1062,38 @@ async def get_stats_by_category(
     분야별 질의 통계 (활용 현황)
 
     **반환값**:
-    - category: 세부 카테고리 (sub_category)
+    - category: 카테고리 (main - sub 형식, 또는 main만, 또는 '미분류')
     - question_count: 질문 수
     """
     start_datetime = datetime.combine(start, datetime.min.time())
     end_datetime = datetime.combine(end, datetime.max.time())
 
+    # CASE 문을 사용하여 category 생성
+    # sub_category가 있으면: "main_category - sub_category"
+    # sub_category가 없고 main_category만 있으면: "main_category"
+    # 둘 다 없으면: "미분류"
+    category_expr = case(
+        (
+            (UsageHistory.sub_category.isnot(None)) & (UsageHistory.sub_category != ''),
+            func.concat(func.coalesce(UsageHistory.main_category, ''), ' - ', UsageHistory.sub_category)
+        ),
+        (
+            (UsageHistory.main_category.isnot(None)) & (UsageHistory.main_category != ''),
+            UsageHistory.main_category
+        ),
+        else_='미분류'
+    ).label('category')
+
     query = (
         select(
-            UsageHistory.sub_category,
+            category_expr,
             func.count(UsageHistory.id).label('question_count')
         )
         .filter(
             UsageHistory.created_at >= start_datetime,
-            UsageHistory.created_at <= end_datetime,
-            UsageHistory.sub_category.isnot(None),
-            UsageHistory.sub_category != ''
+            UsageHistory.created_at <= end_datetime
         )
-        .group_by(UsageHistory.sub_category)
+        .group_by(category_expr)
         .order_by(func.count(UsageHistory.id).desc())
     )
 
@@ -1089,7 +1103,7 @@ async def get_stats_by_category(
     return {
         "items": [
             {
-                "category": row.sub_category,
+                "category": row.category,
                 "question_count": row.question_count
             }
             for row in rows
