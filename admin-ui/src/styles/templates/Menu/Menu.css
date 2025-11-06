@@ -293,8 +293,26 @@ aside {
     }
 }
 
-/* Icon */
-#inquiry {
+/* Icon - 7개 메뉴 ID 매핑 */
+
+/* 1. 대시보드 */
+#dashboard {
+    > .menu-content {
+        > .menu-icon {
+            background-image: url(/admin/templates/img/menu/menu_system_icon.svg);
+        }
+    }
+    &:hover, &.active {
+        > .menu-content {
+            > .menu-icon {
+                background-image: url(/admin/templates/img/menu/menu_system_hover_icon.svg);
+            }
+        }
+    }
+}
+
+/* 2. 대화내역 */
+#conversations {
     > .menu-content {
         > .menu-icon {
             background-image: url(/admin/templates/img/menu/menu_search_icon.svg);
@@ -309,7 +327,8 @@ aside {
     }
 }
 
-#authority {
+/* 3. 학습데이터 관리 */
+#learning-data {
     > .menu-content {
         > .menu-icon {
             background-image: url(/admin/templates/img/menu/menu_docx_icon.svg);
@@ -324,7 +343,8 @@ aside {
     }
 }
 
-#system {
+/* 4. 권한 관리 */
+#permissions {
     > .menu-content {
         > .menu-icon {
             background-image: url(/admin/templates/img/menu/menu_system_icon.svg);
@@ -334,6 +354,54 @@ aside {
         > .menu-content {
             > .menu-icon {
                 background-image: url(/admin/templates/img/menu/menu_system_hover_icon.svg);
+            }
+        }
+    }
+}
+
+/* 5. 부가서비스 관리 */
+#services {
+    > .menu-content {
+        > .menu-icon {
+            background-image: url(/admin/templates/img/menu/menu_docx_icon.svg);
+        }
+    }
+    &:hover, &.active {
+        > .menu-content {
+            > .menu-icon {
+                background-image: url(/admin/templates/img/menu/menu_docx_hover_icon.svg);
+            }
+        }
+    }
+}
+
+/* 6. 배포관리 */
+#deployment {
+    > .menu-content {
+        > .menu-icon {
+            background-image: url(/admin/templates/img/menu/menu_system_icon.svg);
+        }
+    }
+    &:hover, &.active {
+        > .menu-content {
+            > .menu-icon {
+                background-image: url(/admin/templates/img/menu/menu_system_hover_icon.svg);
+            }
+        }
+    }
+}
+
+/* 7. STT 음성 전사 */
+#stt {
+    > .menu-content {
+        > .menu-icon {
+            background-image: url(/admin/templates/img/menu/menu_search_icon.svg);
+        }
+    }
+    &:hover, &.active {
+        > .menu-content {
+            > .menu-icon {
+                background-image: url(/admin/templates/img/menu/menu_search_hover_icon.svg);
             }
         }
     }
