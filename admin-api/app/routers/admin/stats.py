@@ -1062,50 +1062,61 @@ async def get_stats_by_category(
     분야별 질의 통계 (활용 현황)
 
     **반환값**:
-    - category: 카테고리 (main - sub 형식, 또는 main만, 또는 '미분류')
-    - question_count: 질문 수
+    - categories: 대분류별 데이터
+      - main_category: 대분류명
+      - total_count: 대분류 총 건수
+      - sub_items: 세부 항목 리스트
+        - sub_category: 세부 분류명
+        - count: 건수
     """
     start_datetime = datetime.combine(start, datetime.min.time())
     end_datetime = datetime.combine(end, datetime.max.time())
 
-    # CASE 문을 사용하여 category 생성
-    # sub_category가 있으면: "main_category - sub_category"
-    # sub_category가 없고 main_category만 있으면: "main_category"
-    # 둘 다 없으면: "미분류"
-    category_expr = case(
-        (
-            (UsageHistory.sub_category.isnot(None)) & (UsageHistory.sub_category != ''),
-            func.concat(func.coalesce(UsageHistory.main_category, ''), ' - ', UsageHistory.sub_category)
-        ),
-        (
-            (UsageHistory.main_category.isnot(None)) & (UsageHistory.main_category != ''),
-            UsageHistory.main_category
-        ),
-        else_='미분류'
-    ).label('category')
+    # GROUP BY와 SELECT에서 동일한 표현식 사용을 위해 변수로 분리
+    main_cat_expr = func.coalesce(UsageHistory.main_category, '미분류')
+    sub_cat_expr = func.coalesce(UsageHistory.sub_category, '')
 
     query = (
         select(
-            category_expr,
-            func.count(UsageHistory.id).label('question_count')
+            main_cat_expr.label('main_category'),
+            sub_cat_expr.label('sub_category'),
+            func.count(UsageHistory.id).label('count')
         )
         .filter(
             UsageHistory.created_at >= start_datetime,
             UsageHistory.created_at <= end_datetime
         )
-        .group_by(category_expr)
+        .group_by(main_cat_expr, sub_cat_expr)
         .order_by(func.count(UsageHistory.id).desc())
     )
 
     result = await db.execute(query)
     rows = result.all()
 
-    return {
-        "items": [
-            {
-                "category": row.category,
-                "question_count": row.question_count
+    # 대분류별로 그룹화
+    categories_dict = {}
+    for row in rows:
+        main = row.main_category
+        sub = row.sub_category
+        count = row.count
+
+        if main not in categories_dict:
+            categories_dict[main] = {
+                'main_category': main,
+                'total_count': 0,
+                'sub_items': []
             }
-            for row in rows
-        ]
+
+        categories_dict[main]['total_count'] += count
+        if sub:  # sub_category가 있는 경우에만 추가
+            categories_dict[main]['sub_items'].append({
+                'sub_category': sub,
+                'count': count
+            })
+
+    # 총 건수 기준으로 정렬
+    categories = sorted(categories_dict.values(), key=lambda x: x['total_count'], reverse=True)
+
+    return {
+        "categories": categories
     }

@@ -163,7 +163,7 @@ const Dashboard = () => {
             const servicesData = servicesRes.ok ? await servicesRes.json() : { bentos: [] };
             const containersData = containersRes.ok ? await containersRes.json() : { containers: [] };
             const deptData = deptRes.ok ? await deptRes.json() : { items: [] };
-            const catData = catRes.ok ? await catRes.json() : { items: [] };
+            const catData = catRes.ok ? await catRes.json() : { categories: [] };
 
             setStats(dashboardData);
             setDailyTrend(dailyData.items || []);
@@ -175,7 +175,7 @@ const Dashboard = () => {
             setServices(servicesData.bentos || []);
             setContainers(containersData.containers || []);
             setDepartmentStats(deptData.items || []);
-            setCategoryStats(catData.items || []);
+            setCategoryStats(catData.categories || []);
         } catch (err) {
             console.error('Failed to fetch dashboard stats:', err);
             setError(err.message);
@@ -907,7 +907,7 @@ const Dashboard = () => {
                     )}
                 </Paper>
 
-                {/* 분야별 질의 통계 (활용 현황) - Pie Chart */}
+                {/* 분야별 질의 통계 (활용 현황) - 카드 형식 */}
                 <Paper
                     elevation={0}
                     sx={{
@@ -930,48 +930,82 @@ const Dashboard = () => {
                             <CircularProgress />
                         </Box>
                     ) : categoryStats.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={450}>
-                            <PieChart>
-                                <Pie
-                                    data={categoryStats}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={true}
-                                    label={({ category, question_count, percent }) =>
-                                        `${category}: ${question_count}건 (${(percent * 100).toFixed(1)}%)`
-                                    }
-                                    outerRadius={140}
-                                    fill="#8884d8"
-                                    dataKey="question_count"
-                                    nameKey="category"
-                                >
-                                    {categoryStats.map((entry, index) => {
-                                        const colorPalette = [
-                                            colors.primary,
-                                            colors.accent,
-                                            colors.success,
-                                            colors.info,
-                                            colors.warning,
-                                            colors.primaryLight,
-                                            colors.accentLight,
-                                            colors.successLight,
-                                        ];
-                                        return (
-                                            <Cell key={`cell-${index}`} fill={colorPalette[index % colorPalette.length]} />
-                                        );
-                                    })}
-                                </Pie>
-                                <Tooltip
-                                    contentStyle={{
-                                        backgroundColor: 'white',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                                    }}
-                                />
-                                <Legend />
-                            </PieChart>
-                        </ResponsiveContainer>
+                        <Grid container spacing={2}>
+                            {categoryStats.map((category, index) => {
+                                const cardColors = [
+                                    { bg: '#f0f9ff', border: colors.primary, text: colors.primary },
+                                    { bg: '#fff7ed', border: colors.accent, text: colors.accent },
+                                    { bg: '#f0fdf4', border: colors.success, text: colors.success },
+                                    { bg: '#fef2f2', border: '#ef4444', text: '#ef4444' }
+                                ];
+                                const cardColor = cardColors[index % cardColors.length];
+
+                                return (
+                                    <Grid item xs={12} md={6} lg={3} key={index}>
+                                        <Paper
+                                            elevation={0}
+                                            sx={{
+                                                p: 2.5,
+                                                borderRadius: 2,
+                                                backgroundColor: cardColor.bg,
+                                                border: `2px solid ${cardColor.border}`,
+                                                height: '100%',
+                                                minHeight: 200,
+                                            }}
+                                        >
+                                            <Typography
+                                                variant="h6"
+                                                sx={{
+                                                    fontWeight: 'bold',
+                                                    color: cardColor.text,
+                                                    mb: 1,
+                                                    fontSize: '1.1rem'
+                                                }}
+                                            >
+                                                {category.main_category}
+                                            </Typography>
+                                            <Typography
+                                                variant="h4"
+                                                sx={{
+                                                    fontWeight: 'bold',
+                                                    color: cardColor.text,
+                                                    mb: 2
+                                                }}
+                                            >
+                                                {formatNumber(category.total_count)}건
+                                            </Typography>
+
+                                            {category.sub_items.length > 0 && (
+                                                <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${cardColor.border}40` }}>
+                                                    <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 'bold', mb: 1, display: 'block' }}>
+                                                        세부 항목
+                                                    </Typography>
+                                                    {category.sub_items.map((item, idx) => (
+                                                        <Box
+                                                            key={idx}
+                                                            sx={{
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                alignItems: 'center',
+                                                                py: 0.5,
+                                                                fontSize: '0.875rem'
+                                                            }}
+                                                        >
+                                                            <Typography variant="body2" sx={{ color: '#475569' }}>
+                                                                • {item.sub_category}
+                                                            </Typography>
+                                                            <Typography variant="body2" sx={{ fontWeight: 'bold', color: cardColor.text }}>
+                                                                {formatNumber(item.count)}
+                                                            </Typography>
+                                                        </Box>
+                                                    ))}
+                                                </Box>
+                                            )}
+                                        </Paper>
+                                    </Grid>
+                                );
+                            })}
+                        </Grid>
                     ) : (
                         <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', p: 3 }}>
                             데이터가 없습니다
