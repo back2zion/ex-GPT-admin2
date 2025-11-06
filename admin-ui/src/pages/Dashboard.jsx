@@ -930,7 +930,7 @@ const Dashboard = () => {
                             <CircularProgress />
                         </Box>
                     ) : categoryStats.length > 0 ? (
-                        <Grid container spacing={2} sx={{ width: '100%' }}>
+                        <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
                             {categoryStats
                                 .sort((a, b) => {
                                     // 미분류를 맨 마지막으로
@@ -948,16 +948,16 @@ const Dashboard = () => {
                                     const cardColor = cardColors[index % cardColors.length];
 
                                     return (
-                                        <Grid item xs={12} md={4} lg={4} key={index} sx={{ display: 'flex' }}>
                                         <Paper
+                                            key={index}
                                             elevation={0}
                                             sx={{
                                                 p: 2.5,
                                                 borderRadius: 2,
                                                 backgroundColor: cardColor.bg,
                                                 border: `2px solid ${cardColor.border}`,
-                                                width: '100%',
-                                                height: '100%',
+                                                flex: '1 1 0',
+                                                minWidth: 0,
                                                 minHeight: 200,
                                                 display: 'flex',
                                                 flexDirection: 'column',
@@ -1012,10 +1012,9 @@ const Dashboard = () => {
                                                 </Box>
                                             )}
                                         </Paper>
-                                    </Grid>
-                                );
-                            })}
-                        </Grid>
+                                    );
+                                })}
+                        </Box>
                     ) : (
                         <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', p: 3 }}>
                             데이터가 없습니다
