@@ -1565,6 +1565,51 @@ class QuestionRequest(BaseModel):
 
 ## 🚀 배포 요구사항
 
+### 운영 환경 배포 경로 ⚠️ **IMPORTANT**
+
+**Admin UI (React) 배포 위치**:
+```bash
+# 올바른 배포 경로 ✅
+/var/www/html/admin/
+
+# 잘못된 경로 ❌ (사용하지 말 것)
+/var/www/html/exGenBotDS/
+```
+
+**배포 URL**:
+- https://ui.datastreams.co.kr:20443/admin/
+
+**배포 명령어**:
+```bash
+# 1. admin-ui 빌드
+cd /home/aigen/admin-api/admin-ui
+npm run build
+
+# 2. 올바른 위치에 배포
+cp -r dist/* /var/www/html/admin/
+
+# 3. 파일 확인
+ls -lah /var/www/html/admin/assets/
+```
+
+**Apache 프록시 설정**:
+```apache
+# /etc/httpd/conf.d/port-20443.conf 또는 ssl.conf
+# Admin 정적 파일은 /var/www/html/admin/에서 직접 서빙
+DocumentRoot "/var/www/html"
+
+# Admin API는 FastAPI로 프록시
+ProxyPass /api/v1/admin/ http://localhost:8010/api/v1/admin/
+ProxyPassReverse /api/v1/admin/ http://localhost:8010/api/v1/admin/
+```
+
+**주의사항**:
+- **절대로 `/var/www/html/exGenBotDS/`에 배포하지 말 것**
+- 브라우저에서 로드되는 실제 파일 위치는 `/var/www/html/admin/`
+- 배포 후 반드시 브라우저 강제 새로고침 (Ctrl+F5)
+
+---
+
 ### 폐쇄망 배포 프로세스
 
 **1. 패키지 생성** (외부망):

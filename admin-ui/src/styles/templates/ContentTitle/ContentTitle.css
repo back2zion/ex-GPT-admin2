@@ -1,0 +1,18 @@
+.content-title-area {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    min-height: 30px;
+    align-items: center;
+    
+    .content-title {
+        font-weight: 500;
+        font-size: 16px;
+        color: var(--ds-default-text-color);
+    }
+
+    .content-button-inn {
+        display: flex;
+        gap:  6px; 
+    }
+}

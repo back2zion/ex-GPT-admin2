@@ -1,0 +1,250 @@
+html {
+    height: 100%;
+}
+
+body{
+    margin: 0;
+    padding: 0;
+    background-color: #0F3353;
+    height: 100%;
+    overflow-y: hidden;
+}
+
+.locator {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    height: 100vh;
+    padding-top: 21vh;
+    min-width: 800px;
+}
+
+.form-pane {
+    padding: 0 60px;
+    display: flex;
+    align-items: center;
+}
+
+.form-wrap {
+    display: inline-flex; 
+    justify-content: center;
+    margin: 0 auto;
+    align-items: center;
+
+    .form-wrapper {
+        display: flex;
+        box-sizing: border-box;
+        flex-direction: column;
+        background: #ffffff;
+        border-radius: 23px 0 0 23px;
+        padding: 46px 40px 67px;
+        min-width: 392px;
+        flex-shrink: 0;
+        
+        /* logo */
+        .logo {
+            display: flex;
+            align-items: end;
+            gap: 7px;
+            color: #5E5C5C;
+            font-weight: 300;
+            font-size: 15px;
+            margin-bottom: 51px;
+
+            p {
+                margin: 0;
+            }
+        }
+
+        /* input reset */
+        .placeholding-input input {
+            border: none;
+            outline: none;
+            box-shadow: none;
+            background-color: transparent;
+            border-bottom: 1px solid #E0E0E0;
+            font-size: 14px;
+            box-sizing: border-box;
+            border-radius: 0;
+            color: #222222;
+            position: relative;
+            line-height: 32px;
+            height: 32px;
+            caret-color: #006DCD;
+            width: 100%;
+            padding-left: 32px;
+            padding-right: 32px;
+
+            &::placeholder {
+                color: #727272;
+            }
+
+            &:focus {
+                border-bottom-color: #006DCD;
+                box-shadow: 0 1px 0 0 #006DCD;
+            }
+        }
+
+        /* id */
+        .id_input_container {
+            position: relative;
+            margin-bottom: 31px;
+
+            .input_icon {
+                position: absolute;
+                top: 50%;
+                left: 0;
+                transform: translateY(-50%);
+                width: 21px;
+                height: 21px;
+                background: url(/templates/img/login/id_icon.svg) center / cover no-repeat;
+            }
+        }
+
+        /* pw */
+        .pswd_input_container {
+            position: relative;
+
+            .input_icon {
+                position: absolute;
+                top: 50%;
+                left: 0;
+                transform: translateY(-50%);
+                width: 21px;
+                height: 21px;
+                background: url(/templates/img/login/pswd_icon.svg) center / cover no-repeat;
+            }
+
+            .show_icon {
+                border: none;
+                position: absolute;
+                top: 50%;
+                right: 14px;
+                transform: translateY(-50%);
+                width: 24px;
+                height: 24px;
+                background: url(/templates/img/login/eye_icon.svg) center / cover no-repeat;
+
+                &.on {
+                    background-image: url(/templates/img/login/eye_off_icon.svg);
+                }
+            }
+        }
+
+        /* remember id */
+        .remember-id-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 12px;
+            position: relative;
+
+            input {
+                margin: 0;
+                appearance: none;
+                width: 21px;
+                height: 21px;
+                border: 1px solid #D3D3D3;
+                border-radius: 4px;
+
+                &:checked + label:after{
+                    content: '';
+                    position: absolute;
+                    left: 4px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    background: url(/templates/img/login/login_checkbox_check_icon.svg) center / cover no-repeat;
+                    width: 13px;
+                    height: 10px;
+                }
+            }
+
+            .remember-id-text {
+                font-size: 13px;
+                color: #222222;
+                font-weight: 400;
+            }
+
+            & + .login-button-container {
+               margin-top: 30px; 
+            }
+        }
+
+        /* error */
+        .error-message {
+            margin-top: 10px;
+            font-size: 14px;
+            color: red;
+            font-weight: 500;
+            overflow-wrap: break-word;
+            margin-bottom: 8px;
+        }
+
+        /* login button */
+        .login-button-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            button {
+                min-width: 239px;
+                height: 44px;
+                line-height: 44px;
+                border: none;
+                border-radius: 44px;
+                background-color: #0044A2;
+                box-shadow: 0px 6.9px 6.04px 0px #3939391C;
+                color: white;
+                font-weight: 700;
+                font-size: 14px;
+                cursor: pointer;
+                transition: 0.1s;
+
+                &:hover {
+                    background-color: #1461CD;
+                }
+            }
+        }
+    }
+    
+    .desc {
+        background: url(/templates/img/login/login_bg.svg) center / cover no-repeat;
+        width: 219px;
+        border-radius: 0 23px 23px 0;
+        padding-top: 37px;
+        flex-shrink: 0;
+        align-self: normal;
+    }
+}
+
+.credit-bottom {
+    margin-top: 84px;
+    color: #A4B3C7AB;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    > span {
+        position: relative;
+        padding-left: 12px;
+        
+        &:before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            border-left: 1px solid #445C77;
+            height: 14px;
+        }
+    }
+
+    .bottom-credit {
+        background: url(/templates/img/login/ex_gpt_bottom_logo.svg) center / cover no-repeat;
+        width: 128px;
+        height: 15px;
+        order: -1;
+        margin-right: 12px;
+    }
+}

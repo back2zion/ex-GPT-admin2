@@ -1,17 +1,13 @@
 /**
- * 로그인 페이지
- * TDD + 시큐어 코딩
+ * 로그인 페이지 (Templates 기반)
+ * 한국도로공사 공식 디자인 시스템 적용
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login } from '../utils/api';
-import { isValidUserId, escapeHtml } from '../utils/security';
-import './LoginPage.css';
+import '../styles/templates/Login/Login.css';
 
-/**
- * 로그인 페이지 컴포넌트
- */
 export default function LoginPage() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -19,9 +15,21 @@ export default function LoginPage() {
     password: '',
     rememberMe: false,
   });
-  const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // 컴포넌트 마운트 시 "아이디 저장" 불러오기
+  useEffect(() => {
+    const rememberedUsername = localStorage.getItem('rememberedUsername');
+    if (rememberedUsername) {
+      setFormData(prev => ({
+        ...prev,
+        username: rememberedUsername,
+        rememberMe: true,
+      }));
+    }
+  }, []);
 
   /**
    * 입력 변경 핸들러
@@ -33,58 +41,42 @@ export default function LoginPage() {
       [name]: type === 'checkbox' ? checked : value,
     }));
     // 에러 메시지 초기화
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+    if (errorMessage) {
+      setErrorMessage('');
     }
   };
 
   /**
-   * 폼 검증 (TDD - 시큐어 코딩)
+   * 비밀번호 보기/숨기기 토글
    */
-  const validateForm = () => {
-    const newErrors = {};
-
-    // 사용자 ID 검증
-    if (!formData.username) {
-      newErrors.username = '아이디를 입력하세요.';
-    } else if (!isValidUserId(formData.username)) {
-      newErrors.username = '아이디 형식이 올바르지 않습니다. (영문, 숫자, -, _ 만 허용)';
-    }
-
-    // 비밀번호 검증
-    if (!formData.password) {
-      newErrors.password = '비밀번호를 입력하세요.';
-    } else if (formData.password.length < 4) {
-      newErrors.password = '비밀번호는 최소 4자 이상이어야 합니다.';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   /**
-   * 로그인 제출 핸들러
+   * 로그인 제출
    */
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setErrorMessage('');
 
-    // 폼 검증
-    if (!validateForm()) {
+    // 기본 검증
+    if (!formData.username || !formData.password) {
+      setErrorMessage('아이디와 비밀번호를 입력하세요.');
       return;
     }
 
     setIsLoading(true);
+    setErrorMessage('');
 
     try {
       // API 호출
       const response = await login(formData.username, formData.password);
 
-      // 토큰 저장 (FastAPI는 access_token 필드로 반환)
+      // 토큰 저장
       if (response.access_token) {
         localStorage.setItem('authToken', response.access_token);
 
-        // "아이디 기억하기" 처리
+        // "아이디 저장" 처리
         if (formData.rememberMe) {
           localStorage.setItem('rememberedUsername', formData.username);
         } else {
@@ -96,118 +88,122 @@ export default function LoginPage() {
       }
     } catch (error) {
       console.error('Login error:', error);
-      setErrorMessage(
-        error.response?.data?.detail || '로그인에 실패했습니다. 아이디와 비밀번호를 확인하세요.'
-      );
+      const detail = error.response?.data?.detail;
+
+      // 계정 잠금 메시지 처리
+      if (detail && detail.includes('잠겼습니다')) {
+        setErrorMessage(detail);
+      } else {
+        setErrorMessage('로그인에 실패했습니다. 아이디와 비밀번호를 확인하세요.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 컴포넌트 마운트 시 "아이디 기억하기" 불러오기
-  useState(() => {
-    const rememberedUsername = localStorage.getItem('rememberedUsername');
-    if (rememberedUsername) {
-      setFormData(prev => ({
-        ...prev,
-        username: rememberedUsername,
-        rememberMe: true,
-      }));
-    }
-  }, []);
-
   return (
-    <div className="login-page">
-      <div className="login-container">
-        <div className="login-card card">
-          <div className="login-header">
-            <div className="logo-container">
-              <div className="logo-icon">🛣️</div>
-              <h1>한국도로공사</h1>
+    <div className="locator">
+      <div className="form-pane">
+        <div className="form-wrap">
+          <div className="form-wrapper">
+            <div className="logo">
+              <img src="/templates/img/login/ex_gpt_logo.svg" alt="ex-GPT Logo" />
+              <p>관리자 대시보드</p>
             </div>
-            <h2>ex-GPT 관리자 시스템</h2>
-          </div>
 
-          <form onSubmit={handleSubmit}>
-            {errorMessage && (
-              <div className="alert alert-danger" role="alert">
-                {escapeHtml(errorMessage)}
+            <form className="signin" onSubmit={handleSubmit}>
+              {/* 에러 메시지 */}
+              {errorMessage && (
+                <div className="error-message">{errorMessage}</div>
+              )}
+
+              {/* 아이디 입력 */}
+              <div className="id_input_container">
+                <div className="placeholding-input">
+                  <input
+                    type="text"
+                    id="usrId"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    maxLength="80"
+                    placeholder="아이디"
+                    disabled={isLoading}
+                    autoComplete="username"
+                  />
+                </div>
+                <span className="input_icon" aria-hidden="true"></span>
               </div>
-            )}
 
-            <div className="form-group">
-              <label htmlFor="username">아이디</label>
-              <input
-                type="text"
-                id="username"
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                placeholder="아이디를 입력하세요"
-                disabled={isLoading}
-                aria-invalid={errors.username ? 'true' : 'false'}
-                aria-describedby={errors.username ? 'username-error' : null}
-              />
-              {errors.username && (
-                <span id="username-error" className="error-text" role="alert">
-                  {errors.username}
-                </span>
-              )}
-            </div>
+              {/* 비밀번호 입력 */}
+              <div className="pswd_input_container">
+                <div className="placeholding-input">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="pswd"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    maxLength="80"
+                    placeholder="비밀번호"
+                    disabled={isLoading}
+                    autoComplete="current-password"
+                  />
+                </div>
+                <span className="input_icon" aria-hidden="true"></span>
+                <button
+                  type="button"
+                  className={`show_icon ${showPassword ? 'on' : ''}`}
+                  onClick={togglePasswordVisibility}
+                  disabled={isLoading}
+                  aria-label="비밀번호 표시 토글"
+                ></button>
+              </div>
 
-            <div className="form-group">
-              <label htmlFor="password">비밀번호</label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="비밀번호를 입력하세요"
-                disabled={isLoading}
-                aria-invalid={errors.password ? 'true' : 'false'}
-                aria-describedby={errors.password ? 'password-error' : null}
-              />
-              {errors.password && (
-                <span id="password-error" className="error-text" role="alert">
-                  {errors.password}
-                </span>
-              )}
-            </div>
-
-            <div className="form-group checkbox-group">
-              <label>
+              {/* 아이디 저장 체크박스 */}
+              <div className="remember-id-wrapper">
                 <input
                   type="checkbox"
+                  className="remember-id"
+                  id="remember-id"
                   name="rememberMe"
                   checked={formData.rememberMe}
                   onChange={handleChange}
                   disabled={isLoading}
                 />
-                <span>아이디 기억하기</span>
-              </label>
-            </div>
+                <label className="remember-id" htmlFor="remember-id">
+                  <span className="remember-id-text">아이디저장</span>
+                </label>
+              </div>
 
-            <button
-              type="submit"
-              className="btn-primary btn-login"
-              disabled={isLoading}
-            >
-              {isLoading ? '로그인 중...' : '로그인'}
-            </button>
+              {/* 로그인 버튼 */}
+              <div className="login-button-container">
+                <button
+                  type="submit"
+                  className="submit"
+                  disabled={isLoading}
+                >
+                  {isLoading ? '로그인 중...' : 'Login'}
+                </button>
+              </div>
+            </form>
 
-            <div className="login-notice">
-              <p className="notice-text">
+            {/* 하단 메시지 (보안 안내) */}
+            <div className="bottom-message">
+              <p style={{ fontSize: '13px', color: '#666', marginTop: '20px', lineHeight: '1.6' }}>
                 ⚠️ 로그인 5회 실패시 계정이 일시적으로 차단됩니다.<br />
                 계정 관련 문의는 시스템 담당자에게 연락해주세요.
               </p>
             </div>
-          </form>
+          </div>
+          <div className="desc"></div>
         </div>
+      </div>
 
-        <div className="login-footer">
-          <p>© 2025 DataStreams. Co.Ltd. All Rights Reserved.</p>
-        </div>
+      {/* 저작권 표시 */}
+      <div className="credit-bottom">
+        <span>© 2025 Korea Expressway Corporation Service Co., Ltd. All Rights Reserved.</span>
+        <div className="bottom-credit"></div>
       </div>
     </div>
   );

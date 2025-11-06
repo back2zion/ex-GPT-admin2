@@ -1,0 +1,51 @@
+/* 탭 */
+.tab-area {
+	display: flex;
+    border-bottom: 1px solid #eee;
+    
+    button {
+        min-width: 140px;
+        padding: 0 20px;
+        cursor: pointer;
+        background: none;
+        font-size: 14px;
+        font-weight: 400;
+        color: var(--ds-default-text-color);
+        border: 1px solid #ddd;
+        border-bottom-width: 0.5px;
+        transition: 0.1s;
+        height: 32px;
+        line-height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    
+        &:not(:last-child) {
+            border-right: none;
+        }
+
+        &.active {
+            background-color: #444444;
+            color: white;
+            border-color: #2A2A2A;
+        }
+    }
+}
+
+/* 서브 탭 */
+.sub-tab-area {
+    border-bottom: 1px solid #E0E4EC;
+
+    button {
+        min-width: 60px;
+        padding: 0 22px 8px;
+        border-bottom: 2px solid transparent;
+        font-weight: 300;
+        font-size: 15px;
+
+        &.active {
+            border-bottom-color: #3D98FC;
+            font-weight: 600;
+        }
+    }
+}

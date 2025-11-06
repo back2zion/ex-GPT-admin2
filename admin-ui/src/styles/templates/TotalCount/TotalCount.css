@@ -1,0 +1,21 @@
+/* 건 수, 버튼 포함 */
+.total-count {
+	margin-bottom: 6px;
+	display: flex;
+	justify-content: space-between;
+	align-items: end;
+	
+	.count-label {
+		font-weight: 400;
+		padding-left: 2px;
+		font-size: 17px;
+	
+		& em {
+			color: #ff7a06;
+			padding: 0 2px;
+			font-size: inherit;
+			font-weight: inherit;
+			font-style: inherit;
+		}
+	}
+}

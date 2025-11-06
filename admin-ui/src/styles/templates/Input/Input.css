@@ -1,0 +1,240 @@
+/* 초기화 */
+:root {
+    --ds-default-text-color: #222;   
+
+	/* 선택 시 색상 (공통) */
+	--cu-selection-checked-bg: #0071CE;
+	--cu-selection-checked-border: #0071CE;
+	
+	/* 선택 시 색상 (컴포넌트별 override) */
+	--cu-checkbox-checked-bg: var(--cu-selection-checked-bg);
+	--cu-radio-checked-bg: var(--cu-selection-checked-bg);
+	--cu-checkbox-checked-border: var(--cu-selection-checked-border);
+	--cu-radio-checked-border: var(--cu-selection-checked-border);
+	
+	/* 기본 텍스트 */
+	--cu-selection-default-text: #222222;
+	--cu-checkbox-default-text: var(--cu-selection-default-text);
+	--cu-radio-default-text: var(--cu-selection-default-text);
+	
+	/* 기본 border */
+	--cu-selection-default-border: #D3D3D3;
+	--cu-checkbox-default-border: var(--cu-selection-default-border);
+	--cu-radio-default-border: var(--cu-selection-default-border);
+	
+	/* 비활성화 상태 */
+	/* border */
+	--cu-selection-disabled-border: #DFDFDF; 
+	--cu-checkbox-disabled-border: var(--cu-selection-disabled-border);
+	--cu-radio-disabled-border: var(--cu-selection-disabled-border);
+	
+	/* bg */
+	--cu-checkbox-disabled-checked-bg: #DFDFDF;
+	--cu-radio-disabled-checked-bg: #F5D0A8;
+	
+	/* unchecked bg */
+	--cu-checkbox-disabled-unchecked-bg: #F4F4F4;
+	--cu-radio-disabled-unchecked-bg: #DFDFDF;
+	
+	/* text */
+	--cu-checkbox-disabled-text: #A3A3A3;
+	--cu-radio-disabled-text: #727272;
+	
+	/* 포커스 outline */
+	--cu-selection-focus-visible-outline: #000000;
+	
+	/* 고정 white 색상 (테마 영향 없음, 배경 대비용) */
+	--cu-selection-white: #ffffff;
+	
+	/* radio 사이 간격 */
+	--cu-radio-spacing-column-gap: 2.4em;
+}
+
+/* 체크박스 */
+label.cu-checkbox {
+	display: inline-flex;
+	align-items: center;
+	cursor: pointer;
+
+	input[type="checkbox"] { 
+		position: absolute;
+		clip: rect(0 0 0 0);
+		width: 0px !important;
+		height: 0px !important;
+		margin: 0px;
+		overflow: hidden;
+
+		/* 체크 */
+		&:checked { 
+			/* 아이콘 박스 */
+			~ .cu-checkbox-icon {
+				background-color: var(--cu-checkbox-checked-bg);
+				border-color: var(--cu-checkbox-checked-border);
+
+				svg {
+					visibility: visible;
+				}
+			}
+		}
+
+		/* 비활성화 */
+		&[readonly],
+		&[disabled] {
+			cursor: not-allowed;
+			/* 아이콘 박스 */
+			~ .cu-checkbox-icon {
+				cursor: not-allowed;
+				border-color: var(--cu-checkbox-disabled-border);
+			}
+
+			/* 라벨 텍스트 */
+			~ .cu-checkbox-label {
+				color: var(--cu-checkbox-disabled-text);
+				cursor: not-allowed;
+			}
+
+			/* 체크됐을 시 */
+			&:checked {
+				/* 아이콘 박스 */
+				~ .cu-checkbox-icon {
+					background-color: var(--cu-checkbox-disabled-checked-bg);
+				}
+			} 
+
+			/* 체크 안됐을 시 */
+			&:not(:checked) {
+				/* 아이콘 박스 */
+				~ .cu-checkbox-icon {
+					background-color: var(--cu-checkbox-disabled-unchecked-bg);
+
+					svg {
+						visibility: hidden;
+					}
+				}
+			}
+		}
+	}
+ 
+	/* 아이콘 박스 */
+	.cu-checkbox-icon {
+		width: 1.1428571428571428em;
+		height: 1.1428571428571428em;
+		border: 1px solid var(--cu-checkbox-default-border);
+		border-radius: 4px;
+		display: inline-block;
+		position: relative;
+		cursor: pointer;
+		background-color: var(--cu-selection-white);
+		display: inline-block;
+
+		/* 체크 아이콘 */
+		svg {
+			visibility: hidden;
+			width: .7142857142857143em;
+			height: .5714285714285714em;
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+		}
+	}
+
+	/* 라벨 텍스트 */
+	.cu-checkbox-label {
+		padding-left: .35em;
+		font-size: inherit;
+		color: var(--cu-checkbox-default-text);
+		/* 폰트 */
+		font-family: var(--ds-font-family-1);
+	}
+}
+
+/* 라디오 여러 개 */
+.cu-radio-set {
+	display: inline-flex;
+	align-items: center;
+	column-gap: var(--cu-radio-spacing-column-gap);
+	flex-wrap: wrap;
+}
+
+/* 라디오 */
+label.cu-radio {
+	display: inline-flex;
+	align-items: center;
+	cursor: pointer;
+	width: fit-content;
+	position: relative;
+	white-space: nowrap;
+
+	input[type="radio"] {
+		width: 0px !important;
+		height: 0px !important;
+
+		/* 체크 */
+		&:checked {
+			& + .cu-radio-icon {
+				background-color: var(--cu-radio-checked-bg);
+				border-color: var(--cu-radio-checked-border);
+				box-shadow: inset 0 0 0 2.5px var(--cu-selection-white);
+			}
+		}
+		
+		/* 비활성화 */
+		&[readonly],
+		&[disabled] {
+			& + .cu-radio-icon {
+				cursor: not-allowed;
+			}
+			
+			&:checked {
+				& + .cu-radio-icon {
+					background-color: var(--cu-radio-disabled-checked-bg);
+					border-color: var(--cu-radio-disabled-border);
+				}
+			}
+		
+			~ .cu-radio-label {
+				color: var(--cu-radio-disabled-text);
+				cursor: not-allowed;
+			}
+		
+			/* 체크 안됐을 시 */
+			&:not(:checked) {
+				& + .cu-radio-icon {
+					background-color: var(--cu-radio-disabled-unchecked-bg);   
+					box-shadow: inset 0 0 0 2px var(--cu-selection-white);
+				}
+			}
+		}
+	}
+
+	.cu-radio-icon {
+		width: 1.1428571428571428em;
+		height: 1.1428571428571428em;
+		border: 1px solid var(--cu-radio-default-border);
+		border-radius: 50%;
+		outline: none;
+		cursor: pointer;
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		padding: 0;
+		transition: none;
+		display: inline-flex;
+		align-items: baseline;
+
+		&:before {
+			display: none;
+		}
+	}
+
+	.cu-radio-label {
+		display: inline-block;
+		padding-left: .35em;
+		color: var(--cu-radio-default-text);
+		line-height: 1;
+		font-size: inherit;
+		font-weight: 300;
+		/* 폰트 */
+		font-family: var(--ds-font-family-1);
+	}
+}

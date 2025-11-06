@@ -1,0 +1,91 @@
+/* 검색 조건 */
+.dept-container {
+    .search-fields-area {
+        .item-group {
+            display: flex;    
+        }
+    }
+}
+
+/* 부서 목록 */
+.dept-list-group{
+    border: 1px solid #DDDDDD;
+    border-radius: 4px;
+    height: 230px;
+    padding: 10px 20px;
+    overflow-y: auto;
+
+    .list{
+        margin-top: 10px;
+        /* 초기화 */
+        ul,li {
+            list-style: none;
+            padding: 0;
+        }
+
+        &:not(:last-child){
+            margin-bottom: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        a{
+            position: relative;
+            padding-left: 40px;
+            color: #222222;
+            font-size: 14px;
+
+            &:before{
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 4px;
+                width: 0;
+                height: 0;
+                border-style: solid;
+                border-width: 4.5px 0px 4.5px 6px;
+                border-color: transparent transparent transparent #323D51;
+                transition: 0.1s;
+            }
+
+            /* 제일 하위 부서는 화살표 제거 */
+            &.no-before::before {
+                display: none;
+            }
+
+            &.on:before{
+                transform: rotateZ(90deg);
+            }
+
+            &::after{
+                content: '';
+                position: absolute;
+                left: 17px;
+                top: 50%;
+                transform: translateY(-50%);
+                background: url(../../img/deptPopup/folder_icon.svg) center/cover no-repeat;
+                width: 18px;
+                height: 17px;
+            }
+
+            &.on:after {
+                background-image: url(../../img/deptPopup/folder_open_icon.svg);
+            }
+
+            ~ .list {
+                padding-left: 19px;
+            }
+
+            /* 선택 시 */
+            &.selected {
+                font-weight: 600;
+            }
+        }
+    }
+
+    >.list > ul > li > a {
+        font-weight: 500;
+    }
+}

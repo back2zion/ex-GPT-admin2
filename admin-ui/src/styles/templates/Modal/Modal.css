@@ -1,0 +1,107 @@
+/* 모달 공통 */
+.modal {
+	display: none;
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	background-color: rgba(0, 0, 0, 0.6);
+	z-index: 100000;
+
+	&.on {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+	}
+
+	.modal-box {
+		display: flex;
+		flex-direction: column;
+		background-color: white;
+		border-radius: 10px;
+		overflow: hidden;
+		position: relative;
+		/* width: 100%;
+		height: 100%; */
+		overflow-y: auto;
+        /* 최대너비 */
+        max-width: 1290px;
+        /* 최소너비 */
+        min-width: 600px;
+
+		> .modal-close {
+			position: absolute;
+			top: 22px;
+			right: 30px;
+			background: url(../../img/modal/modal_close_icon.svg) center/cover no-repeat;
+			width: 17px;
+			height: 17px;
+			padding: 0;
+			border: none;
+			
+			&:focus-visible {
+				outline: 1px solid black;
+			}
+		}
+	}
+
+
+	.modal-header {
+		flex: none;
+		font-size: 20px;
+		font-weight: 500;
+		border-bottom: 1px solid #222222;
+		padding-bottom: 12px;
+		margin: 22px 30px 0px 30px;
+
+		.modal-header-title {
+			padding-right: 60px;
+			font-weight: 500;
+			font-size: 20px;
+			line-height: normal;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			overflow: hidden;
+			cursor: default;
+			user-select: none;
+			line-height: 1;
+		}
+	}
+
+	.modal-close + .modal-content {
+		margin-top: 52px;
+	}
+
+	/* .modal-header + .modal-content {
+		margin-top: 16px;
+	} */
+
+	.modal-content {
+		flex: 1;
+		overflow: auto;
+		scrollbar-gutter: stable;
+		padding: 15px 30px 20px;
+		/* padding: 15px 30px 30px; */
+	}
+
+	.modal-footer {
+		flex: none;
+		padding: 14px 0 16px;
+		margin: -22px 30px 0px;
+
+		.flex-end {
+			display: flex;
+			align-items: center;
+			justify-content: flex-end;
+			gap: 6px;
+		}
+	}
+
+	/* 팝업 검색 조건 공통 */
+	.search-fields-area {
+		.item {
+			gap: 8px;
+		}
+	}
+}

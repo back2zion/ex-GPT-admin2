@@ -1,0 +1,29 @@
+/* 로딩 */
+.loading{
+	position: fixed;
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	background: #000000BF;
+    z-index: 1000000;
+
+	.spinner {
+		display: inline-block;
+		width: 147px;
+		height: 147px;
+		border: 18px solid #676767;
+		border-top: 18px solid #0071CE;
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		transform: translate(-50%, -50%);
+	}
+}
+
+@keyframes spin {
+	0% { transform: translate(-50%, -50%) rotate(0deg); }
+	100% { transform: translate(-50%, -50%) rotate(360deg); }
+}

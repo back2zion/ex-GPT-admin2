@@ -68,3 +68,17 @@ logs/
 *.tmp
 *.temp
 .cache/
+
+# Backup directories (불필요한 백업 파일 제외)
+*.backup/
+app.backup/
+frontend.backup/
+tests.backup/
+docs.backup/
+
+# Legacy/Duplicate directories (중복 디렉토리 제외)
+admin-api/frontend/
+frontend/
+
+# Deployment temp backups
+/tmp/admin-ui-backup-*/

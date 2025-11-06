@@ -1,0 +1,352 @@
+.ag-theme-quartz,
+.ag-theme-quartz-dark,
+.ag-theme-quartz-auto-dark {
+    --ag-card-shadow: transparent !important;
+    --ag-cell-horizontal-border: solid #eeeeee !important;
+    --ag-header-column-resize-handle-height: 100% !important;
+    --ag-header-column-resize-handle-color: #eeeeee !important;
+    --ag-header-column-resize-handle-width: 1px !important;
+    --ag-wrapper-border-radius: 4px !important;
+    --ag-icon-size:18px !important;
+    --ag-input-focus-box-shadow: transparent !important;
+    --ag-font-family: "Pretendard" !important;
+    --ag-checkbox-checked-color: #3957D3 !important;
+    --ag-checkbox-border-radius: 4px !important;
+    --ag-border-color: #D3D3D3 !important;
+    --ag-header-background-color: #F5F6F8 !important;
+    --ag-data-color: #222222 !important;
+    --ag-header-foreground-color: #000000 !important;
+    --ag-selected-row-background-color: #E9F0FA !important;
+    --ag-row-hover-color: #F3F7FD !important;
+    /* --ag-font-size: 13px !important; */
+    --ag-row-height: 34px !important;
+    --ag-header-height: 36px !important;
+    --ag-border-color: #EEEEEE !important;
+    --ag-wrapper-border-radius: 0px !important;
+    --ag-checkbox-unchecked-color: #D3D3D3 !important;
+    /* --ag-icon-font-code-checkbox-checked: ../img/default_checkbox_check_icon.svg !important; */
+}
+/* 헤더 그룹 있을 시, 높이 수정 */
+.ag-theme-quartz:has(.ag-header-row-column-group) {
+    --ag-header-height: 28px !important;
+}
+.ag-root-wrapper{
+    border: none !important;
+    border-top: 1px solid #DEDEDE !important;
+}
+
+[class*=ag-theme-] {
+    font-size: 13px !important;
+}
+/* 그리드 헤더 */
+.ag-header-row{
+    font-weight: 400 !important;
+    font-size: 14px !important;
+}
+
+.ag-row-hover.ag-row-selected::before {
+    background-color: var(--ag-row-hover-color);
+    background-image: linear-gradient(var(--ag-selected-row-background-color), var(--ag-selected-row-background-color));
+}
+
+/* 편집가능한 헤더셀 표시 */
+/*
+.ag-header-cell.editable{
+    width: 12px;
+    height: 12px;
+}
+*/
+.ag-header-cell.editable .ag-header-cell-text{
+    padding-left: 20px;
+    background: url(../img/grid_edit_icon.svg) left/auto no-repeat;
+}
+/* 필수 입력 헤더 표시 */
+.ag-header-cell {
+    &.required {
+        .ag-header-cell-text {
+            &:after {
+                content: '*';
+                color: #FF0000;
+                display: inline-block;
+            }
+        }
+    }
+}
+.ag-header-cell-label{
+    justify-content: center;
+}
+.ag-cell span{
+    line-height: min(var(--ag-internal-calculated-line-height), var(--ag-internal-padded-row-height));
+}
+/* 그리드 페이지 */
+.ag-paging-panel{
+    border-top-color: transparent !important;
+    justify-content: center !important;
+}
+.ag-cell a.ppt{
+    background: url(../img/ppt.svg) center/cover no-repeat;
+    width: 18px;
+    height: 18px;
+    margin-right: 3px;
+}
+.ag-cell a.clip{
+    background: url(../img/clip.svg) center/cover no-repeat;
+    width: 14px;
+    height: 16px;
+    margin-top: 10px;
+}
+/* 그리드 헤더 필수값 */
+.ag-header-cell .required{
+    color: #FF0000;
+}
+/* 그리드 헤더 html */
+.ag-header-cell.editable .h_cell{
+    position: relative;
+    padding-left: 20px;
+}
+.ag-header-cell.editable .h_cell:before{
+    content: '';
+    position: absolute;
+    padding-left: 20px;
+    background: url(../img/grid_edit_icon.svg) left/contain no-repeat;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 13px;
+}
+/* 그리드 헤더 체크박스 미선택 커스텀 */
+/* .ag-checkbox-input-wrapper.ag-indeterminate::after{
+    border: 1px solid #D3D3D3 !important;
+    color: transparent !important;
+    border-radius: 4px;
+    width: 18px;
+    height: 18px;
+} */
+/* 그리드 체크박스 비활성화 스타일 변경 */
+/* .ag-checkbox-input-wrapper.ag-disabled{
+    opacity: 1 !important;
+    background-color: #DFDFDF;
+}
+.ag-checkbox-input-wrapper.ag-disabled::after{
+    color: #DFDFDF !important;
+} */
+/* 그리드 행 */
+.ag-row{
+    font-weight: 400;
+}
+/* 그리드 셀렉트박스 아이콘 */
+.ag-select .ag-picker-field-icon{
+    align-items: baseline !important;
+}
+/* 헤더 그룹 스타일 추가 */
+.header_group_center .ag-header-cell-comp-wrapper{
+    justify-content: center;
+}
+/* 헤더 여러 개 일 때 */
+.multi_header.ag-theme-quartz{
+    --ag-header-height: 30px !important;
+}
+/* 그리드 셀에 호버 시 제품 이동 버튼 보이게 */
+.ag-ltr .ag-cell:hover a.prd{
+    display: block;
+    opacity: 1;
+}
+/* 그리드 셀 리사이즈 높이 수정 */
+.ag-ltr .ag-header-viewport .ag-header-cell-resize::after{
+    height: 100% !important;
+    top: 0 !important;
+}
+/* 그리드 셀 셀렉트 박스 아이콘 위치 수정 */
+.ag-cell .ag-icon {
+    display: inline-block;
+    vertical-align: middle;
+    transform: translateY(-2px);
+}
+/* 그리드 셀 체크박스 중간 정렬 */
+.ag-checkbox-cell{
+    justify-content: center;
+}
+/* 그리드 마지막 셀 리사이즈 및 보더 숨김 */
+.ag-header-cell-resize{
+    z-index: 1 !important;
+
+    &:last-of-type {
+        .ag-header-cell-resize{
+            display: none;
+        }
+    }
+}
+.ag-row .ag-cell.ag-column-last {
+    border-right-color: transparent;
+}
+/* 그리드 헤더 체크박스 */
+.ag_header_check{
+    display: flex;
+    align-items: center;
+
+    label.chk_s{
+        margin-right: 4px;
+    }
+}
+.ag-checkbox-input-wrapper.ag-checked::after{
+    font-weight: 900;
+}
+/* 셀 병합 시 배경 */
+.cell_span{
+    background-color: white;
+    position: relative;
+
+    &::before {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        border-bottom: 1px solid #EEEEEE;
+    } 
+}
+
+/* 삭제 버튼 */
+.row-delete-btn{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+
+    a {
+        width: 26px;
+        height: 26px;
+        min-width: 26px;
+        min-height: 26px;
+        position: relative;
+        cursor: pointer;
+        border-radius: 4px;
+
+        &:before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: url(../../img/agGrid/wastebasket_gray_icon.svg) center/cover no-repeat;
+            width: 12px;
+            height: 14px;
+        }
+
+        &:hover {
+            background-color: #D6E3F5;
+
+            &:before {
+                background-image: url(../../img/agGrid/wastebasket_blue_icon.svg);
+            }
+        }
+    }
+}
+
+/* 페이지네이션 */
+.pagination {
+	flex: 1;
+	display: flex;
+	gap: 5px;
+	align-items: center;
+	justify-content: center;
+    margin-top: 14px;
+}
+
+.pagination-button {
+	min-width: 26px;
+	height: 25px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid #e0e4ec;
+	background-color: white;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: 0.1s;
+
+	&:hover {
+		background-color: #f4f4f4;
+	}
+}
+
+.pagination-page {
+	min-width: 26px;
+	height: 25px;
+	line-height: 25px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: white;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	font-size: 13px;
+	cursor: pointer;
+	transition: 0.1s;
+
+	&:hover {
+		border-color: #727272;
+	}
+
+    &.active-page {
+        background-color: #006dc6;
+        color: white;
+        border-color: #006dc6;
+    
+        &:hover {
+            border-color: #0068BE;
+            background-color: #0068BE;
+            color: white;
+        }
+    }
+}
+
+
+.pagination-ellipsis {
+	padding: 0 5px;
+}
+
+.page-size-selector {
+	display: flex;
+	align-items: center;
+
+	select {
+		min-width: 87px;
+		height: 25px;
+		padding: 0 2px;
+		border: 1px solid #e0e4ec;
+		background-color: white;
+		border-radius: 3px;
+		font-size: 13px;
+		cursor: pointer;
+
+		&:focus {
+			outline: none;
+			border-color: #1f2020;
+		}
+	}
+}
+
+.pagination-button[disabled] {
+	background: #f4f4f4;
+	border-color: #e0e0e0;
+	color: #bfbfbf;
+	cursor: default;
+}
+
+.pagination-button[disabled] > span {
+	opacity: 0.5;
+}
+
+
+/* 그리드 활성화 */
+.grid-wrapper.sub {
+    .grid-area {
+        display: none;
+        
+        &.active {
+            display: block;
+        }
+    }
+}

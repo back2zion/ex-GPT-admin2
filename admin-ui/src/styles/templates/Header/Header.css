@@ -1,0 +1,41 @@
+header {
+	height: 40px;
+	background-color: #F6F6F670;
+	border-bottom: 1px solid #E3E3E3;
+    padding: 0 30px;
+}
+
+.user {
+    height: 100%;
+    display: flex;
+    justify-content: flex-end; 
+    align-items: center;
+    padding: 7px 0 8px;
+    gap: 28px;
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        svg {
+            width: 26px;
+            height: 26px;
+        }
+    }
+
+    .logout {
+        border: 1px solid #D7D7D7;
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: 500;
+        min-width: 60px;
+        padding: 0 12px;
+        height: 25px;
+        line-height: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--ds-default-text-color);
+    }
+}
