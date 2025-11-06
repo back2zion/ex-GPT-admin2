@@ -16,6 +16,8 @@ import {
   Grid,
   Card,
   CardContent,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { getConversationDetail } from '../utils/api';
@@ -46,6 +48,7 @@ export default function ConversationDetailPage() {
   const [sessionData, setSessionData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedTab, setSelectedTab] = useState(0);
 
   /**
    * 대화내역 상세 로드
@@ -178,100 +181,127 @@ export default function ConversationDetailPage() {
         </Grid>
       </Paper>
 
-      {/* 대화 목록 (멀티턴) */}
-      {sessionData.conversations.map((conversation, index) => (
-        <Box key={conversation.id} sx={{ mb: 3 }}>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main' }}>
-            🔹 대화 #{index + 1} (ID: {conversation.id})
-          </Typography>
+      {/* 대화 탭 */}
+      <Paper elevation={3} sx={{ mb: 3 }}>
+        <Tabs
+          value={selectedTab}
+          onChange={(e, newValue) => setSelectedTab(newValue)}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{ borderBottom: 1, borderColor: 'divider' }}
+        >
+          {sessionData.conversations.map((conversation, index) => (
+            <Tab
+              key={conversation.id}
+              label={`대화 #${index + 1}`}
+              id={`conversation-tab-${index}`}
+            />
+          ))}
+        </Tabs>
 
-          {/* 대화 분류 및 시간 정보 */}
-          <Paper elevation={2} sx={{ p: 2, mb: 2, bgcolor: '#fafafa' }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={3}>
-                <Typography variant="body2" color="text.secondary">대분류</Typography>
-                <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                  {conversation.main_category || '미분류'}
+        {/* 선택된 대화 내용 */}
+        {sessionData.conversations.map((conversation, index) => (
+          <Box
+            key={conversation.id}
+            role="tabpanel"
+            hidden={selectedTab !== index}
+            id={`conversation-tabpanel-${index}`}
+            sx={{ p: 3 }}
+          >
+            {selectedTab === index && (
+              <>
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: 'primary.main' }}>
+                  🔹 대화 #{index + 1} (ID: {conversation.id})
                 </Typography>
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <Typography variant="body2" color="text.secondary">소분류</Typography>
-                <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                  {conversation.sub_category || '-'}
-                </Typography>
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <Typography variant="body2" color="text.secondary">질문 시간</Typography>
-                <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                  {formatDateTime(conversation.created_at)}
-                </Typography>
-              </Grid>
-              <Grid item xs={12} sm={2}>
-                <Typography variant="body2" color="text.secondary">응답 시간</Typography>
-                <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                  {conversation.response_time ? `${conversation.response_time}ms` : '-'}
-                </Typography>
-              </Grid>
-            </Grid>
-          </Paper>
 
-          {/* 질문 내용 */}
-          <Card elevation={3} sx={{ mb: 2, bgcolor: '#f0f8ff' }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#1976d2' }}>
-                ❓ 질문 내용
-              </Typography>
-              <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
-                {conversation.question}
-              </Typography>
-            </CardContent>
-          </Card>
+                {/* 대화 분류 및 시간 정보 */}
+                <Paper elevation={2} sx={{ p: 2, mb: 2, bgcolor: '#fafafa' }}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={3}>
+                      <Typography variant="body2" color="text.secondary">대분류</Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                        {conversation.main_category || '미분류'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={3}>
+                      <Typography variant="body2" color="text.secondary">소분류</Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                        {conversation.sub_category || '-'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Typography variant="body2" color="text.secondary">질문 시간</Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                        {formatDateTime(conversation.created_at)}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={2}>
+                      <Typography variant="body2" color="text.secondary">응답 시간</Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                        {conversation.response_time ? `${conversation.response_time}ms` : '-'}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Paper>
 
-          {/* 추론 내용 */}
-          {conversation.thinking_content && (
-            <Card elevation={3} sx={{ mb: 2, bgcolor: '#fff8e1' }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#f57c00' }}>
-                  🤔 추론 내용
-                </Typography>
-                <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
-                  {conversation.thinking_content}
-                </Typography>
-              </CardContent>
-            </Card>
-          )}
+                {/* 질문 내용 */}
+                <Card elevation={3} sx={{ mb: 2, bgcolor: '#f0f8ff' }}>
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#1976d2' }}>
+                      ❓ 질문 내용
+                    </Typography>
+                    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
+                      {conversation.question}
+                    </Typography>
+                  </CardContent>
+                </Card>
 
-          {/* 답변 내용 */}
-          <Card elevation={3} sx={{ mb: 2, bgcolor: '#f1f8e9' }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#388e3c' }}>
-                💬 답변 내용
-              </Typography>
-              <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
-                {conversation.answer || '답변 없음'}
-              </Typography>
-            </CardContent>
-          </Card>
+                {/* 추론 내용 */}
+                {conversation.thinking_content && (
+                  <Card elevation={3} sx={{ mb: 2, bgcolor: '#fff8e1' }}>
+                    <CardContent>
+                      <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#f57c00' }}>
+                        🤔 추론 내용
+                      </Typography>
+                      <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
+                        {conversation.thinking_content}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                )}
 
-          {/* 참조 문서 */}
-          {conversation.referenced_documents && conversation.referenced_documents.length > 0 && (
-            <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
-              <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
-                📚 참조 문서
-              </Typography>
-              <ul>
-                {conversation.referenced_documents.map((doc, docIndex) => (
-                  <li key={docIndex}>
-                    <Typography variant="body2">{doc}</Typography>
-                  </li>
-                ))}
-              </ul>
-            </Paper>
-          )}
+                {/* 답변 내용 */}
+                <Card elevation={3} sx={{ mb: 2, bgcolor: '#f1f8e9' }}>
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#388e3c' }}>
+                      💬 답변 내용
+                    </Typography>
+                    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
+                      {conversation.answer || '답변 없음'}
+                    </Typography>
+                  </CardContent>
+                </Card>
 
-          {index < sessionData.conversations.length - 1 && <Divider sx={{ my: 3 }} />}
-        </Box>
-      ))}
+                {/* 참조 문서 */}
+                {conversation.referenced_documents && conversation.referenced_documents.length > 0 && (
+                  <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+                      📚 참조 문서
+                    </Typography>
+                    <ul>
+                      {conversation.referenced_documents.map((doc, docIndex) => (
+                        <li key={docIndex}>
+                          <Typography variant="body2">{doc}</Typography>
+                        </li>
+                      ))}
+                    </ul>
+                  </Paper>
+                )}
+              </>
+            )}
+          </Box>
+        ))}
+      </Paper>
 
       {/* 목록으로 돌아가기 버튼 */}
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
