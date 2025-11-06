@@ -777,7 +777,7 @@ export default function VectorDataManagementPageSimple() {
                 1. 먼저 카테고리를 선택하세요.
               </Typography>
               <Typography variant="body2">
-                2. 폴더생성 버튼을 클릭하여 새로운 경로를 추가할 수 있습니다.
+                2. 파일을 선택하고 저장 버튼을 클릭하세요.
               </Typography>
             </Box>
 
