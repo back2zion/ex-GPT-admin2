@@ -110,6 +110,7 @@ async def login(
 ):
     """
     관리자 로그인
+    로그인 5회 실패 시 30분간 계정 잠금
 
     Args:
         request: 로그인 요청 (username, password)
@@ -122,6 +123,23 @@ async def login(
         HTTPException: 인증 실패 시 401
     """
     auth_service = AuthService()
+
+    # 계정 잠금 상태 확인 (더 자세한 메시지 제공)
+    result = await db.execute(
+        select(User).filter(User.username == request.username)
+    )
+    existing_user = result.scalar_one_or_none()
+
+    if existing_user and existing_user.locked_until:
+        from datetime import datetime
+        now = datetime.utcnow()
+        if existing_user.locked_until > now:
+            remaining_minutes = int((existing_user.locked_until - now).total_seconds() / 60)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"로그인 5회 실패로 계정이 잠겼습니다. {remaining_minutes}분 후 다시 시도해주세요.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
     # 사용자 인증
     user = await auth_service.authenticate_user(

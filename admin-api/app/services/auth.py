@@ -108,6 +108,7 @@ class AuthService:
     ) -> Optional[User]:
         """
         사용자 인증을 수행합니다.
+        로그인 5회 실패 시 30분간 계정 잠금
 
         Args:
             username: 사용자명
@@ -130,9 +131,34 @@ class AuthService:
         if not user.is_active:
             return None
 
+        # 계정 잠금 확인
+        now = datetime.utcnow()
+        if user.locked_until and user.locked_until > now:
+            # 아직 잠금 상태
+            return None
+
+        # 잠금 해제 시간이 지났으면 자동 해제
+        if user.locked_until and user.locked_until <= now:
+            user.failed_login_attempts = 0
+            user.locked_until = None
+            await db.commit()
+
         # 비밀번호 검증
         if not verify_password(password, user.hashed_password):
+            # 로그인 실패 카운트 증가
+            user.failed_login_attempts += 1
+
+            # 5회 실패 시 계정 잠금 (30분)
+            if user.failed_login_attempts >= 5:
+                user.locked_until = now + timedelta(minutes=30)
+
+            await db.commit()
             return None
+
+        # 로그인 성공 - 실패 카운트 리셋
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        await db.commit()
 
         return user
 

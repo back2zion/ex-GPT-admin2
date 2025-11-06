@@ -35,6 +35,10 @@ class User(Base, TimestampMixin):
     allowed_model = Column(String(100), nullable=True, comment="할당된 LLM 모델 (Qwen235B, Qwen32B, 70B 등)")
     last_login_at = Column(DateTime(timezone=True), nullable=True, comment="마지막 로그인 시간")
 
+    # 계정 보안 (로그인 실패 추적)
+    failed_login_attempts = Column(Integer, default=0, nullable=False, comment="로그인 실패 횟수")
+    locked_until = Column(DateTime, nullable=True, comment="계정 잠금 해제 시간")
+
     # 조직 및 인사 정보
     employee_number = Column(String(50), unique=True, index=True, comment="사번")
     position = Column(String(50), comment="직급 (예: 사원, 대리, 과장, 차장, 부장)")
