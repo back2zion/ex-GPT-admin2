@@ -7,6 +7,7 @@ import { Admin, Resource, CustomRoutes } from 'react-admin';
 import { Route } from 'react-router-dom';
 import { createContext, useState, useEffect } from 'react';
 import dataProvider from './dataProvider';
+import authProvider from './authProvider';
 import { lightTheme, darkTheme } from './theme';
 import i18nProvider from './i18nProvider';
 
@@ -99,11 +100,12 @@ export default function App() {
     <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
       <Admin
         dataProvider={dataProvider}
+        authProvider={authProvider}
         theme={darkMode ? darkTheme : lightTheme}
         i18nProvider={i18nProvider}
         title="ex-GPT 관리도구"
         loginPage={LoginPage}
-        requireAuth={false} // 인증 미구현 시 false
+        requireAuth={true} // 로그인 필수
         dashboard={Dashboard} // TDD 기반 통계 대시보드 (메인 페이지)
         layout={CoreUILayout} // CoreUI 스타일 레이아웃
       >

@@ -176,8 +176,8 @@ const CoreUIAppBar = () => {
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
         localStorage.removeItem('lastLogin');
-        // Redirect to admin login page
-        window.location.href = '/admin/';
+        // Redirect to login page (react-admin hash routing)
+        window.location.href = '/admin/#/login';
     };
 
     const handleMarkAllRead = () => {
