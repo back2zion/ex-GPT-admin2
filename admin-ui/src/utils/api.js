@@ -341,12 +341,12 @@ export async function getConversations(params = {}) {
 }
 
 /**
- * 대화내역 상세 조회
+ * 대화내역 상세 조회 (세션의 모든 대화 반환)
  * @param {number} id - 대화내역 ID
- * @returns {Promise<Object>}
+ * @returns {Promise<Object>} - { session_id, conversations: [...] }
  */
 export async function getConversationDetail(id) {
-  const response = await apiClient.get(`/admin/conversations/simple/${id}`);
+  const response = await apiClient.get(`/admin/conversations/${id}`);
   return response.data;
 }
 
