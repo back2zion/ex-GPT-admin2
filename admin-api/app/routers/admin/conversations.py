@@ -101,6 +101,12 @@ class ConversationListResponse(BaseModel):
     total_pages: int
 
 
+class SessionDetailResponse(BaseModel):
+    """세션 대화내역 상세 응답"""
+    session_id: str
+    conversations: List[ConversationDetail]
+
+
 # 인증 없이 사용 가능한 간단한 조회 엔드포인트
 @router.get("/simple", response_model=ConversationListResponse)
 async def get_conversations_simple(
@@ -368,22 +374,76 @@ async def get_conversations(
     )
 
 
-@router.get("/{conversation_id}", response_model=ConversationDetail)
+@router.get("/{conversation_id}", response_model=SessionDetailResponse)
 async def get_conversation_detail(
     conversation_id: int,
     db: AsyncSession = Depends(get_db),
     principal: Principal = Depends(get_principal)
 ):
     """
-    대화내역 상세 조회 (인증 필요)
+    대화내역 상세 조회 (세션의 모든 대화 반환)
 
-    - 전체 질문/답변 내용
-    - 사용자 정보
-    - 세션 정보
-    - 참조 문서 목록
-    - 메타데이터
+    - 해당 conversation의 session_id를 찾아서
+    - 해당 세션의 모든 대화를 시간순으로 반환
+    - 사용자 정보, 참조 문서 등 포함
     """
-    return await get_conversation_detail_simple(conversation_id, db)
+    # 먼저 conversation_id로 session_id 찾기
+    query = select(UsageHistory.session_id).filter(UsageHistory.id == conversation_id)
+    result = await db.execute(query)
+    session_id = result.scalar_one_or_none()
+
+    if not session_id:
+        raise HTTPException(status_code=404, detail="대화내역을 찾을 수 없습니다.")
+
+    # 해당 세션의 모든 대화 조회
+    query = select(
+        UsageHistory,
+        User.position,
+        User.rank,
+        User.team,
+        User.join_year,
+        User.full_name
+    ).outerjoin(
+        User, UsageHistory.user_id == User.username
+    ).filter(
+        UsageHistory.session_id == session_id
+    ).order_by(UsageHistory.created_at)
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    conversations = []
+    for row in rows:
+        usage_history, position, rank, team, join_year, full_name = row
+
+        detail_dict = {
+            "id": usage_history.id,
+            "user_id": usage_history.user_id,
+            "position": position,
+            "rank": rank,
+            "team": team,
+            "join_year": join_year,
+            "department": usage_history.department if hasattr(usage_history, 'department') else None,
+            "session_id": usage_history.session_id,
+            "question": usage_history.question,
+            "answer": usage_history.answer,
+            "thinking_content": usage_history.thinking_content,
+            "response_time": usage_history.response_time,
+            "main_category": usage_history.main_category,
+            "sub_category": usage_history.sub_category,
+            "model_name": usage_history.model_name,
+            "referenced_documents": usage_history.referenced_documents or [],
+            "usage_metadata": usage_history.usage_metadata or {},
+            "ip_address": usage_history.ip_address,
+            "created_at": usage_history.created_at,
+            "updated_at": usage_history.updated_at
+        }
+        conversations.append(ConversationDetail(**detail_dict))
+
+    return SessionDetailResponse(
+        session_id=session_id,
+        conversations=conversations
+    )
 
 
 @router.get("/export/excel")
