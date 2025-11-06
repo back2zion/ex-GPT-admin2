@@ -21,6 +21,7 @@ import {
     ReferenceField,
     ReferenceInput,
     SelectInput,
+    AutocompleteInput,
     BooleanInput,
     required,
     DeleteButton,
@@ -48,10 +49,16 @@ const DocumentPermissionListActions = () => (
 
 const documentPermissionFilters = [
     <ReferenceInput key="document_id" source="document_id" reference="documents" label="문서">
-        <SelectInput optionText="title" />
+        <AutocompleteInput
+            optionText="title"
+            filterToQuery={searchText => ({ title: searchText })}
+        />
     </ReferenceInput>,
     <ReferenceInput key="department_id" source="department_id" reference="departments" label="부서">
-        <SelectInput optionText="name" />
+        <AutocompleteInput
+            optionText="name"
+            filterToQuery={searchText => ({ name: searchText })}
+        />
     </ReferenceInput>,
 ];
 
@@ -314,7 +321,7 @@ export const DocumentPermissionEdit = () => (
                         label="문서"
                         validate={[required()]}
                     >
-                        <SelectInput
+                        <AutocompleteInput
                             optionText="title"
                             fullWidth
                             disabled
@@ -334,10 +341,11 @@ export const DocumentPermissionEdit = () => (
                                 reference="departments"
                                 label="부서 (선택)"
                             >
-                                <SelectInput
+                                <AutocompleteInput
                                     optionText="name"
                                     fullWidth
-                                    helperText="부서 또는 결재라인 중 하나 선택"
+                                    helperText="부서를 검색하세요"
+                                    filterToQuery={searchText => ({ name: searchText })}
                                 />
                             </ReferenceInput>
                         </Grid>
@@ -347,10 +355,11 @@ export const DocumentPermissionEdit = () => (
                                 reference="approval-lines"
                                 label="결재라인 (선택)"
                             >
-                                <SelectInput
+                                <AutocompleteInput
                                     optionText="name"
                                     fullWidth
-                                    helperText="부서 또는 결재라인 중 하나 선택"
+                                    helperText="결재라인을 검색하세요"
+                                    filterToQuery={searchText => ({ name: searchText })}
                                 />
                             </ReferenceInput>
                         </Grid>
@@ -412,10 +421,11 @@ export const DocumentPermissionCreate = () => (
                 label="문서"
                 validate={[required()]}
             >
-                <SelectInput
+                <AutocompleteInput
                     optionText="title"
                     fullWidth
-                    helperText="권한을 부여할 문서 선택"
+                    helperText="문서 제목을 검색하세요"
+                    filterToQuery={searchText => ({ title: searchText })}
                 />
             </ReferenceInput>
 
@@ -424,10 +434,11 @@ export const DocumentPermissionCreate = () => (
                 reference="departments"
                 label="부서 (선택)"
             >
-                <SelectInput
+                <AutocompleteInput
                     optionText="name"
                     fullWidth
-                    helperText="부서 또는 결재라인 중 하나 선택"
+                    helperText="부서를 검색하세요 (부서 또는 결재라인 중 하나 선택)"
+                    filterToQuery={searchText => ({ name: searchText })}
                 />
             </ReferenceInput>
 
@@ -436,10 +447,11 @@ export const DocumentPermissionCreate = () => (
                 reference="approval-lines"
                 label="결재라인 (선택)"
             >
-                <SelectInput
+                <AutocompleteInput
                     optionText="name"
                     fullWidth
-                    helperText="부서 또는 결재라인 중 하나 선택"
+                    helperText="결재라인을 검색하세요 (부서 또는 결재라인 중 하나 선택)"
+                    filterToQuery={searchText => ({ name: searchText })}
                 />
             </ReferenceInput>
 
