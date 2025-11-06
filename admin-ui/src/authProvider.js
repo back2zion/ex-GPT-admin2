@@ -6,10 +6,43 @@
 export const authProvider = {
   // 로그인
   login: async ({ username, password }) => {
-    const { login } = await import('./utils/api');
     try {
-      const response = await login(username, password);
-      // api.js의 login 함수가 이미 localStorage에 토큰 저장
+      // Direct backend API call (bypass proxy issues)
+      const formData = new URLSearchParams();
+      formData.append('username', username);
+      formData.append('password', password);
+
+      const response = await fetch('http://localhost:8010/api/v1/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('로그인에 실패했습니다. 아이디와 비밀번호를 확인하세요.');
+      }
+
+      const data = await response.json();
+
+      // Store token
+      localStorage.setItem('authToken', data.access_token);
+
+      // Fetch user info
+      const userResponse = await fetch('http://localhost:8010/api/v1/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${data.access_token}`
+        }
+      });
+
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('lastLogin', new Date().toISOString());
+      }
+
       return Promise.resolve();
     } catch (error) {
       return Promise.reject(error);
