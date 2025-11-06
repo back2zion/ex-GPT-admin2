@@ -12,8 +12,10 @@ import {
   Box,
   TextField,
   Button,
-  ToggleButton,
-  ToggleButtonGroup,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
   Table,
   TableBody,
   TableCell,
@@ -194,22 +196,20 @@ export default function ConversationsPage() {
   /**
    * 대분류 변경
    */
-  const handleMainCategoryChange = (event, newValue) => {
-    if (newValue) {
-      setMainCategory(newValue);
-      setSubCategory('전체'); // 대분류 변경시 소분류 초기화
-      setPage(1);
-    }
+  const handleMainCategoryChange = (event) => {
+    const newValue = event.target.value;
+    setMainCategory(newValue);
+    setSubCategory('전체'); // 대분류 변경시 소분류 초기화
+    setPage(1);
   };
 
   /**
    * 소분류 변경
    */
-  const handleSubCategoryChange = (event, newValue) => {
-    if (newValue) {
-      setSubCategory(newValue);
-      setPage(1);
-    }
+  const handleSubCategoryChange = (event) => {
+    const newValue = event.target.value;
+    setSubCategory(newValue);
+    setPage(1);
   };
 
   /**
@@ -309,36 +309,40 @@ export default function ConversationsPage() {
             />
           </LocalizationProvider>
 
-          {/* 대분류 토글 버튼 */}
-          <ToggleButtonGroup
-            value={mainCategory}
-            exclusive
-            onChange={handleMainCategoryChange}
-            size="small"
-            sx={{ flexGrow: 1 }}
-          >
-            {Object.keys(CATEGORY_MAP).map((cat) => (
-              <ToggleButton key={cat} value={cat}>
-                {cat}
-              </ToggleButton>
-            ))}
-          </ToggleButtonGroup>
-
-          {/* 소분류 토글 버튼 */}
-          {mainCategory && CATEGORY_MAP[mainCategory] && (
-            <ToggleButtonGroup
-              value={subCategory}
-              exclusive
-              onChange={handleSubCategoryChange}
-              size="small"
-              sx={{ flexGrow: 1 }}
+          {/* 대분류 선택 */}
+          <FormControl size="small" sx={{ minWidth: 160 }}>
+            <InputLabel id="main-category-label">대분류</InputLabel>
+            <Select
+              labelId="main-category-label"
+              value={mainCategory}
+              onChange={handleMainCategoryChange}
+              label="대분류"
             >
-              {CATEGORY_MAP[mainCategory].subcategories.map((sub) => (
-                <ToggleButton key={sub} value={sub}>
-                  {sub}
-                </ToggleButton>
+              {Object.keys(CATEGORY_MAP).map((cat) => (
+                <MenuItem key={cat} value={cat}>
+                  {cat}
+                </MenuItem>
               ))}
-            </ToggleButtonGroup>
+            </Select>
+          </FormControl>
+
+          {/* 소분류 선택 */}
+          {mainCategory && CATEGORY_MAP[mainCategory] && (
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <InputLabel id="sub-category-label">소분류</InputLabel>
+              <Select
+                labelId="sub-category-label"
+                value={subCategory}
+                onChange={handleSubCategoryChange}
+                label="소분류"
+              >
+                {CATEGORY_MAP[mainCategory].subcategories.map((sub) => (
+                  <MenuItem key={sub} value={sub}>
+                    {sub}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           )}
 
           {/* 검색/초기화 버튼 */}
