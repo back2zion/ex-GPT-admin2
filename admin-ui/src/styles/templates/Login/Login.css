@@ -10,6 +10,12 @@ body{
     overflow-y: hidden;
 }
 
+/* 로그인 페이지 전용 body 클래스 */
+body.login-body {
+    background-color: #0F3353 !important;
+    overflow-y: hidden !important;
+}
+
 .locator {
     display: flex;
     flex-direction: column;
