@@ -18,6 +18,9 @@ import {
     useRecordContext,
     downloadCSV,
     useInput,
+    TopToolbar,
+    FilterButton,
+    ExportButton,
 } from 'react-admin';
 import { Box, Grid, Typography, Paper, Rating, Chip, Card, CardContent, LinearProgress, Button } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -111,6 +114,13 @@ const SatisfactionFilter = (props) => (
     </Filter>
 );
 
+const SatisfactionListActions = () => (
+    <TopToolbar>
+        <FilterButton />
+        <ExportButton label="엑셀 다운로드" />
+    </TopToolbar>
+);
+
 /**
  * 평점 필드 (별점 표시)
  */
@@ -168,6 +178,7 @@ const FeedbackField = (props) => {
 export const SatisfactionList = () => (
     <List
         filters={<SatisfactionFilter />}
+        actions={<SatisfactionListActions />}
         exporter={exporter}
         perPage={50}
         sort={{ field: 'created_at', order: 'DESC' }}
