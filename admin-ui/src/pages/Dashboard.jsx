@@ -935,13 +935,13 @@ const Dashboard = () => {
                                     cx="50%"
                                     cy="50%"
                                     labelLine={true}
-                                    label={({ main_category, question_count, percent }) =>
-                                        `${main_category}: ${question_count}건 (${(percent * 100).toFixed(1)}%)`
+                                    label={({ category, question_count, percent }) =>
+                                        `${category}: ${question_count}건 (${(percent * 100).toFixed(1)}%)`
                                     }
                                     outerRadius={140}
                                     fill="#8884d8"
                                     dataKey="question_count"
-                                    nameKey="main_category"
+                                    nameKey="category"
                                 >
                                     {categoryStats.map((entry, index) => {
                                         const colorPalette = [

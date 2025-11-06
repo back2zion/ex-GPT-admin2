@@ -1060,34 +1060,36 @@ async def get_stats_by_category(
 ):
     """
     분야별 질의 통계 (활용 현황)
-    
+
     **반환값**:
-    - main_category: 대분류
+    - category: 세부 카테고리 (sub_category)
     - question_count: 질문 수
     """
     start_datetime = datetime.combine(start, datetime.min.time())
     end_datetime = datetime.combine(end, datetime.max.time())
-    
+
     query = (
         select(
-            UsageHistory.main_category,
+            UsageHistory.sub_category,
             func.count(UsageHistory.id).label('question_count')
         )
         .filter(
             UsageHistory.created_at >= start_datetime,
-            UsageHistory.created_at <= end_datetime
+            UsageHistory.created_at <= end_datetime,
+            UsageHistory.sub_category.isnot(None),
+            UsageHistory.sub_category != ''
         )
-        .group_by(UsageHistory.main_category)
+        .group_by(UsageHistory.sub_category)
         .order_by(func.count(UsageHistory.id).desc())
     )
-    
+
     result = await db.execute(query)
     rows = result.all()
-    
+
     return {
         "items": [
             {
-                "main_category": row.main_category or '미분류',
+                "category": row.sub_category,
                 "question_count": row.question_count
             }
             for row in rows
