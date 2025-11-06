@@ -194,16 +194,13 @@ export default function RecommendedQuestionsPage() {
           >
             등록
           </Button>
-          <IconButton
+          <Button
+            variant="outlined"
+            startIcon={<DownloadIcon />}
             onClick={handleDownloadExcel}
-            sx={{
-              backgroundColor: '#28a745',
-              color: 'white',
-              '&:hover': { backgroundColor: '#218838' },
-            }}
           >
-            <DownloadIcon />
-          </IconButton>
+            엑셀 다운로드
+          </Button>
         </Box>
       </Box>
 

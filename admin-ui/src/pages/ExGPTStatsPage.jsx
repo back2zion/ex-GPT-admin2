@@ -125,17 +125,14 @@ const SectionTitle = ({ icon: Icon, title, color, onDownload }) => (
             </Typography>
         </Box>
         {onDownload && (
-            <IconButton
+            <Button
+                variant="outlined"
+                startIcon={<DownloadIcon />}
                 onClick={onDownload}
-                sx={{
-                    backgroundColor: colors.success,
-                    color: 'white',
-                    '&:hover': { backgroundColor: colors.successLight },
-                }}
                 size="small"
             >
-                <DownloadIcon />
-            </IconButton>
+                엑셀 다운로드
+            </Button>
         )}
     </Box>
 );
@@ -521,13 +518,14 @@ export default function ExGPTStatsPage() {
                             <ToggleButton value="questions">질문수</ToggleButton>
                             <ToggleButton value="errors">오류신고수</ToggleButton>
                         </ToggleButtonGroup>
-                        <IconButton
+                        <Button
+                            variant="outlined"
+                            startIcon={<DownloadIcon />}
                             onClick={downloadCombinedChart}
-                            sx={{ backgroundColor: colors.success, color: 'white', '&:hover': { backgroundColor: colors.successLight } }}
                             size="small"
                         >
-                            <DownloadIcon />
-                        </IconButton>
+                            엑셀 다운로드
+                        </Button>
                     </Box>
                 </Box>
                 {isLoading ? (

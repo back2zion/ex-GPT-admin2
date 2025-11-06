@@ -210,16 +210,13 @@ export default function ErrorReportManagementPage() {
             <MenuItem value={50}>50</MenuItem>
           </Select>
         </Box>
-        <IconButton
+        <Button
+          variant="outlined"
+          startIcon={<DownloadIcon />}
           onClick={handleDownloadExcel}
-          sx={{
-            backgroundColor: '#28a745',
-            color: 'white',
-            '&:hover': { backgroundColor: '#218838' },
-          }}
         >
-          <DownloadIcon />
-        </IconButton>
+          엑셀 다운로드
+        </Button>
       </Box>
 
       {/* 테이블 */}

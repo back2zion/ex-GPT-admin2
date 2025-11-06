@@ -392,16 +392,13 @@ export default function ConversationsPage() {
           </FormControl>
         </Box>
         <Box>
-          <IconButton
+          <Button
+            variant="outlined"
+            startIcon={<DownloadIcon />}
             onClick={handleDownloadExcel}
-            sx={{
-              backgroundColor: '#28a745',
-              color: 'white',
-              '&:hover': { backgroundColor: '#218838' },
-            }}
           >
-            <DownloadIcon />
-          </IconButton>
+            엑셀 다운로드
+          </Button>
         </Box>
       </Box>
 

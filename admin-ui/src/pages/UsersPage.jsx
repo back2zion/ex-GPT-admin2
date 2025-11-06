@@ -847,16 +847,13 @@ export default function UsersPage() {
                 현재 페이지 전체 선택 ({users.length}명)
               </Button>
             </Box>
-            <IconButton
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
               onClick={handleDownloadExcel}
-              sx={{
-                backgroundColor: '#28a745',
-                color: 'white',
-                '&:hover': { backgroundColor: '#218838' },
-              }}
             >
-              <DownloadIcon />
-            </IconButton>
+              엑셀 다운로드
+            </Button>
           </Box>
 
           {/* 테이블 */}
@@ -1126,16 +1123,13 @@ export default function UsersPage() {
                 <MenuItem value={100}>100</MenuItem>
               </Select>
             </Box>
-            <IconButton
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
               onClick={handleDownloadHistoryExcel}
-              sx={{
-                backgroundColor: '#28a745',
-                color: 'white',
-                '&:hover': { backgroundColor: '#218838' },
-              }}
             >
-              <DownloadIcon />
-            </IconButton>
+              엑셀 다운로드
+            </Button>
           </Box>
 
           {/* 테이블 */}
@@ -1299,17 +1293,14 @@ export default function UsersPage() {
         <DialogTitle>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6">부서별 ex-GPT 권한 통계</Typography>
-            <IconButton
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
               onClick={handleDownloadStatsExcel}
-              sx={{
-                backgroundColor: '#28a745',
-                color: 'white',
-                '&:hover': { backgroundColor: '#218838' },
-              }}
               size="small"
             >
-              <DownloadIcon />
-            </IconButton>
+              엑셀 다운로드
+            </Button>
           </Box>
         </DialogTitle>
         <DialogContent>
