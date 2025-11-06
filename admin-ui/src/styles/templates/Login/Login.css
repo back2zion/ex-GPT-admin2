@@ -37,9 +37,10 @@ body{
         flex-direction: column;
         background: #ffffff;
         border-radius: 23px 0 0 23px;
-        padding: 46px 40px 67px;
+        padding: 46px 40px 30px;
         min-width: 392px;
         flex-shrink: 0;
+        height: 392px;
         
         /* logo */
         .logo {
@@ -49,7 +50,7 @@ body{
             color: #5E5C5C;
             font-weight: 300;
             font-size: 15px;
-            margin-bottom: 51px;
+            margin-bottom: 48px;
 
             p {
                 margin: 0;
@@ -97,7 +98,7 @@ body{
                 transform: translateY(-50%);
                 width: 21px;
                 height: 21px;
-                background: url(/templates/img/login/id_icon.svg) center / cover no-repeat;
+                background: url(/admin/templates/img/login/id_icon.svg) center / cover no-repeat;
             }
         }
 
@@ -112,7 +113,7 @@ body{
                 transform: translateY(-50%);
                 width: 21px;
                 height: 21px;
-                background: url(/templates/img/login/pswd_icon.svg) center / cover no-repeat;
+                background: url(/admin/templates/img/login/pswd_icon.svg) center / cover no-repeat;
             }
 
             .show_icon {
@@ -123,10 +124,10 @@ body{
                 transform: translateY(-50%);
                 width: 24px;
                 height: 24px;
-                background: url(/templates/img/login/eye_icon.svg) center / cover no-repeat;
+                background: url(/admin/templates/img/login/eye_icon.svg) center / cover no-repeat;
 
                 &.on {
-                    background-image: url(/templates/img/login/eye_off_icon.svg);
+                    background-image: url(/admin/templates/img/login/eye_off_icon.svg);
                 }
             }
         }
@@ -146,6 +147,7 @@ body{
                 height: 21px;
                 border: 1px solid #D3D3D3;
                 border-radius: 4px;
+                cursor: pointer;
 
                 &:checked + label:after{
                     content: '';
@@ -153,10 +155,14 @@ body{
                     left: 4px;
                     top: 50%;
                     transform: translateY(-50%);
-                    background: url(/templates/img/login/login_checkbox_check_icon.svg) center / cover no-repeat;
+                    background: url(/admin/templates/img/login/login_checkbox_check_icon.svg) center / cover no-repeat;
                     width: 13px;
                     height: 10px;
                 }
+            }
+
+            label {
+                cursor: pointer;
             }
 
             .remember-id-text {
@@ -166,7 +172,7 @@ body{
             }
 
             & + .login-button-container {
-               margin-top: 30px; 
+               margin-top: 30px;
             }
         }
 
@@ -199,6 +205,9 @@ body{
                 font-size: 14px;
                 cursor: pointer;
                 transition: 0.1s;
+                text-align: center;
+                padding: 0;
+                margin: 0;
 
                 &:hover {
                     background-color: #1461CD;
@@ -208,7 +217,7 @@ body{
     }
     
     .desc {
-        background: url(/templates/img/login/login_bg.svg) center / cover no-repeat;
+        background: url(/admin/templates/img/login/login_bg.svg) center / cover no-repeat;
         width: 219px;
         border-radius: 0 23px 23px 0;
         padding-top: 37px;
@@ -241,7 +250,7 @@ body{
     }
 
     .bottom-credit {
-        background: url(/templates/img/login/ex_gpt_bottom_logo.svg) center / cover no-repeat;
+        background: url(/admin/templates/img/login/ex_gpt_bottom_logo.svg) center / cover no-repeat;
         width: 128px;
         height: 15px;
         order: -1;
