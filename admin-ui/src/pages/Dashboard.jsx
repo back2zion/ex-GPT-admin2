@@ -930,7 +930,7 @@ const Dashboard = () => {
                             <CircularProgress />
                         </Box>
                     ) : categoryStats.length > 0 ? (
-                        <Grid container spacing={2}>
+                        <Grid container spacing={2} sx={{ width: '100%' }}>
                             {categoryStats
                                 .sort((a, b) => {
                                     // 미분류를 맨 마지막으로
@@ -948,7 +948,7 @@ const Dashboard = () => {
                                     const cardColor = cardColors[index % cardColors.length];
 
                                     return (
-                                        <Grid item xs={12} md={4} lg={4} key={index}>
+                                        <Grid item xs={12} md={4} lg={4} key={index} sx={{ display: 'flex' }}>
                                         <Paper
                                             elevation={0}
                                             sx={{
@@ -956,8 +956,11 @@ const Dashboard = () => {
                                                 borderRadius: 2,
                                                 backgroundColor: cardColor.bg,
                                                 border: `2px solid ${cardColor.border}`,
+                                                width: '100%',
                                                 height: '100%',
                                                 minHeight: 200,
+                                                display: 'flex',
+                                                flexDirection: 'column',
                                             }}
                                         >
                                             <Typography
