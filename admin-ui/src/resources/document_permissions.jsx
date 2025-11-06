@@ -402,7 +402,7 @@ export const DocumentPermissionCreate = () => (
         <SimpleForm
             sx={{
                 '& .MuiFormControl-root': { marginBottom: '16px' },
-                maxWidth: 800,
+                maxWidth: 600,
                 margin: '0 auto'
             }}
         >
