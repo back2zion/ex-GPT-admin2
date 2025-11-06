@@ -118,82 +118,96 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-      <div className="login-card card">
-        <div className="login-header">
-          <h1>ex-GPT</h1>
-          <p>한국도로공사 관리도구</p>
+      <div className="login-container">
+        <div className="login-card card">
+          <div className="login-header">
+            <div className="logo-container">
+              <div className="logo-icon">🛣️</div>
+              <h1>한국도로공사</h1>
+            </div>
+            <h2>ex-GPT 관리자 시스템</h2>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            {errorMessage && (
+              <div className="alert alert-danger" role="alert">
+                {escapeHtml(errorMessage)}
+              </div>
+            )}
+
+            <div className="form-group">
+              <label htmlFor="username">아이디</label>
+              <input
+                type="text"
+                id="username"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                placeholder="아이디를 입력하세요"
+                disabled={isLoading}
+                aria-invalid={errors.username ? 'true' : 'false'}
+                aria-describedby={errors.username ? 'username-error' : null}
+              />
+              {errors.username && (
+                <span id="username-error" className="error-text" role="alert">
+                  {errors.username}
+                </span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="password">비밀번호</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="비밀번호를 입력하세요"
+                disabled={isLoading}
+                aria-invalid={errors.password ? 'true' : 'false'}
+                aria-describedby={errors.password ? 'password-error' : null}
+              />
+              {errors.password && (
+                <span id="password-error" className="error-text" role="alert">
+                  {errors.password}
+                </span>
+              )}
+            </div>
+
+            <div className="form-group checkbox-group">
+              <label>
+                <input
+                  type="checkbox"
+                  name="rememberMe"
+                  checked={formData.rememberMe}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                />
+                <span>아이디 기억하기</span>
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              className="btn-primary btn-login"
+              disabled={isLoading}
+            >
+              {isLoading ? '로그인 중...' : '로그인'}
+            </button>
+
+            <div className="login-notice">
+              <p className="notice-text">
+                ⚠️ 로그인 5회 실패시 계정이 일시적으로 차단됩니다.<br />
+                계정 관련 문의는 시스템 담당자에게 연락해주세요.
+              </p>
+            </div>
+          </form>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <h2>관리자 로그인</h2>
-
-          {errorMessage && (
-            <div className="alert alert-danger" role="alert">
-              {escapeHtml(errorMessage)}
-            </div>
-          )}
-
-          <div className="form-group">
-            <label htmlFor="username">아이디</label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              placeholder="아이디를 입력하세요"
-              disabled={isLoading}
-              aria-invalid={errors.username ? 'true' : 'false'}
-              aria-describedby={errors.username ? 'username-error' : null}
-            />
-            {errors.username && (
-              <span id="username-error" className="error-text" role="alert">
-                {errors.username}
-              </span>
-            )}
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">비밀번호</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="비밀번호를 입력하세요"
-              disabled={isLoading}
-              aria-invalid={errors.password ? 'true' : 'false'}
-              aria-describedby={errors.password ? 'password-error' : null}
-            />
-            {errors.password && (
-              <span id="password-error" className="error-text" role="alert">
-                {errors.password}
-              </span>
-            )}
-          </div>
-
-          <div className="form-group checkbox-group">
-            <label>
-              <input
-                type="checkbox"
-                name="rememberMe"
-                checked={formData.rememberMe}
-                onChange={handleChange}
-                disabled={isLoading}
-              />
-              <span>아이디 기억하기</span>
-            </label>
-          </div>
-
-          <button
-            type="submit"
-            className="btn-primary btn-login"
-            disabled={isLoading}
-          >
-            {isLoading ? '로그인 중...' : '로그인'}
-          </button>
-        </form>
+        <div className="login-footer">
+          <p>© 2025 DataStreams. Co.Ltd. All Rights Reserved.</p>
+        </div>
       </div>
     </div>
   );

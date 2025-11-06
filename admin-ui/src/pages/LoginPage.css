@@ -1,6 +1,6 @@
 /**
  * 로그인 페이지 스타일
- * 한국도로공사 브랜드 컬러 적용 (PRD SIR-001)
+ * 일반적인 기업 로그인 페이지 디자인
  */
 
 .login-page {
@@ -8,77 +8,58 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #0a2986 0%, #1e4db7 50%, #0a2986 100%);
-  position: relative;
-  overflow: hidden;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 }
 
-/* 배경 패턴 */
-.login-page::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image:
-    radial-gradient(circle at 20% 50%, rgba(230, 71, 1, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(230, 71, 1, 0.08) 0%, transparent 50%);
-  pointer-events: none;
+.login-container {
+  width: 100%;
+  max-width: 480px;
+  padding: 20px;
 }
 
 .login-card {
-  max-width: 460px;
-  width: 100%;
-  margin: var(--spacing-lg);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  border-radius: 16px;
   background: white;
-  position: relative;
-  z-index: 1;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   padding: 48px 40px;
+  margin-bottom: 24px;
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 32px;
-  padding-bottom: 24px;
-  border-bottom: 3px solid #0a2986;
-  position: relative;
+  margin-bottom: 36px;
 }
 
-/* 한국도로공사 로고 대체 (심볼) */
-.login-header::before {
-  content: '🛣️';
-  font-size: 48px;
-  display: block;
+.logo-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.logo-icon {
+  font-size: 64px;
   margin-bottom: 12px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 .login-header h1 {
-  font-size: 2.8rem;
-  margin-bottom: 8px;
+  font-size: 1.8rem;
   color: #0a2986;
   font-weight: 700;
+  margin: 0 0 8px 0;
   letter-spacing: -0.5px;
 }
 
-.login-header p {
-  color: #7b7b7b;
-  font-size: 16px;
+.login-header h2 {
+  font-size: 1.1rem;
+  color: #666666;
   font-weight: 500;
-}
-
-.login-card h2 {
-  text-align: center;
-  margin-bottom: 28px;
-  font-size: 1.6rem;
-  color: #333333;
-  font-weight: 600;
+  margin: 0;
 }
 
 .form-group {
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: 20px;
 }
 
 .form-group label {
@@ -91,12 +72,12 @@
 .form-group input[type="text"],
 .form-group input[type="password"] {
   width: 100%;
-  padding: 14px 16px;
-  border: 2px solid #e4e4e4;
-  border-radius: 8px;
+  padding: 12px 16px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
   font-size: 15px;
   transition: all 0.2s;
-  background: #f8f8f8;
+  background: white;
   color: #333333;
 }
 
@@ -110,7 +91,7 @@
 .form-group input:-webkit-autofill,
 .form-group input:-webkit-autofill:hover,
 .form-group input:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0px 1000px #f8f8f8 inset;
+  -webkit-box-shadow: 0 0 0px 1000px white inset;
   -webkit-text-fill-color: #333333;
   transition: background-color 5000s ease-in-out 0s;
 }
@@ -118,8 +99,7 @@
 .form-group input:focus {
   outline: none;
   border-color: #0a2986;
-  background: white;
-  box-shadow: 0 0 0 4px rgba(10, 41, 134, 0.1);
+  box-shadow: 0 0 0 3px rgba(10, 41, 134, 0.08);
 }
 
 .form-group input[aria-invalid="true"] {
@@ -154,63 +134,90 @@
 .btn-login {
   width: 100%;
   padding: 14px;
-  font-size: 17px;
-  font-weight: 700;
-  margin-top: 24px;
-  background: linear-gradient(135deg, #e64701 0%, #ff6a1a 100%);
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 8px;
+  background: #0a2986;
   border: none;
   color: white;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(230, 71, 1, 0.3);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
 }
 
 .btn-login:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(230, 71, 1, 0.4);
-  background: linear-gradient(135deg, #ff6a1a 0%, #e64701 100%);
+  background: #082060;
 }
 
 .btn-login:active:not(:disabled) {
-  transform: translateY(0);
+  background: #061840;
 }
 
 .btn-login:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
+}
+
+/* 안내 문구 */
+.login-notice {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e8e8e8;
+}
+
+.notice-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #666;
+  text-align: center;
+  margin: 0;
+}
+
+/* Footer */
+.login-footer {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.login-footer p {
+  font-size: 13px;
+  color: #888;
+  margin: 0;
 }
 
 /* 알림 메시지 스타일링 */
 .alert {
-  padding: 14px 18px;
-  border-radius: 8px;
+  padding: 12px 16px;
+  border-radius: 6px;
   margin-bottom: 20px;
   font-size: 14px;
-  font-weight: 500;
 }
 
 .alert-danger {
-  background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
-  border: 2px solid #ff4444;
-  color: #cc0000;
+  background: #fff5f5;
+  border: 1px solid #ffcccc;
+  color: #d32f2f;
 }
 
 /* ===== 반응형 ===== */
 @media (max-width: 480px) {
+  .login-container {
+    padding: 16px;
+  }
+
   .login-card {
-    margin: 16px;
     padding: 32px 24px;
   }
 
-  .login-header h1 {
-    font-size: 2.2rem;
+  .logo-icon {
+    font-size: 48px;
   }
 
-  .login-header::before {
-    font-size: 40px;
+  .login-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .login-header h2 {
+    font-size: 1rem;
   }
 }
