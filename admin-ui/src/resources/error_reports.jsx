@@ -30,7 +30,7 @@ const ErrorReportListActions = () => (
     <TopToolbar>
         <FilterButton />
         <CreateButton label="오류 추가" />
-        <ExportButton />
+        <ExportButton label="엑셀 다운로드" />
     </TopToolbar>
 );
 
