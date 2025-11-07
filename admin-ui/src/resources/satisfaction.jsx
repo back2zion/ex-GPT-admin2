@@ -117,7 +117,7 @@ const SatisfactionFilter = (props) => (
 const SatisfactionListActions = () => (
     <TopToolbar>
         <FilterButton />
-        <ExportButton label="엑셀 다운로드" exporter={exporter} />
+        <ExportButton label="엑셀 다운로드" />
     </TopToolbar>
 );
 
@@ -179,6 +179,7 @@ export const SatisfactionList = () => (
     <List
         filters={<SatisfactionFilter />}
         actions={<SatisfactionListActions />}
+        exporter={exporter}
         perPage={50}
         sort={{ field: 'created_at', order: 'DESC' }}
         title="⭐ 만족도 조사"
