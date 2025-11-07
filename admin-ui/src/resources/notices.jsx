@@ -25,9 +25,6 @@ import {
     required,
     useRecordContext,
     useInput,
-    TopToolbar,
-    FilterButton,
-    ExportButton,
 } from 'react-admin';
 import { Box, Grid, Typography, Paper } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -138,20 +135,12 @@ const NoticeFilter = (props) => (
     </Filter>
 );
 
-const NoticeListActions = () => (
-    <TopToolbar>
-        <FilterButton />
-        <ExportButton label="엑셀 다운로드" />
-    </TopToolbar>
-);
-
 /**
  * 공지사항 목록
  */
 export const NoticeList = () => (
     <List
         filters={<NoticeFilter />}
-        actions={<NoticeListActions />}
         sort={{ field: 'created_at', order: 'DESC' }}
         perPage={25}
     >
