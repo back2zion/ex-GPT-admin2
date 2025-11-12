@@ -248,7 +248,41 @@ export default function VectorDataManagementPageSimple() {
     );
   };
 
-  // 엑셀 다운로드
+  // 원본 문서 다운로드
+  const handleDocumentDownload = async (documentId) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE}/vector-documents/${documentId}/download`,
+        { responseType: 'blob' }
+      );
+
+      // 파일명 추출 (Content-Disposition 헤더에서)
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `document_${documentId}`;
+
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/"/g, '');
+        }
+      }
+
+      // Blob을 다운로드
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('문서 다운로드 실패:', error);
+      alert(error.response?.data?.detail || '문서 다운로드에 실패했습니다.');
+    }
+  };
+
+  // 목록 다운로드 (CSV)
   const handleExcelDownload = async () => {
     try {
       let documentsToExport = [];
@@ -604,7 +638,7 @@ export default function VectorDataManagementPageSimple() {
             문서등록
           </Button>
           <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleExcelDownload}>
-            엑셀 다운로드
+            목록 다운로드
           </Button>
         </Box>
       </Box>
@@ -658,8 +692,13 @@ export default function VectorDataManagementPageSimple() {
                     <TableRow
                       key={doc.id}
                       sx={{
-                        '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
+                        '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)', cursor: 'pointer' },
                         bgcolor: isSelected ? 'rgba(0, 166, 81, 0.08)' : 'inherit'
+                      }}
+                      onClick={(e) => {
+                        // 체크박스 클릭 시에는 다운로드하지 않음
+                        if (e.target.type === 'checkbox') return;
+                        handleDocumentDownload(doc.id);
                       }}
                     >
                       <TableCell padding="checkbox">

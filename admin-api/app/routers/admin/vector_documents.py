@@ -2,6 +2,7 @@
 벡터 문서 관리 API 엔드포인트 (EDB 기반)
 """
 from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi.responses import StreamingResponse
 from typing import Optional
 from datetime import datetime
 import logging
@@ -10,6 +11,7 @@ import asyncpg
 import httpx
 from minio import Minio
 from minio.error import S3Error
+import io
 
 logger = logging.getLogger(__name__)
 
@@ -547,6 +549,140 @@ async def batch_delete_documents(
         raise HTTPException(
             status_code=500,
             detail=f"다중 문서 삭제 실패: {str(e)}"
+        )
+    finally:
+        if conn:
+            await conn.close()
+
+
+@router.get("/{document_id}/download")
+async def download_document(document_id: str):
+    """
+    원본 문서 파일 다운로드 (MinIO에서)
+
+    Args:
+        document_id: 문서 ID (doc_id)
+
+    Returns:
+        원본 파일 스트리밍 응답
+    """
+    conn = None
+    try:
+        conn = await get_edb_connection()
+
+        # document_id를 정수로 변환
+        try:
+            doc_id_int = int(document_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"유효하지 않은 문서 ID: {document_id}"
+            )
+
+        # EDB에서 문서 정보 조회
+        doc_info = await conn.fetchrow(
+            """
+            SELECT
+                doc_id,
+                doc_title_nm,
+                doc_cat_cd,
+                doc_det_level_n1_cd,
+                doc_det_level_n2_cd,
+                doc_det_level_n3_cd
+            FROM wisenut.doc_bas_lst
+            WHERE doc_id = $1 AND use_yn = 'Y'
+            """,
+            doc_id_int
+        )
+
+        if not doc_info:
+            raise HTTPException(
+                status_code=404,
+                detail=f"문서를 찾을 수 없습니다: {document_id}"
+            )
+
+        # MinIO 클라이언트 생성
+        client = get_minio_client()
+
+        # MinIO 경로 구성: {doc_cat_cd}/{doc_det_level_n1_cd}/{doc_det_level_n2_cd}/{doc_det_level_n3_cd}/파일명
+        # 또는: {doc_cat_cd}/파일명
+        # 경로를 조합하여 찾기
+        path_parts = [doc_info['doc_cat_cd']]
+        if doc_info['doc_det_level_n1_cd']:
+            path_parts.append(doc_info['doc_det_level_n1_cd'])
+        if doc_info['doc_det_level_n2_cd']:
+            path_parts.append(doc_info['doc_det_level_n2_cd'])
+        if doc_info['doc_det_level_n3_cd']:
+            path_parts.append(doc_info['doc_det_level_n3_cd'])
+
+        prefix = "/".join(path_parts)
+
+        # MinIO에서 파일 검색
+        objects = list(client.list_objects(MINIO_BUCKET, prefix=prefix, recursive=True))
+
+        if not objects:
+            # prefix만으로 찾기 (경로 레벨이 없는 경우)
+            prefix = doc_info['doc_cat_cd']
+            objects = list(client.list_objects(MINIO_BUCKET, prefix=prefix, recursive=True))
+
+        if not objects:
+            raise HTTPException(
+                status_code=404,
+                detail=f"파일을 찾을 수 없습니다: {document_id}"
+            )
+
+        # 첫 번째 파일 선택 (여러 개 있을 경우)
+        object_name = objects[0].object_name
+
+        # MinIO에서 파일 가져오기
+        try:
+            response = client.get_object(MINIO_BUCKET, object_name)
+            file_data = response.read()
+            response.close()
+            response.release_conn()
+        except S3Error as e:
+            logger.error(f"Failed to download from MinIO: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"파일 다운로드 실패: {str(e)}"
+            )
+
+        # 파일명 추출
+        filename = object_name.split('/')[-1]
+
+        # Content-Type 결정
+        content_type = "application/octet-stream"
+        if filename.lower().endswith('.pdf'):
+            content_type = "application/pdf"
+        elif filename.lower().endswith(('.doc', '.docx')):
+            content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        elif filename.lower().endswith('.hwp'):
+            content_type = "application/x-hwp"
+        elif filename.lower().endswith(('.ppt', '.pptx')):
+            content_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        elif filename.lower().endswith(('.xls', '.xlsx')):
+            content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        elif filename.lower().endswith('.txt'):
+            content_type = "text/plain"
+
+        logger.info(f"Downloaded document {document_id} from MinIO: {object_name}")
+
+        # 파일 스트리밍 응답
+        return StreamingResponse(
+            io.BytesIO(file_data),
+            media_type=content_type,
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"'
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to download document: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"문서 다운로드 실패: {str(e)}"
         )
     finally:
         if conn:
